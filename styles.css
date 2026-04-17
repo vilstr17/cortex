@@ -1,0 +1,807 @@
+.srs-due {
+  opacity: 0.7;
+  margin-left: 6px;
+  font-size: 0.9em;
+}
+
+.srs-set {
+  margin-bottom: 1.5em;
+  padding: 0.5em;
+  border-bottom: 1px solid var(--divider-color);
+}
+
+.srs-set-desc {
+  font-size: 0.9em;
+  opacity: 0.7;
+  margin-bottom: 0.5em;
+}
+
+.srs-note-info {
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+.srs-actions {
+  margin-top: 6px;
+}
+
+.srs-btn {
+  appearance: none;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.85em;
+  cursor: pointer;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  transition:
+    background 0.15s ease,
+    transform 0.05s ease;
+}
+
+.srs-btn:hover {
+  background: var(--background-secondary-alt);
+}
+
+.srs-btn:active {
+  transform: translateY(1px);
+}
+
+.srs-btn-learned {
+  border-color: var(--color-green);
+  color: var(--color-green);
+}
+
+.srs-btn-learned:hover {
+  background: rgba(0, 200, 0, 0.1);
+}
+
+/* Buttons container */
+.srs-review-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+/* All review buttons */
+.srs-review-buttons button {
+  padding: 0.6rem 0;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  transition:
+    transform 0.05s ease,
+    opacity 0.1s ease;
+}
+
+/* Hover / active feel */
+.srs-review-buttons button:hover {
+  opacity: 0.9;
+}
+
+.srs-review-buttons button:active {
+  transform: scale(0.97);
+}
+
+.srs-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 1em;
+}
+
+.srs-cal-weekday {
+  text-align: center;
+  font-size: 0.8em;
+  opacity: 0.7;
+}
+
+.srs-cal-day {
+  min-height: 48px;
+  border-radius: 6px;
+  padding: 4px;
+  position: relative;
+  border: 1px solid #cccccc25;
+}
+
+.srs-cal-empty {
+  min-height: 48px;
+  border-radius: 6px;
+  padding: 4px;
+  position: relative;
+}
+
+.srs-cal-day-number {
+  font-size: 1em;
+}
+
+.srs-cal-badge {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  font-size: 1em;
+  font-weight: 600;
+}
+
+.srs-cal-day.light {
+  background: var(--background-modifier-border);
+}
+.srs-cal-day.medium {
+  background: rgb(165, 107, 0);
+}
+.srs-cal-day.heavy {
+  background: rgb(150, 0, 0);
+}
+
+.srs-cal-day.today {
+  outline: 2px solid var(--interactive-accent);
+}
+
+/* Cortex Dashboard */
+.cortex-dashboard {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.cortex-dashboard h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.cortex-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cortex-header-row h1 {
+  margin: 0;
+}
+
+/* Icon buttons in header */
+.cortex-chat-icon-btn,
+.cortex-refresh-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	background: transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	border-radius: 6px;
+	padding: 6px;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.cortex-chat-icon-btn {
+	color: #8A2BE2;
+}
+
+.cortex-chat-icon-btn:hover {
+	background: rgba(138, 43, 226, 0.15);
+	color: #8A2BE2;
+}
+
+.cortex-refresh-btn:hover {
+	background: var(--background-modifier-border);
+	color: var(--text-normal);
+}
+
+.cortex-chat-icon-btn svg,
+.cortex-refresh-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.cortex-reviews-section {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+
+.cortex-reviews-placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 1rem 0;
+}
+
+.cortex-due-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cortex-due-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  transition: background 0.1s ease;
+}
+
+.cortex-due-item:hover {
+  background: var(--background-primary-alt);
+}
+
+.cortex-due-item.cortex-overdue {
+  border-color: var(--color-red);
+}
+
+.cortex-note-link {
+  flex: 1;
+  color: var(--text-accent);
+  text-decoration: none;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.cortex-note-link:hover {
+  text-decoration: underline;
+}
+
+.cortex-note-date {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.cortex-badge {
+  font-size: 0.7em;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 0.15em 0.5em;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+}
+
+.cortex-overdue-badge {
+  background: var(--color-red);
+  color: white;
+}
+
+/* ── Cortex Chat Modal ─────────────────────────────────────────── */
+
+.cortex-chat-modal {
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-history {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 0.75rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  max-width: 85%;
+  gap: 0.25rem;
+}
+
+.chat-message-user {
+  align-self: flex-end;
+}
+
+.chat-message-assistant {
+  align-self: flex-start;
+}
+
+.chat-message-label {
+  font-size: 0.75em;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.chat-message-text {
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  line-height: 1.5;
+  font-size: 0.9em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-message-user .chat-message-text {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-bottom-right-radius: 2px;
+}
+
+.chat-message-assistant .chat-message-text {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-bottom-left-radius: 2px;
+}
+
+.chat-loading-dots {
+  padding: 0.6rem 0.85rem;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.85em;
+}
+
+.chat-input-area {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.chat-input {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.9em;
+  line-height: 1.4;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  min-height: 2.5em;
+  max-height: 120px;
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+
+.chat-input:disabled {
+  opacity: 0.6;
+}
+
+.chat-send-btn {
+  align-self: flex-end;
+  padding: 0.6rem 1.25rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-weight: 600;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.chat-send-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.chat-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.chat-action-area {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.chat-event-preview {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.85em;
+}
+
+.chat-event-list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.chat-event-list li {
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+}
+
+.chat-event-list li:last-child {
+  border-bottom: none;
+}
+
+.chat-action-area button {
+  align-self: flex-start;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* ── Dashboard Google Calendar auth section ── */
+
+.cortex-auth-section {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+
+.cortex-calendar-connect-desc {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem;
+}
+
+.cortex-connect-google-btn {
+  padding: 0.5rem 1.25rem;
+  border: none;
+  border-radius: 6px;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cortex-auth-status h4 {
+  margin: 0 0 0.5rem;
+}
+
+.cortex-auth-code {
+  font-size: 0.95em;
+  margin-bottom: 0.5rem;
+}
+
+.cortex-auth-code-value {
+  font-family: monospace;
+}
+
+.cortex-auth-link {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
+
+.cortex-schedule-section {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+
+.cortex-schedule-section h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.2rem;
+}
+
+.cortex-schedule-placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 0.5rem 0;
+}
+
+.cortex-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cortex-event-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  font-size: 0.9em;
+}
+
+.cortex-event-time {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.cortex-event-summary {
+  flex: 1;
+  font-weight: 500;
+}
+
+.cortex-event-link {
+  color: var(--text-accent);
+  text-decoration: none;
+  font-size: 0.9em;
+}
+
+.cortex-event-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Dashboard Upcoming Tests section ── */
+
+.cortex-tests-section {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+
+.cortex-tests-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.cortex-tests-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.cortex-tests-placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 0.5rem 0;
+}
+
+.cortex-create-test-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.85em;
+  font-weight: 500;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.cortex-create-test-btn:hover {
+  background: var(--background-primary-alt);
+  color: var(--text-normal);
+  border-color: var(--text-muted);
+}
+
+.cortex-create-test-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.cortex-test-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cortex-test-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border-radius: 6px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  transition: background 0.1s ease;
+  position: relative;
+}
+
+.cortex-test-item:hover {
+  background: var(--background-primary-alt);
+}
+
+.cortex-test-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cortex-test-name {
+  font-weight: 600;
+  font-size: 0.95em;
+  flex: 1;
+}
+
+.cortex-test-date {
+  font-size: 0.8em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.cortex-test-progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cortex-test-progress-bar {
+  height: 8px;
+  background: var(--background-modifier-border);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.cortex-test-progress-fill {
+  height: 100%;
+  background: var(--color-green);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.cortex-test-progress-label {
+  font-size: 0.75em;
+  color: var(--text-muted);
+}
+
+.cortex-test-file-count {
+  font-size: 0.75em;
+  color: var(--text-muted);
+  align-self: flex-end;
+}
+
+.cortex-test-delete-btn {
+  position: absolute;
+  right: 0.5rem;
+  top: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.cortex-test-item:hover .cortex-test-delete-btn {
+  opacity: 1;
+}
+
+.cortex-test-delete-btn:hover {
+  color: var(--color-red);
+  background: var(--background-modifier-error-hover);
+}
+
+.cortex-test-delete-btn svg {
+	width: 14px;
+	height: 14px;
+}
+
+/* ── Expandable Exam Accordion ── */
+.cortex-test-item {
+	cursor: pointer;
+}
+
+.cortex-test-header {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.cortex-expand-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	transition: transform 0.2s ease;
+	color: var(--text-muted);
+	flex-shrink: 0;
+}
+
+.cortex-expand-icon svg {
+	width: 14px;
+	height: 14px;
+}
+
+.cortex-test-item.expanded .cortex-expand-icon {
+	transform: rotate(90deg);
+}
+
+.cortex-test-details {
+	display: none;
+	margin-top: 0.75rem;
+	padding-top: 0.75rem;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.cortex-test-item.expanded .cortex-test-details {
+	display: block;
+}
+
+.cortex-test-notes-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.cortex-test-note-item {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.4rem 0.6rem;
+	border-radius: 4px;
+	background: var(--background-secondary);
+	font-size: 0.85em;
+}
+
+.cortex-test-note-link {
+	flex: 1;
+	color: var(--text-accent);
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.cortex-test-note-link:hover {
+	text-decoration: underline;
+}
+
+.cortex-test-note-score {
+	font-size: 0.8em;
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+
+.cortex-test-note-score.has-score {
+	color: var(--color-green);
+	font-weight: 500;
+}
+
+.cortex-test-note-score.no-score {
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+.cortex-exclude-btn {
+	padding: 2px 8px;
+	font-size: 0.75em;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background: transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+	white-space: nowrap;
+}
+
+.cortex-exclude-btn:hover {
+	background: rgba(138, 43, 226, 0.1);
+	color: #8A2BE2;
+	border-color: #8A2BE2;
+}
+
+.cortex-exclude-btn.excluded {
+	background: rgba(138, 43, 226, 0.15);
+	color: #8A2BE2;
+	border-color: #8A2BE2;
+}
+
+.cortex-test-note-item.excluded {
+	opacity: 0.5;
+}
