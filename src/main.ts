@@ -1,4 +1,4 @@
-import { Plugin, WorkspaceLeaf } from "obsidian";
+import { Plugin, WorkspaceLeaf, Notice } from "obsidian";
 import Commands from "./commands";
 import {
   CortexDashboardView,
@@ -26,6 +26,26 @@ export default class CortexPlugin extends Plugin {
       CORTEX_DASHBOARD_VIEW,
       (leaf) => new CortexDashboardView(leaf, this),
     );
+
+    // Register protocol handler for remote Google OAuth redirect
+    this.registerObsidianProtocolHandler("cortex-auth", async (params) => {
+      if (params.access_token) {
+        this.settings.googleAccessToken = params.access_token;
+        if (params.refresh_token) {
+          this.settings.googleRefreshToken = params.refresh_token;
+        }
+        if (params.expires_in) {
+          this.settings.googleTokenExpiry = Date.now() + parseInt(params.expires_in, 10) * 1000;
+        } else {
+          this.settings.googleTokenExpiry = Date.now() + 3600 * 1000; // default 1 hr
+        }
+        
+        await this.saveData(this.settings);
+        new Notice("Cortex: Google Calendar connected successfully!");
+      } else if (params.error) {
+        new Notice(`Cortex: Failed to connect Google Calendar: ${params.error}`);
+      }
+    });
 
     // Add ribbon icon to open the dashboard
     this.addRibbonIcon("brain", "Open Cortex Dashboard", () => {

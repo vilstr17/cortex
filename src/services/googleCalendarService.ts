@@ -2,7 +2,7 @@ import { requestUrl } from "obsidian";
 import { CortexSettings } from "../settings";
 
 // Google OAuth 2.0 credentials — replace before distributing.
-const GOOGLE_CLIENT_ID = "";
+const GOOGLE_CLIENT_ID = "243033885510-h3dur7p7gm579nk5o2s0prr3pppp1fjb.apps.googleusercontent.com";
 const GOOGLE_CLIENT_SECRET = "";
 
 // ── Public interfaces ──────────────────────────────────────────────
@@ -19,15 +19,6 @@ export interface SimplifiedEvent {
   title: string;
   startTime: string;
   endTime: string;
-}
-
-export interface DeviceAuthResponse {
-  device_code: string;
-  user_code: string;
-  verification_uri: string;
-  verification_url: string;
-  expires_in: number;
-  interval: number;
 }
 
 // ── Internal interfaces ────────────────────────────────────────────
@@ -67,106 +58,6 @@ export class GoogleCalendarService {
   constructor(settings: CortexSettings, saveSettingsCallback: () => Promise<void>) {
     this.settings = settings;
     this.saveSettingsCallback = saveSettingsCallback;
-  }
-
-  // ── Device Authorization Grant ───────────────────────────────────
-
-  /**
-   * Start the device authorization flow.
-   * Returns the device auth response with user_code and verification_uri.
-   */
-  async initiateDeviceAuth(): Promise<DeviceAuthResponse> {
-    console.log("Cortex: Initiating device authorization…");
-
-    const body = new URLSearchParams();
-    body.append("client_id", GOOGLE_CLIENT_ID.trim());
-    body.append(
-      "scope",
-      "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar"
-    );
-
-    console.log("Cortex: Sending Auth Request with body:", body.toString());
-
-    const response = await requestUrl({
-      url: "https://oauth2.googleapis.com/device/code",
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: body.toString(),
-      throw: false,
-    });
-
-    if (response.status !== 200) {
-      console.error("Cortex: Google Auth Error Body:", response.text);
-      throw new Error(`Request failed, status ${response.status}`);
-    }
-
-    const data = response.json as DeviceAuthResponse;
-
-    if (!data.device_code || !data.user_code || !data.verification_url) {
-      console.error("Cortex: Device auth response missing required fields.", data);
-      throw new Error("Google device authorization response is malformed.");
-    }
-
-    // Backfill verification_uri alias for any callers still using the RFC-standard name.
-    return {
-      ...data,
-      verification_uri: data.verification_url,
-    };
-  }
-
-  /**
-   * Poll for the access token after the user has completed device auth.
-   * Returns true when tokens are saved, false if polling timed out.
-   */
-  async pollForTokens(
-    deviceCode: string,
-    interval: number,
-    expiresIn: number,
-  ): Promise<boolean> {
-    console.log("Cortex: Polling for Google token…");
-    const deadline = Date.now() + expiresIn * 1000;
-
-    while (Date.now() < deadline) {
-      await this.sleep(interval * 1000);
-
-      try {
-        const response = await requestUrl({
-          url: this.TOKEN_URL,
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            client_id: GOOGLE_CLIENT_ID,
-            client_secret: GOOGLE_CLIENT_SECRET,
-            device_code: deviceCode,
-            grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-          }).toString(),
-        });
-
-        const data = response.json as TokenResponse;
-
-        if (data.error) {
-          if (data.error === "authorization_pending" || data.error === "slow_down") {
-            continue;
-          }
-          console.error("Cortex: Google token error:", data.error, data.error_description);
-          return false;
-        }
-
-        // Success — save tokens
-        console.log("Cortex: Successfully obtained Google access token.");
-        this.settings.googleAccessToken = data.access_token;
-        this.settings.googleRefreshToken = data.refresh_token ?? this.settings.googleRefreshToken;
-        this.settings.googleTokenExpiry = Date.now() + data.expires_in * 1000;
-        await this.saveSettingsCallback();
-        return true;
-      } catch {
-        // Network error — keep polling
-        continue;
-      }
-    }
-
-    console.warn("Cortex: Google device auth polling timed out.");
-    return false;
   }
 
   // ── Token management ─────────────────────────────────────────────

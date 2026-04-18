@@ -22,6 +22,9 @@ export class CortexDashboardView extends ItemView {
 	private testsContainer!: HTMLElement;
 	private testService!: TestService;
 
+	private currentCalendarDate: Date = new Date();
+	private currentReviewsDate: Date = new Date();
+
 	constructor(leaf: WorkspaceLeaf, plugin: CortexPlugin) {
 		super(leaf);
 		this.plugin = plugin;
@@ -141,74 +144,16 @@ export class CortexDashboardView extends ItemView {
 	}
 
 	private async handleConnectGoogleCalendar(): Promise<void> {
-		const calendarService = new GoogleCalendarService(
-			this.plugin.settings,
-			() => this.plugin.saveData(this.plugin.settings),
-		);
+		const authUrl = "https://cortex-proxy.vercel.app/api/auth";
+		window.open(authUrl);
 
-		try {
-			const authResponse = await calendarService.initiateDeviceAuth();
-
-			// Show the user code and verification URL in the UI
-			this.authContainer.empty();
-
-			const statusEl = this.authContainer.createDiv({ cls: "cortex-auth-status" });
-			statusEl.createEl("h4", { text: "Connect Google Calendar" });
-
-			const hintEl = statusEl.createEl("p", {
-				text: "Click the link below, enter your code, and grant access.",
-				cls: "cortex-auth-hint",
-			});
-			hintEl.style.color = "var(--text-muted)";
-			hintEl.style.fontSize = "0.85em";
-
-			const linkEl = statusEl.createEl("a", {
-				cls: "cortex-auth-link",
-				text: authResponse.verification_url ?? authResponse.verification_uri,
-				href: authResponse.verification_url ?? authResponse.verification_uri,
-			});
-			linkEl.setAttr("target", "_blank");
-			linkEl.style.display = "block";
-			linkEl.style.margin = "8px 0";
-			linkEl.style.wordBreak = "break-all";
-
-			const codeEl = statusEl.createDiv({ cls: "cortex-auth-code" });
-			codeEl.createSpan({ text: "Your code: " });
-			const codeSpan = codeEl.createSpan({
-				cls: "cortex-auth-code-value",
-				text: authResponse.user_code,
-			});
-			codeSpan.style.fontWeight = "bold";
-			codeSpan.style.fontSize = "1.4em";
-			codeSpan.style.letterSpacing = "0.1em";
-
-			const pollingEl = statusEl.createEl("p", {
-				text: "Waiting for authorization…",
-				cls: "cortex-auth-polling",
-			});
-
-			// Start polling for tokens
-			const success = await calendarService.pollForTokens(
-				authResponse.device_code,
-				authResponse.interval,
-				authResponse.expires_in,
-			);
-
-			if (success) {
-				pollingEl.setText("✓ Google Calendar connected!");
-				new Notice("Cortex: Google Calendar connected successfully.");
-				// Re-render to show today's schedule
-				this.renderGoogleCalendarSection();
-			} else {
-				pollingEl.setText("Authorization timed out. Please try again.");
-				pollingEl.style.color = "var(--text-error)";
-				// Revert to connect button after a delay
-				setTimeout(() => this.renderGoogleCalendarSection(), 5000);
-			}
-		} catch (err) {
-			console.error("Cortex: Failed to initiate device auth:", err);
-			new Notice("Cortex: Failed to start Google Calendar authentication.");
-		}
+		this.authContainer.empty();
+		const statusEl = this.authContainer.createDiv({ cls: "cortex-auth-status" });
+		statusEl.createEl("h4", { text: "Waiting for authorization…" });
+		statusEl.createEl("p", {
+			text: "Please complete the login in your web browser. Cortex will automatically refresh once connected.",
+			cls: "cortex-auth-hint",
+		});
 	}
 
 	private async renderTodaysSchedule(): Promise<void> {
@@ -217,24 +162,51 @@ export class CortexDashboardView extends ItemView {
 			() => this.plugin.saveData(this.plugin.settings),
 		);
 
-		const today = new Date();
-		const events = await calendarService.getEventsForDay(today);
+		const targetDate = this.currentCalendarDate;
+		const events = await calendarService.getEventsForDay(targetDate);
 
 		this.scheduleContainer.empty();
 
+		const headerRow = this.scheduleContainer.createDiv({ cls: "cortex-dashboard-header-row" });
+		headerRow.style.display = "flex";
+		headerRow.style.justifyContent = "space-between";
+		headerRow.style.alignItems = "center";
+		headerRow.style.marginBottom = "10px";
+
+		const titleStr = this.isToday(targetDate) 
+			? `Today's Schedule (${events.length})` 
+			: `${targetDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })} Schedule (${events.length})`;
+		
+		const title = headerRow.createEl("h2", { text: titleStr });
+		title.style.margin = "0";
+
+		const navDiv = headerRow.createDiv({ cls: "cortex-date-nav" });
+		navDiv.style.display = "flex";
+		navDiv.style.gap = "8px";
+
+		const prevBtn = navDiv.createEl("button", { cls: "clickable-icon" });
+		setIcon(prevBtn, "chevron-left");
+		prevBtn.addEventListener("click", () => {
+			this.currentCalendarDate = new Date(this.currentCalendarDate);
+			this.currentCalendarDate.setDate(this.currentCalendarDate.getDate() - 1);
+			this.renderTodaysSchedule();
+		});
+
+		const nextBtn = navDiv.createEl("button", { cls: "clickable-icon" });
+		setIcon(nextBtn, "chevron-right");
+		nextBtn.addEventListener("click", () => {
+			this.currentCalendarDate = new Date(this.currentCalendarDate);
+			this.currentCalendarDate.setDate(this.currentCalendarDate.getDate() + 1);
+			this.renderTodaysSchedule();
+		});
+
 		if (events.length === 0) {
-			this.scheduleContainer.createEl("h2", { text: "Today's Schedule" });
 			this.scheduleContainer.createDiv({
 				cls: "cortex-schedule-placeholder",
-				text: "No events scheduled today.",
+				text: "No events scheduled for this day.",
 			});
 			return;
 		}
-
-		// Section header with count
-		this.scheduleContainer.createEl("h2", {
-			text: `Today's Schedule (${events.length})`,
-		});
 
 		const list = this.scheduleContainer.createEl("div", {
 			cls: "cortex-event-list",
@@ -273,19 +245,47 @@ export class CortexDashboardView extends ItemView {
 	// ── Due Reviews ──────────────────────────────────────────────────
 
 	private renderDueReviews(): void {
-		const dueNotes = this.getDueNotes();
+		const targetDate = this.currentReviewsDate;
+		const dueNotes = this.getDueNotes(targetDate);
 		this.reviewsContainer.empty();
 
-		// Section header with count
-		const header = this.reviewsContainer.createEl("h2", {
-			text: `Due Reviews (${dueNotes.length})`,
+		const headerRow = this.reviewsContainer.createDiv({ cls: "cortex-dashboard-header-row" });
+		headerRow.style.display = "flex";
+		headerRow.style.justifyContent = "space-between";
+		headerRow.style.alignItems = "center";
+		headerRow.style.marginBottom = "10px";
+
+		const titleStr = this.isToday(targetDate) 
+			? `Due Reviews (${dueNotes.length})` 
+			: `${targetDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })} Reviews (${dueNotes.length})`;
+
+		const header = headerRow.createEl("h2", { text: titleStr });
+		header.style.margin = "0";
+
+		const navDiv = headerRow.createDiv({ cls: "cortex-date-nav" });
+		navDiv.style.display = "flex";
+		navDiv.style.gap = "8px";
+
+		const prevBtn = navDiv.createEl("button", { cls: "clickable-icon" });
+		setIcon(prevBtn, "chevron-left");
+		prevBtn.addEventListener("click", () => {
+			this.currentReviewsDate = new Date(this.currentReviewsDate);
+			this.currentReviewsDate.setDate(this.currentReviewsDate.getDate() - 1);
+			this.renderDueReviews();
 		});
-		header.style.marginTop = "0";
+
+		const nextBtn = navDiv.createEl("button", { cls: "clickable-icon" });
+		setIcon(nextBtn, "chevron-right");
+		nextBtn.addEventListener("click", () => {
+			this.currentReviewsDate = new Date(this.currentReviewsDate);
+			this.currentReviewsDate.setDate(this.currentReviewsDate.getDate() + 1);
+			this.renderDueReviews();
+		});
 
 		if (dueNotes.length === 0) {
 			this.reviewsContainer.createDiv({
 				cls: "cortex-reviews-placeholder",
-				text: "No reviews due. You're all caught up!",
+				text: "No reviews due for this day.",
 			});
 			return;
 		}
@@ -595,6 +595,13 @@ export class CortexDashboardView extends ItemView {
 
 	// ── Helpers ──────────────────────────────────────────────────────
 
+	private isToday(date: Date): boolean {
+		const today = new Date();
+		return date.getDate() === today.getDate() &&
+			date.getMonth() === today.getMonth() &&
+			date.getFullYear() === today.getFullYear();
+	}
+
 	private formatTime(date: Date): string {
 		return date.toLocaleTimeString(undefined, {
 			hour: "2-digit",
@@ -603,11 +610,11 @@ export class CortexDashboardView extends ItemView {
 	}
 
 	/**
-	 * Scan the vault for markdown files whose next_review date is today or earlier.
+	 * Scan the vault for markdown files whose next_review date is the targetDate or earlier.
 	 * Supports both YYYY-MM-DD and DD.MM.YYYY formats.
 	 */
-	private getDueNotes(): DueNote[] {
-		const today = this.getStartOfToday();
+	private getDueNotes(targetDate: Date): DueNote[] {
+		const targetDateStart = this.startOfDay(targetDate);
 		const dueNotes: DueNote[] = [];
 
 		const files = this.app.vault.getMarkdownFiles();
@@ -622,12 +629,12 @@ export class CortexDashboardView extends ItemView {
 			const parsedDate = this.parseDate(rawDate);
 			if (!parsedDate) continue;
 
-			// Due if next_review is today or in the past
-			if (parsedDate <= today) {
+			// Due if next_review is targetDateStart or in the past
+			if (parsedDate <= targetDateStart) {
 				dueNotes.push({
 					file,
 					nextReview: parsedDate,
-					isOverdue: parsedDate < today,
+					isOverdue: parsedDate < targetDateStart,
 				});
 			}
 		}
