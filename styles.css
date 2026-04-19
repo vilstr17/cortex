@@ -202,6 +202,31 @@
   padding: 1rem 1.25rem;
 }
 
+.cortex-date-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cortex-date-nav-btn {
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  border-radius: 6px;
+  padding: 2px 8px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.cortex-date-nav-btn:hover {
+  background: var(--background-modifier-hover);
+}
+
+.cortex-date-nav-today-btn {
+  font-size: 0.8rem;
+  padding: 2px 10px;
+}
+
 .cortex-reviews-placeholder {
   color: var(--text-muted);
   font-style: italic;

@@ -3,7 +3,7 @@ import { CortexSettings } from "../settings";
 
 // Google OAuth 2.0 credentials — replace before distributing.
 const GOOGLE_CLIENT_ID = "243033885510-h3dur7p7gm579nk5o2s0prr3pppp1fjb.apps.googleusercontent.com";
-const GOOGLE_CLIENT_SECRET = "";
+const GOOGLE_REFRESH_PROXY_BASE_URL = "https://cortex-proxy.vercel.app";
 
 // ── Public interfaces ──────────────────────────────────────────────
 
@@ -65,36 +65,24 @@ export class GoogleCalendarService {
   /**
    * Refresh the access token using the stored refresh token.
    */
-  async refreshAccessToken(): Promise<boolean> {
-    if (!this.settings.googleRefreshToken) return false;
+  async refreshAccessToken(refreshToken: string): Promise<string> {
+    const url = `${GOOGLE_REFRESH_PROXY_BASE_URL}/api/refresh?refresh_token=${encodeURIComponent(refreshToken)}`;
 
-    try {
-      const response = await requestUrl({
-        url: this.TOKEN_URL,
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          client_id: GOOGLE_CLIENT_ID,
-          client_secret: GOOGLE_CLIENT_SECRET,
-          refresh_token: this.settings.googleRefreshToken,
-          grant_type: "refresh_token",
-        }).toString(),
-      });
+    const response = await fetch(url, { method: "GET" });
+    const data = await response.json().catch(() => ({})) as { access_token?: string; error?: string; expires_in?: number };
 
-      const data = response.json as TokenResponse;
-      if (data.error) {
-        console.error("Cortex: Google token refresh failed:", data.error);
-        return false;
-      }
-
-      this.settings.googleAccessToken = data.access_token;
-      this.settings.googleTokenExpiry = Date.now() + data.expires_in * 1000;
-      await this.saveSettingsCallback();
-      return true;
-    } catch (err) {
-      console.error("Cortex: Failed to refresh Google token:", err);
-      return false;
+    if (!response.ok || !data?.access_token) {
+      const message = data?.error || `Proxy refresh failed (${response.status})`;
+      throw new Error(message);
     }
+
+    const newAccessToken = data.access_token;
+
+    this.settings.googleAccessToken = newAccessToken;
+    this.settings.googleTokenExpiry = Date.now() + (data.expires_in ?? 3600) * 1000;
+    await this.saveSettingsCallback();
+
+    return newAccessToken;
   }
 
   /**
@@ -107,7 +95,15 @@ export class GoogleCalendarService {
       return true;
     }
 
-    return this.refreshAccessToken();
+    if (!this.settings.googleRefreshToken) return false;
+
+    try {
+      await this.refreshAccessToken(this.settings.googleRefreshToken);
+      return true;
+    } catch (err) {
+      console.error("Cortex: Failed to refresh Google token via proxy:", err);
+      return false;
+    }
   }
 
   // ── Calendar operations ──────────────────────────────────────────

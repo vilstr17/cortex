@@ -181,19 +181,33 @@ export class CortexDashboardView extends ItemView {
 		title.style.margin = "0";
 
 		const navDiv = headerRow.createDiv({ cls: "cortex-date-nav" });
-		navDiv.style.display = "flex";
-		navDiv.style.gap = "8px";
 
-		const prevBtn = navDiv.createEl("button", { cls: "clickable-icon" });
-		setIcon(prevBtn, "chevron-left");
+		const prevBtn = navDiv.createEl("button", {
+			cls: "cortex-date-nav-btn",
+			text: "←",
+		});
+		prevBtn.setAttr("aria-label", "Previous day");
 		prevBtn.addEventListener("click", () => {
 			this.currentCalendarDate = new Date(this.currentCalendarDate);
 			this.currentCalendarDate.setDate(this.currentCalendarDate.getDate() - 1);
 			this.renderTodaysSchedule();
 		});
 
-		const nextBtn = navDiv.createEl("button", { cls: "clickable-icon" });
-		setIcon(nextBtn, "chevron-right");
+		const todayBtn = navDiv.createEl("button", {
+			cls: "cortex-date-nav-btn cortex-date-nav-today-btn",
+			text: "Today",
+		});
+		todayBtn.setAttr("aria-label", "Go to today");
+		todayBtn.addEventListener("click", () => {
+			this.currentCalendarDate = this.getStartOfToday();
+			this.renderTodaysSchedule();
+		});
+
+		const nextBtn = navDiv.createEl("button", {
+			cls: "cortex-date-nav-btn",
+			text: "→",
+		});
+		nextBtn.setAttr("aria-label", "Next day");
 		nextBtn.addEventListener("click", () => {
 			this.currentCalendarDate = new Date(this.currentCalendarDate);
 			this.currentCalendarDate.setDate(this.currentCalendarDate.getDate() + 1);
@@ -263,19 +277,33 @@ export class CortexDashboardView extends ItemView {
 		header.style.margin = "0";
 
 		const navDiv = headerRow.createDiv({ cls: "cortex-date-nav" });
-		navDiv.style.display = "flex";
-		navDiv.style.gap = "8px";
 
-		const prevBtn = navDiv.createEl("button", { cls: "clickable-icon" });
-		setIcon(prevBtn, "chevron-left");
+		const prevBtn = navDiv.createEl("button", {
+			cls: "cortex-date-nav-btn",
+			text: "←",
+		});
+		prevBtn.setAttr("aria-label", "Previous day");
 		prevBtn.addEventListener("click", () => {
 			this.currentReviewsDate = new Date(this.currentReviewsDate);
 			this.currentReviewsDate.setDate(this.currentReviewsDate.getDate() - 1);
 			this.renderDueReviews();
 		});
 
-		const nextBtn = navDiv.createEl("button", { cls: "clickable-icon" });
-		setIcon(nextBtn, "chevron-right");
+		const todayBtn = navDiv.createEl("button", {
+			cls: "cortex-date-nav-btn cortex-date-nav-today-btn",
+			text: "Today",
+		});
+		todayBtn.setAttr("aria-label", "Go to today");
+		todayBtn.addEventListener("click", () => {
+			this.currentReviewsDate = this.getStartOfToday();
+			this.renderDueReviews();
+		});
+
+		const nextBtn = navDiv.createEl("button", {
+			cls: "cortex-date-nav-btn",
+			text: "→",
+		});
+		nextBtn.setAttr("aria-label", "Next day");
 		nextBtn.addEventListener("click", () => {
 			this.currentReviewsDate = new Date(this.currentReviewsDate);
 			this.currentReviewsDate.setDate(this.currentReviewsDate.getDate() + 1);
