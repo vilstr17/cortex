@@ -1,11 +1,9 @@
 import { requestUrl } from "obsidian";
 import { CortexSettings } from "../settings";
 
-// Google OAuth 2.0 credentials — replace before distributing.
 const GOOGLE_CLIENT_ID = "243033885510-h3dur7p7gm579nk5o2s0prr3pppp1fjb.apps.googleusercontent.com";
 const GOOGLE_REFRESH_PROXY_BASE_URL = "https://cortex-proxy.vercel.app";
-
-// ── Public interfaces ──────────────────────────────────────────────
+const PREEMPTIVE_REFRESH_MS = 5 * 60 * 1000; // refresh 5 min before expiry
 
 export interface DisplayCalendarEvent {
   id: string;
@@ -21,17 +19,6 @@ export interface SimplifiedEvent {
   endTime: string;
 }
 
-// ── Internal interfaces ────────────────────────────────────────────
-
-interface TokenResponse {
-  access_token: string;
-  refresh_token?: string;
-  expires_in: number;
-  token_type: string;
-  error?: string;
-  error_description?: string;
-}
-
 interface CalendarEvent {
   id: string;
   summary: string;
@@ -40,84 +27,166 @@ interface CalendarEvent {
   htmlLink?: string;
 }
 
-/**
- * Google Calendar service using OAuth 2.0 Device Authorization Grant.
- * Works in browser / Obsidian environments without a local redirect server.
- */
 export class GoogleCalendarService {
-  private readonly TOKEN_URL = "https://oauth2.googleapis.com/token";
-  private readonly DEVICE_AUTH_URL = "https://oauth2.googleapis.com/device/code";
   private readonly CALENDAR_API = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
-  private readonly CALENDAR_EVENTS_SCOPES = "https://www.googleapis.com/auth/calendar.events";
-  private readonly CALENDAR_READONLY_SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
-  private readonly COMBINED_SCOPES = `${this.CALENDAR_EVENTS_SCOPES} ${this.CALENDAR_READONLY_SCOPE}`;
 
   private settings: CortexSettings;
   private saveSettingsCallback: () => Promise<void>;
+  private refreshMutex: Promise<string> | null = null;
+  private preemptiveTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(settings: CortexSettings, saveSettingsCallback: () => Promise<void>) {
     this.settings = settings;
     this.saveSettingsCallback = saveSettingsCallback;
+    this.startPreemptiveRefresh();
+  }
+
+  destroy(): void {
+    if (this.preemptiveTimer) {
+      clearInterval(this.preemptiveTimer);
+      this.preemptiveTimer = null;
+    }
   }
 
   // ── Token management ─────────────────────────────────────────────
 
   /**
-   * Refresh the access token using the stored refresh token.
+   * Single serialized refresh. Concurrent callers wait on the same promise.
+   * Handles invalid_grant (permanent) vs transient errors with retry.
    */
-  async refreshAccessToken(refreshToken: string): Promise<string> {
-    const url = `${GOOGLE_REFRESH_PROXY_BASE_URL}/api/refresh?refresh_token=${encodeURIComponent(refreshToken)}`;
+  private async serializedRefresh(): Promise<string> {
+    if (this.refreshMutex) return this.refreshMutex;
 
-    const response = await fetch(url, { method: "GET" });
-    const data = await response.json().catch(() => ({})) as { access_token?: string; error?: string; expires_in?: number };
+    const doRefresh = async (retryCount = 0): Promise<string> => {
+      const rt = this.settings.googleRefreshToken;
+      if (!rt) throw new Error("No refresh token");
 
-    if (!response.ok || !data?.access_token) {
-      const message = data?.error || `Proxy refresh failed (${response.status})`;
-      throw new Error(message);
-    }
+      let lastError: Error | null = null;
 
-    const newAccessToken = data.access_token;
+      for (let attempt = 0; attempt <= retryCount; attempt++) {
+        if (attempt > 0) {
+          await this.sleep(Math.pow(2, attempt) * 1000);
+        }
 
-    this.settings.googleAccessToken = newAccessToken;
-    this.settings.googleTokenExpiry = Date.now() + (data.expires_in ?? 3600) * 1000;
-    await this.saveSettingsCallback();
+        try {
+          const url = `${GOOGLE_REFRESH_PROXY_BASE_URL}/api/refresh?refresh_token=${encodeURIComponent(rt)}`;
+          const response = await requestUrl({ url, method: "GET" });
+          const data = response.json as {
+            access_token?: string;
+            refresh_token?: string;
+            error?: string;
+            expires_in?: number;
+          };
 
-    return newAccessToken;
+          if (!data?.access_token) {
+            throw new Error(data?.error || "Proxy refresh failed");
+          }
+
+          this.settings.googleAccessToken = data.access_token;
+          this.settings.googleTokenExpiry = Date.now() + (data.expires_in ?? 3600) * 1000;
+
+          if (data.refresh_token) {
+            this.settings.googleRefreshToken = data.refresh_token;
+          }
+
+          await this.saveSettingsCallback();
+          return data.access_token;
+        } catch (err) {
+          lastError = err instanceof Error ? err : new Error(String(err));
+          const msg = lastError.message;
+
+          if (msg === "invalid_grant" || msg.includes("invalid_grant")) {
+            break; // permanent — don't retry
+          }
+
+          if (msg.includes("network") || msg.includes("timeout") || msg.includes("fetch")) {
+            continue; // transient — retry
+          }
+
+          break; // unknown error — don't retry
+        }
+      }
+
+      throw lastError ?? new Error("Token refresh failed");
+    };
+
+    this.refreshMutex = doRefresh(3).finally(() => { this.refreshMutex = null; });
+    return this.refreshMutex;
   }
 
-  /**
-   * Ensure we have a valid, non-expired access token. Refreshes if needed.
-   */
   private async ensureValidToken(): Promise<boolean> {
     if (!this.settings.googleAccessToken) return false;
 
-    if (Date.now() < this.settings.googleTokenExpiry - 60_000) {
+    if (Date.now() < this.settings.googleTokenExpiry - PREEMPTIVE_REFRESH_MS) {
       return true;
     }
 
-    if (!this.settings.googleRefreshToken) return false;
+    if (!this.settings.googleRefreshToken) {
+      console.error("[cortex] No refresh token — reconnect Google Calendar");
+      return false;
+    }
 
     try {
-      await this.refreshAccessToken(this.settings.googleRefreshToken);
+      await this.serializedRefresh();
       return true;
     } catch (err) {
-      console.error("Cortex: Failed to refresh Google token via proxy:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[cortex] Token refresh failed:", msg);
+
+      if (msg === "invalid_grant" || msg.includes("invalid_grant")) {
+        console.warn("[cortex] Refresh token revoked — disconnecting Google Calendar");
+        this.settings.googleAccessToken = "";
+        this.settings.googleRefreshToken = "";
+        this.settings.googleTokenExpiry = 0;
+        await this.saveSettingsCallback();
+      }
+
       return false;
     }
   }
 
+  // ── Preemptive background refresh ─────────────────────────────────
+
+  private startPreemptiveRefresh(): void {
+    if (this.preemptiveTimer) return;
+
+    this.preemptiveTimer = setInterval(async () => {
+      if (!this.settings.googleAccessToken || !this.settings.googleRefreshToken) return;
+
+      const msUntilExpiry = this.settings.googleTokenExpiry - Date.now();
+      if (msUntilExpiry < PREEMPTIVE_REFRESH_MS && msUntilExpiry > -60_000) {
+        try {
+          await this.serializedRefresh();
+          console.log("[cortex] Preemptive token refresh succeeded");
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn("[cortex] Preemptive token refresh failed:", msg);
+          if (msg === "invalid_grant" || msg.includes("invalid_grant")) {
+            this.settings.googleAccessToken = "";
+            this.settings.googleRefreshToken = "";
+            this.settings.googleTokenExpiry = 0;
+            await this.saveSettingsCallback();
+          }
+        }
+      }
+    }, 60_000);
+  }
+
   // ── Calendar operations ──────────────────────────────────────────
 
-  /**
-   * Create a new event in the primary calendar.
-   */
   async createEvent(options: {
     summary: string;
     description?: string;
-    startTime: string; // ISO 8601 datetime string
-    endTime: string; // ISO 8601 datetime string
-    timeZone?: string; // IANA timezone name (e.g., Europe/Prague)
+    startTime: string;
+    endTime: string;
+    timeZone?: string;
   }): Promise<boolean> {
+    const hasToken = await this.ensureValidToken();
+    if (!hasToken) {
+      console.error("Cortex: Cannot create event — no valid Google access token.");
+      return false;
+    }
+
     const timeZone = options.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
     const eventData = {
       summary: options.summary,
@@ -127,10 +196,9 @@ export class GoogleCalendarService {
     };
 
     console.log("Cortex: Creating event with payload:", JSON.stringify(eventData));
-    console.log("Cortex: Access token present:", !!this.settings.googleAccessToken);
 
     const response = await requestUrl({
-      url: "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+      url: this.CALENDAR_API,
       method: "POST",
       headers: {
         Authorization: "Bearer " + this.settings.googleAccessToken,
@@ -141,19 +209,14 @@ export class GoogleCalendarService {
     });
 
     if (response.status !== 200) {
-      console.error("Cortex: Failed to create event. Google response:", response.text);
-      console.error("Cortex: Response status:", response.status);
+      console.error("Cortex: Failed to create event. Status:", response.status, response.text);
       throw new Error("Failed to create event");
-    } else {
-      console.log("Cortex: Event created successfully!");
-      console.log("Cortex: Google response:", response.text);
-      return true;
     }
+
+    console.log("Cortex: Event created successfully!");
+    return true;
   }
 
-  /**
-   * Fetch calendar events for a specific day (primary calendar).
-   */
   async getEventsForDay(day: Date): Promise<DisplayCalendarEvent[]> {
     const hasToken = await this.ensureValidToken();
     if (!hasToken) return [];
@@ -170,8 +233,6 @@ export class GoogleCalendarService {
       orderBy: "startTime",
     });
 
-    console.log(`Cortex: Fetching events for ${startOfDay.toISOString()} → ${endOfDay.toISOString()}`);
-
     try {
       const response = await requestUrl({
         url: `${this.CALENDAR_API}?${params.toString()}`,
@@ -183,7 +244,6 @@ export class GoogleCalendarService {
 
       const data = response.json;
       const items: CalendarEvent[] = data?.items ?? [];
-      console.log(`Cortex: Found ${items.length} event(s) for the day.`);
 
       return items
         .map((item): DisplayCalendarEvent | null => {
@@ -206,9 +266,6 @@ export class GoogleCalendarService {
     }
   }
 
-  /**
-   * Delete an event by its Google Calendar event ID.
-   */
   async deleteEvent(eventId: string): Promise<boolean> {
     const hasToken = await this.ensureValidToken();
     if (!hasToken) {
@@ -216,7 +273,7 @@ export class GoogleCalendarService {
       return false;
     }
 
-    console.log(`Cortex: Deleting event ${eventId}…`);
+    console.log(`Cortex: Deleting event ${eventId}...`);
 
     const response = await requestUrl({
       url: `${this.CALENDAR_API}/${encodeURIComponent(eventId)}`,
@@ -236,10 +293,6 @@ export class GoogleCalendarService {
     return false;
   }
 
-  /**
-   * Delete all events for a specific day.
-   * Returns { attempted, succeeded, failed }.
-   */
   async deleteEventsForDay(day: Date): Promise<{ attempted: number; succeeded: number; failed: number }> {
     const events = await this.getEventsForDay(day);
 
@@ -255,27 +308,23 @@ export class GoogleCalendarService {
     return { attempted: events.length, succeeded, failed };
   }
 
-  /**
-   * Update an existing event by its Google Calendar event ID.
-   * Only the fields provided in `options` will be updated; others remain unchanged.
-   */
   async updateEvent(eventId: string, options: {
     summary?: string;
     description?: string;
-    startTime?: string; // ISO 8601 datetime string
-    endTime?: string; // ISO 8601 datetime string
-    timeZone?: string; // IANA timezone name (e.g., Europe/Prague)
+    startTime?: string;
+    endTime?: string;
+    timeZone?: string;
   }): Promise<boolean> {
     const hasToken = await this.ensureValidToken();
     if (!hasToken) {
       console.error("Cortex: Cannot update event — no valid Google access token.");
       return false;
     }
-  
+
     const timeZone = options.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-  
+
     console.log(`Cortex: Updating event ${eventId} with:`, options);
-  
+
     const payload: Record<string, unknown> = {};
     if (options.summary !== undefined) payload.summary = options.summary;
     if (options.description !== undefined) payload.description = options.description;
@@ -301,8 +350,6 @@ export class GoogleCalendarService {
     console.error(`Cortex: Failed to update event ${eventId}. Status: ${response.status}`, response.text);
     return false;
   }
-
-  // ── Helpers ──────────────────────────────────────────────────────
 
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));

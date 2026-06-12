@@ -1,4 +1,5 @@
 import { App, Modal, Setting, SliderComponent } from "obsidian";
+import { ReviewScoreInfoModal } from "./ReviewScoreInfoModal";
 
 export class ReviewScoreModal extends Modal {
   private onSubmit: (score: number) => void;
@@ -23,7 +24,21 @@ export class ReviewScoreModal extends Modal {
     const sliderSetting = new Setting(contentEl)
       .setName("Review Score")
       .setDesc('Left (1) = "Don\'t know it at all"  ·  Right (5) = "Know it perfectly"');
+    sliderSetting.settingEl.addClass("cortex-review-score-setting");
     sliderSetting.settingEl.style.display = "block";
+
+    const scoreInfoButton = sliderSetting.nameEl.createEl("button", {
+      cls: "cortex-score-info-btn",
+      text: "i",
+      attr: {
+        type: "button",
+        "aria-label": "Show review score explanation",
+        title: "What do scores 1–5 mean?",
+      },
+    });
+    scoreInfoButton.addEventListener("click", () => {
+      new ReviewScoreInfoModal(this.app).open();
+    });
 
     // Score display label
     this.scoreLabel = sliderSetting.controlEl.createSpan({
@@ -53,8 +68,6 @@ export class ReviewScoreModal extends Modal {
 
     // Scale legend — evenly spaced labels directly under the slider
     const legend = contentEl.createDiv({ cls: "cortex-score-legend" });
-    legend.style.cssText =
-      "display: flex; justify-content: space-between; padding: 0 4px; color: var(--text-muted); font-size: 0.8em; margin-bottom: 1.5em;";
     legend.createSpan({ text: "1 — Don't know it" });
     legend.createSpan({ text: "3 — Partially" });
     legend.createSpan({ text: "5 — Know it perfectly" });

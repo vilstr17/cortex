@@ -16,65 +16,49 @@ export interface NextReviewResult {
  * @param currentInterval - The current interval in days (0 means new/never reviewed)
  * @param quality - Quality score from 1–5
  * @param examDateStr - Optional exam date in YYYY-MM-DD format
+ * @param maxIntervalDays - Optional user-defined max interval in days (null/undefined = no custom cap)
  * @returns Object with nextInterval (days) and nextReviewDate (YYYY-MM-DD)
  */
 export function calculateNextReview(
   currentInterval: number,
   quality: number,
   examDateStr?: string,
+  maxIntervalDays?: number | null,
 ): NextReviewResult {
   const baseInterval = currentInterval <= 0 ? 1 : currentInterval;
   let nextInterval: number;
 
   if (quality <= 2) {
-    // Forgot or barely remembered — reset
     nextInterval = 1;
   } else if (quality === 3) {
-    // Partial recall — hold steady
     nextInterval = baseInterval;
   } else if (quality === 4) {
-    // Good recall — double the interval
     nextInterval = Math.round(baseInterval * 2.0);
   } else {
-    // Perfect recall — triple the interval
     nextInterval = Math.round(baseInterval * 3.0);
   }
 
-  // Clamp to a reasonable range
   nextInterval = Math.max(1, Math.min(nextInterval, 365));
 
+  if (typeof maxIntervalDays === "number" && Number.isFinite(maxIntervalDays)) {
+    const sanitizedUserMax = Math.max(1, Math.floor(maxIntervalDays));
+    nextInterval = Math.min(nextInterval, sanitizedUserMax);
+  }
+
   const today = new Date();
-  const todayStr = today.toISOString().split("T")[0];
 
   const nextReviewDateObj = new Date(today);
   nextReviewDateObj.setDate(nextReviewDateObj.getDate() + nextInterval);
   let nextReviewDate = nextReviewDateObj.toISOString().split("T")[0];
 
-  // ── Exam date constraint ─────────────────────────────────────────
   if (examDateStr) {
     const examDate = new Date(examDateStr);
-    const examDateOnly = examDate.toISOString().split("T")[0];
-
     const timeUntilExam = examDate.getTime() - today.getTime();
     const daysUntilExam = Math.ceil(timeUntilExam / (1000 * 60 * 60 * 24));
 
     if (daysUntilExam <= 0) {
-      // Exam is today or already passed — review today
-      nextInterval = 0;
-      nextReviewDate = todayStr;
-    } else if (daysUntilExam === 1) {
-      // Exam tomorrow — review today
-      nextInterval = 0;
-      nextReviewDate = todayStr;
-    } else {
-      // SR interval MUST NOT exceed 50% of the remaining time to the exam
-      const maxInterval = Math.max(1, Math.floor(daysUntilExam / 2));
-      if (nextInterval > maxInterval) {
-        nextInterval = maxInterval;
-        const compressedDate = new Date(today);
-        compressedDate.setDate(compressedDate.getDate() + nextInterval);
-        nextReviewDate = compressedDate.toISOString().split("T")[0];
-      }
+      nextInterval = 9999;
+      nextReviewDate = "9999-12-31";
     }
   }
 

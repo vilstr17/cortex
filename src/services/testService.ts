@@ -38,6 +38,14 @@ export class TestService {
     await this.plugin.saveData(this.plugin.settings);
   }
 
+  async toggleDone(id: string): Promise<CortexTest | undefined> {
+    const test = this.getTestById(id);
+    if (!test) return undefined;
+    test.done = !test.done;
+    await this.plugin.saveData(this.plugin.settings);
+    return test;
+  }
+
   async updateTest(id: string, updates: Partial<Pick<CortexTest, "name" | "date">>): Promise<CortexTest | undefined> {
     const test = this.getTestById(id);
     if (!test) return undefined;

@@ -401,7 +401,6 @@ export class GeminiService {
     
     const wakeUp = this.settings.wakeUpTime || "07:00";
     const bedTime = this.settings.bedTime || "23:00";
-    const meals = this.settings.mealTimes || "Lunch 12:00-13:00";
 
     parts.push(
       "",
@@ -410,10 +409,9 @@ export class GeminiService {
       "═══════════════════════════════════════════",
       `Wake Up Time: ${wakeUp}`,
       `Bed Time: ${bedTime}`,
-      `Meal Times: ${meals}`,
       "",
       "Your primary goal is to optimize the user's learning efficiency, not just fill slots.",
-      "Respect the Daily Routine: Never schedule study during sleep or meal times.",
+      "Respect the Daily Routine: Never schedule study during sleep hours.",
       "Block Limits: Never schedule continuous study blocks longer than 2 hours. Automatically insert a 15-minute 'Break' event after any long block.",
       "Prioritization: Look at the lastScore of pending reviews. Schedule the lowest scores during the user's peak morning hours. High scores can be reviewed later in the day.",
       "Calendar Awareness: You MUST check existing calendar events and only place new study sessions in genuine free gaps."
@@ -488,17 +486,16 @@ export class GeminiService {
     } else {
       const wakeUp = this.settings.wakeUpTime || "07:00";
       const bedTime = this.settings.bedTime || "23:00";
-      const meals = this.settings.mealTimes || "Lunch 12:00-13:00";
 
       systemPrompt =
         this.getTimeContext() +
         "\n\nYou operate in the timezone specified in the context. Always provide and accept times in local format. Do not convert to UTC." +
         "\n\nYou are an intelligent personal assistant integrated into Obsidian. " +
         "Your goal is to help the user manage their knowledge and schedule. " +
-        `\n\nDaily Routine:\nWake Up Time: ${wakeUp}\nBed Time: ${bedTime}\nMeal Times: ${meals}` +
+        `\n\nDaily Routine:\nWake Up Time: ${wakeUp}\nBed Time: ${bedTime}` +
         "\n\nScheduling Rules:\n" +
         "- Your primary goal is to optimize the user's learning efficiency, not just fill slots.\n" +
-        "- Respect the Daily Routine: Never schedule study during sleep or meal times.\n" +
+        "- Respect the Daily Routine: Never schedule study during sleep hours.\n" +
         "- Block Limits: Never schedule continuous study blocks longer than 2 hours. Automatically insert a 15-minute 'Break' event after any long block.\n" +
         "- Prioritization: Look at the lastScore of pending reviews. Schedule the lowest scores during the user's peak morning hours. High scores can be reviewed later in the day.\n" +
         "- Calendar Awareness: You MUST check existing calendar events and only place new study sessions in genuine free gaps.\n" +

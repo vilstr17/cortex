@@ -2,6 +2,7 @@ import { TFile } from "obsidian";
 import CortexPlugin from "./main";
 import { ReviewScoreModal } from "./modals/ReviewScoreModal";
 import { AddToTestModal } from "./modals/AddToTestModal";
+import { MarkTestDoneModal } from "./modals/MarkTestDoneModal";
 import { calculateNextReview } from "./utils/srsLogic";
 import { cortexNotice } from "./utils/notice";
 
@@ -26,10 +27,12 @@ export default class Commands {
         if (activeFile && activeFile.extension === "md") {
           new ReviewScoreModal(plugin.app, async (score: number) => {
             try {
-              await applyReviewToFrontmatter(activeFile, score, plugin.app);
-              cortexNotice(
-                `Logged review score: ${score} for ${activeFile.name}`
-              );
+              const result = await applyReviewToFrontmatter(activeFile, score, plugin);
+              if (result.lastReviewBeforeExam) {
+                cortexNotice(`Crush it! Last review done for ${activeFile.name} — good luck on the exam!`);
+              } else {
+                cortexNotice(`Logged review score: ${score} for ${activeFile.name}`);
+              }
             } catch (error) {
               console.error("Cortex: Error logging review:", error);
               cortexNotice(`Failed to log review for ${activeFile.name}`);
@@ -52,7 +55,19 @@ export default class Commands {
         }
       },
     });
+
+    plugin.addCommand({
+      id: "mark-test-done",
+      name: "Mark test as done",
+      callback: () => {
+        new MarkTestDoneModal(plugin.app, plugin).open();
+      },
+    });
   }
+}
+
+interface ReviewResult {
+  lastReviewBeforeExam: boolean;
 }
 
 /**
@@ -67,15 +82,25 @@ export default class Commands {
  * The confidence field is always set to the provided score value.
  * If a note has never been reviewed, it will have no confidence field,
  * which the progress calculator treats as score = 0.
+ *
+ * Returns a ReviewResult indicating whether this was the last review before an exam.
  */
 async function applyReviewToFrontmatter(
   file: TFile,
   score: number,
-  app: CortexPlugin["app"]
-): Promise<void> {
+  plugin: CortexPlugin
+): Promise<ReviewResult> {
+  const app = plugin.app;
   // Let's first calculate the basic next review date
   let nextInterval = 0;
   let nextReviewDate = "";
+  let lastReviewBeforeExam = false;
+
+  const rawMaxInterval = plugin.settings.maxReviewIntervalDays;
+  const maxReviewIntervalDays =
+    typeof rawMaxInterval === "number" && Number.isFinite(rawMaxInterval)
+      ? Math.max(1, Math.min(365, Math.floor(rawMaxInterval)))
+      : null;
 
   await app.fileManager.processFrontMatter(file, (frontmatter) => {
     // Ensure exam_date exists in frontmatter so Obsidian Properties UI shows it.
@@ -98,31 +123,39 @@ async function applyReviewToFrontmatter(
         ? frontmatter.exam_date
         : undefined;
 
+    // Check if this is the last review before the exam
+    if (examDateStr) {
+      const examDate = new Date(examDateStr);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (examDate.getTime() <= today.getTime()) {
+        lastReviewBeforeExam = true;
+      }
+    }
+
     // Calculate next review using the SRS algorithm
     const srResult = calculateNextReview(
       currentInterval,
       score,
-      examDateStr
+      examDateStr,
+      maxReviewIntervalDays,
     );
     nextInterval = srResult.nextInterval;
     nextReviewDate = srResult.nextReviewDate;
   });
 
   // Check for daily overflow limits
-  const maxPerDay = 5; // default max 5
-  let hasOverflow = false;
+  const configuredMax = plugin.settings.dailyLimitMax;
+  const maxPerDay = configuredMax !== null ? Math.max(1, Math.min(20, configuredMax)) : null;
 
-  const getNotesScheduledFor = (dateStr: string, examStr?: string) => {
+  const getNotesScheduledFor = (dateStr: string) => {
     let count = 0;
     const files = app.vault.getMarkdownFiles();
     for (const f of files) {
       if (f.path === file.path) continue; // Skip the currently updated file
       const cache = app.metadataCache.getFileCache(f);
       if (cache?.frontmatter) {
-        if (
-          cache.frontmatter.next_review === dateStr &&
-          cache.frontmatter.exam_date === examStr
-        ) {
+        if (cache.frontmatter.next_review === dateStr) {
           count++;
         }
       }
@@ -130,28 +163,15 @@ async function applyReviewToFrontmatter(
     return count;
   };
 
-  // We only check limits if it has an exam date (based on "from a single exam")
-  let currentExamDateStr: string | undefined;
-  const currentCache = app.metadataCache.getFileCache(file);
-  if (currentCache?.frontmatter?.exam_date) {
-    currentExamDateStr = currentCache.frontmatter.exam_date;
-  }
-
-  if (currentExamDateStr) {
+  if (maxPerDay !== null) {
     let overflowDate = new Date(nextReviewDate);
-    const examDateObj = new Date(currentExamDateStr);
 
-    while (getNotesScheduledFor(nextReviewDate, currentExamDateStr) >= maxPerDay) {
+    while (getNotesScheduledFor(nextReviewDate) >= maxPerDay) {
       // overflow to the next day
       overflowDate.setDate(overflowDate.getDate() + 1);
       const newStr = overflowDate.toISOString().split("T")[0];
-      // Only overflow if it doesn't push past the exam date
-      if (newStr > currentExamDateStr) {
-        break; // can't overflow past exam, keep it as is
-      }
       nextReviewDate = newStr;
       nextInterval++;
-      hasOverflow = true;
     }
   }
 
@@ -161,4 +181,6 @@ async function applyReviewToFrontmatter(
     frontmatter.interval = nextInterval;
     frontmatter.next_review = nextReviewDate;
   });
+
+  return { lastReviewBeforeExam };
 }

@@ -18,6 +18,9 @@ main.js
 # obsidian
 data.json
 
+# Downloaded face-detection assets (wasm runtime + model cache)
+.assets/
+
 dist/
 
 # Exclude macOS Finder (System Explorer) View States

@@ -1,11 +1,13 @@
-import { App, Notice, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, Platform, PluginSettingTab, Setting } from "obsidian";
 import CortexPlugin from "./main";
+import type { BleCalibration } from "./ble/types";
 
 export interface CortexTest {
   id: string;
   name: string;
   date: string; // ISO date string
   filePaths: string[];
+  done?: boolean;
 }
 
 export interface CortexSettings {
@@ -19,7 +21,16 @@ export interface CortexSettings {
   tests: CortexTest[];
   wakeUpTime: string;
   bedTime: string;
-  mealTimes: string;
+  dailyLimitMax: number | null;
+  maxReviewIntervalDays: number | null;
+  bleEnabled: boolean;
+  bleDeviceName: string;
+  bleCalibrationData: BleCalibration | null;
+  faceEnabled: boolean;
+  faceSampleIntervalSec: number;
+  faceBlinkThreshold: number;
+  facePitchThreshold: number;
+  faceGracePeriodSec: number;
 }
 
 export const DEFAULT_SETTINGS: CortexSettings = {
@@ -33,7 +44,16 @@ export const DEFAULT_SETTINGS: CortexSettings = {
   tests: [],
   wakeUpTime: "07:00",
   bedTime: "23:00",
-  mealTimes: "Lunch 12:00-13:00",
+  dailyLimitMax: null,
+  maxReviewIntervalDays: null,
+  bleEnabled: false,
+  bleDeviceName: "",
+  bleCalibrationData: null,
+  faceEnabled: false,
+  faceSampleIntervalSec: 10,
+  faceBlinkThreshold: 0.25,
+  facePitchThreshold: -0.08,
+  faceGracePeriodSec: 2,
 };
 
 export class CortexSettingTab extends PluginSettingTab {
@@ -155,15 +175,70 @@ export class CortexSettingTab extends PluginSettingTab {
           })
       );
       
+    // Review load balancing section
+    containerEl.createEl("h4", { text: "Review scheduling" });
+
+    const clampDailyLimit = (value: number): number => {
+      return Math.max(1, Math.min(20, value));
+    };
+
     new Setting(containerEl)
-      .setName("Meal Times")
-      .setDesc("Your usual meal times (e.g., Lunch 12:00-13:00)")
+      .setName("Max reviews per day")
+      .setDesc("Maximum scheduled reviews for one day (1-20). Leave empty for no limit.")
       .addText((text) =>
         text
-          .setPlaceholder("Lunch 12:00-13:00")
-          .setValue(this.plugin.settings.mealTimes)
+          .setPlaceholder("No limit")
+          .setValue(
+            this.plugin.settings.dailyLimitMax === null
+              ? ""
+              : String(this.plugin.settings.dailyLimitMax)
+          )
           .onChange(async (value) => {
-            this.plugin.settings.mealTimes = value;
+            const trimmed = value.trim();
+            if (trimmed === "") {
+              this.plugin.settings.dailyLimitMax = null;
+              await this.plugin.saveData(this.plugin.settings);
+              return;
+            }
+
+            const parsed = Number.parseInt(trimmed, 10);
+            if (Number.isNaN(parsed)) return;
+
+            this.plugin.settings.dailyLimitMax = clampDailyLimit(parsed);
+            await this.plugin.saveData(this.plugin.settings);
+          })
+      );
+
+    const clampMaxReviewInterval = (value: number): number => {
+      return Math.max(1, Math.min(365, value));
+    };
+
+    new Setting(containerEl)
+      .setName("Maximum interval between reviews (days)")
+      .setDesc("Optional. Leave empty for no maximum.")
+      .addText((text) =>
+        text
+          .setPlaceholder("empty = no limit")
+          .setValue(
+            this.plugin.settings.maxReviewIntervalDays === null
+              ? ""
+              : String(this.plugin.settings.maxReviewIntervalDays)
+          )
+          .onChange(async (value) => {
+            const trimmed = value.trim();
+            if (trimmed === "") {
+              this.plugin.settings.maxReviewIntervalDays = null;
+              await this.plugin.saveData(this.plugin.settings);
+              return;
+            }
+
+            const parsed = Number.parseInt(trimmed, 10);
+            if (Number.isNaN(parsed)) {
+              return;
+            }
+
+            this.plugin.settings.maxReviewIntervalDays =
+              clampMaxReviewInterval(parsed);
             await this.plugin.saveData(this.plugin.settings);
           })
       );
@@ -190,5 +265,124 @@ export class CortexSettingTab extends PluginSettingTab {
             this.display();
           })
       );
+
+    if (!Platform.isMobile) {
+    containerEl.createEl("h3", { text: "Focus Detection" });
+    containerEl.createEl("p", {
+      text: "Two independent detection methods that warn you when you get distracted: Bluetooth proximity (phone in hand) and webcam face tracking. Each can be enabled and configured separately; both run locally — nothing is recorded or sent anywhere.",
+    });
+
+    containerEl.createEl("h4", { text: "Phone detection (Bluetooth)" });
+
+    new Setting(containerEl)
+      .setName("Enable phone detection")
+      .setDesc("Detect when your phone is in your hand using its Bluetooth signal strength. Requires a selected and calibrated device below.")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.detection?.isBleOn() ?? false)
+          .onChange(async () => {
+            await this.plugin.detection?.toggleBle();
+            // Re-render so the toggle reflects the real state if start failed
+            this.display();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Bluetooth device")
+      .setDesc(this.plugin.settings.bleDeviceName
+        ? `Currently: ${this.plugin.settings.bleDeviceName}`
+        : "No device selected. Scan for nearby Bluetooth devices and pick your phone.")
+      .addButton((button) =>
+        button
+          .setButtonText(this.plugin.settings.bleDeviceName ? "Change device" : "Select device")
+          .setCta()
+          .onClick(() => {
+            this.plugin.openBleDevicePicker();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Calibrate")
+      .setDesc("Calibrate by holding your phone in hand. Cortex will learn the Bluetooth signal and detect when you're using it.")
+      .addButton((button) =>
+        button
+          .setButtonText("Calibrate")
+          .setCta()
+          .onClick(() => {
+            this.plugin.openBleCalibration();
+          })
+      );
+
+    containerEl.createEl("h4", { text: "Face tracking (webcam)" });
+
+    new Setting(containerEl)
+      .setName("Enable face tracking")
+      .setDesc("Detect when you look away from the screen, blink excessively, or fidget. The first start downloads the detection model (~15 MB, cached afterwards).")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.faceEnabled)
+          .onChange(async () => {
+            await this.plugin.detection?.toggleFace();
+            this.display();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Sample interval (seconds)")
+      .setDesc("How often to check your face (3-30s). Lower = more responsive but more CPU usage. Changes apply the next time face tracking is turned on.")
+      .addSlider((slider) =>
+        slider
+          .setLimits(3, 30, 1)
+          .setValue(this.plugin.settings.faceSampleIntervalSec)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            this.plugin.settings.faceSampleIntervalSec = value;
+            await this.plugin.saveData(this.plugin.settings);
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Blink threshold")
+      .setDesc("Eye openness below which eyes are considered closed (lower = stricter).")
+      .addSlider((slider) =>
+        slider
+          .setLimits(0.1, 0.5, 0.05)
+          .setValue(this.plugin.settings.faceBlinkThreshold)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            this.plugin.settings.faceBlinkThreshold = value;
+            await this.plugin.saveData(this.plugin.settings);
+          })
+      );
+
+    const pitchLabel = (v: number) => `${v.toFixed(2)} rad`;
+    new Setting(containerEl)
+      .setName("Head pitch threshold (radians)")
+      .setDesc("How far down your head needs to tilt to count as 'looking away'. -0.08 = slight tilt. -0.15 = clearly looking at desk.")
+      .addSlider((slider) =>
+        slider
+          .setLimits(-0.2, 0, 0.01)
+          .setValue(this.plugin.settings.facePitchThreshold)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            this.plugin.settings.facePitchThreshold = value;
+            await this.plugin.saveData(this.plugin.settings);
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Grace period (seconds)")
+      .setDesc("If your face briefly disappears (e.g., you turn away), how long to preserve the last state before resetting (0-5s).")
+      .addSlider((slider) =>
+        slider
+          .setLimits(0, 5, 0.5)
+          .setValue(this.plugin.settings.faceGracePeriodSec)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            this.plugin.settings.faceGracePeriodSec = value;
+            await this.plugin.saveData(this.plugin.settings);
+          })
+      );
+  }
   }
 }

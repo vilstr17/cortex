@@ -1,8 +1,9 @@
-import { ItemView, Notice, TFile, WorkspaceLeaf, setIcon, moment } from "obsidian";
+import { ItemView, Notice, Platform, TFile, WorkspaceLeaf, setIcon, moment } from "obsidian";
 import CortexPlugin from "../main";
 import { GoogleCalendarService, DisplayCalendarEvent } from "../services/googleCalendarService";
 import { CortexChatModal } from "../modals/CortexChatModal";
 import { CreateTestModal } from "../modals/CreateTestModal";
+import { ReviewFilterModal, ReviewFilters } from "../modals/ReviewFilterModal";
 import { TestService } from "../services/testService";
 import { CortexTest } from "../settings";
 
@@ -14,50 +15,53 @@ interface DueNote {
 	isOverdue: boolean;
 }
 
+interface ReviewFilterOptions {
+	sortOrder: "low-to-high" | "high-to-low";
+	selectedTestIds: Set<string>;
+}
+
 export class CortexDashboardView extends ItemView {
 	private plugin: CortexPlugin;
 	private reviewsContainer!: HTMLElement;
 	private scheduleContainer!: HTMLElement;
 	private authContainer!: HTMLElement;
 	private testsContainer!: HTMLElement;
+	private focusContainer!: HTMLElement;
+	private bleContainer!: HTMLElement;
+	private faceContainer!: HTMLElement;
 	private testService!: TestService;
+	private calendarService!: GoogleCalendarService;
+	private focusUpdateInterval: ReturnType<typeof setInterval> | null = null;
 
 	private currentCalendarDate: Date = new Date();
 	private currentReviewsDate: Date = new Date();
+	private reviewFilters: ReviewFilterOptions = {
+		sortOrder: "low-to-high",
+		selectedTestIds: new Set(),
+	};
 
 	constructor(leaf: WorkspaceLeaf, plugin: CortexPlugin) {
 		super(leaf);
 		this.plugin = plugin;
 	}
 
-	getViewType(): string {
-		return CORTEX_DASHBOARD_VIEW;
-	}
-
-	getDisplayText(): string {
-		return "Cortex Dashboard";
-	}
-
-	getIcon(): string {
-		return "brain";
-	}
+	getViewType(): string { return CORTEX_DASHBOARD_VIEW; }
+	getDisplayText(): string { return "Cortex Dashboard"; }
+	getIcon(): string { return "brain"; }
 
 	async onOpen(): Promise<void> {
 		const container = this.containerEl.children[1];
 		container.empty();
 
 		this.testService = new TestService(this.plugin);
+		this.calendarService = new GoogleCalendarService(this.plugin.settings, () => this.plugin.saveData(this.plugin.settings));
 
 		const wrapper = container.createDiv({ cls: "cortex-dashboard" });
 
-		// ── 1. Header row: title + chat icon + refresh ──
 		const headerRow = wrapper.createDiv({ cls: "cortex-header-row" });
 		headerRow.createEl("h1", { text: "Cortex Command Center" });
 
-		// Sleek chat icon button → Gemini Planner
-		const chatBtn = headerRow.createEl("button", {
-			cls: "cortex-chat-icon-btn",
-		});
+		const chatBtn = headerRow.createEl("button", { cls: "cortex-chat-icon-btn" });
 		chatBtn.setAttr("title", "Open Gemini Planner");
 		setIcon(chatBtn, "message-square");
 		chatBtn.addEventListener("click", () => {
@@ -68,62 +72,61 @@ export class CortexDashboardView extends ItemView {
 			new CortexChatModal(this.app, this.plugin).open();
 		});
 
-		// Refresh button
-		const refreshBtn = headerRow.createEl("button", {
-			cls: "cortex-refresh-btn clickable-icon",
-		});
+		const refreshBtn = headerRow.createEl("button", { cls: "cortex-refresh-btn clickable-icon" });
 		refreshBtn.setAttr("title", "Refresh");
 		setIcon(refreshBtn, "refresh-cw");
 		refreshBtn.addEventListener("click", () => this.render());
 
-		// ── 2. Due Reviews (middle-top) ──
-		this.reviewsContainer = wrapper.createDiv({
-			cls: "cortex-reviews-section",
-		});
-
-		// ── 3. Today's Schedule (middle-bottom) ──
+		this.reviewsContainer = wrapper.createDiv({ cls: "cortex-reviews-section" });
 		this.scheduleContainer = wrapper.createDiv({ cls: "cortex-schedule-section" });
-
-		// ── 4. Upcoming Tests ──
 		this.testsContainer = wrapper.createDiv({ cls: "cortex-tests-section" });
-
-		// ── 5. Google Calendar auth (shown only when not connected) ──
 		this.authContainer = wrapper.createDiv({ cls: "cortex-auth-section" });
 
-		// Listen for frontmatter changes to auto-refresh
+		// Side-by-side focus panels
+		this.focusContainer = wrapper.createDiv({ cls: "cortex-focus-row" });
+		this.bleContainer = this.focusContainer.createDiv({ cls: "cortex-focus-panel" });
+		this.faceContainer = this.focusContainer.createDiv({ cls: "cortex-focus-panel" });
+
+		// Debounced: while editing, metadata changes fire on every save —
+		// re-rendering the whole dashboard (incl. a calendar fetch) each
+		// time causes visible lag.
+		let renderTimer: ReturnType<typeof setTimeout> | null = null;
 		this.registerEvent(
 			this.app.metadataCache.on("changed", (file) => {
 				if (file instanceof TFile && file.extension === "md") {
-					this.render();
+					if (renderTimer) clearTimeout(renderTimer);
+					renderTimer = setTimeout(() => this.render(), 2000);
 				}
 			}),
 		);
 
 		this.render();
+
+		// One shared ticker for both focus panels; updates are skipped
+		// entirely while the window is hidden.
+		this.focusUpdateInterval = setInterval(() => {
+			if (document.hidden) return;
+			this.updateBleStatusDisplay();
+			this.updateFaceDisplay();
+		}, 1000);
 	}
 
 	async onClose(): Promise<void> {
-		// all listeners registered via registerEvent are cleaned up automatically
+		if (this.focusUpdateInterval) { clearInterval(this.focusUpdateInterval); this.focusUpdateInterval = null; }
+		this.calendarService.destroy();
 	}
 
 	private async render(): Promise<void> {
 		this.renderGoogleCalendarSection();
 		this.renderDueReviews();
 		this.renderUpcomingTests();
+		this.renderFocusPanels();
 	}
-
-	// ── Google Calendar ──────────────────────────────────────────────
 
 	private renderGoogleCalendarSection(): void {
 		this.authContainer.empty();
 		this.scheduleContainer.empty();
-
-		if (!this.plugin.settings.googleAccessToken) {
-			this.renderConnectButton();
-			return;
-		}
-
-		// Token exists — fetch and show today's events
+		if (!this.plugin.settings.googleAccessToken) { this.renderConnectButton(); return; }
 		this.renderTodaysSchedule();
 	}
 
@@ -132,603 +135,420 @@ export class CortexDashboardView extends ItemView {
 			text: "Connect your Google Calendar to see today's schedule alongside your reviews.",
 			cls: "cortex-calendar-connect-desc",
 		});
-
-		const btn = this.authContainer.createEl("button", {
-			cls: "cortex-connect-google-btn",
-			text: "Connect Google Calendar",
-		});
-
-		btn.addEventListener("click", async () => {
-			await this.handleConnectGoogleCalendar();
-		});
+		const btn = this.authContainer.createEl("button", { cls: "cortex-connect-google-btn", text: "Connect Google Calendar" });
+		btn.addEventListener("click", async () => { await this.handleConnectGoogleCalendar(); });
 	}
 
 	private async handleConnectGoogleCalendar(): Promise<void> {
-		const authUrl = "https://cortex-proxy.vercel.app/api/auth";
-		window.open(authUrl);
-
+		window.open("https://cortex-proxy.vercel.app/api/auth");
 		this.authContainer.empty();
-		const statusEl = this.authContainer.createDiv({ cls: "cortex-auth-status" });
-		statusEl.createEl("h4", { text: "Waiting for authorization…" });
-		statusEl.createEl("p", {
-			text: "Please complete the login in your web browser. Cortex will automatically refresh once connected.",
-			cls: "cortex-auth-hint",
-		});
+		const el = this.authContainer.createDiv({ cls: "cortex-auth-status" });
+		el.createEl("h4", { text: "Waiting for authorization\u2026" });
+		el.createEl("p", { text: "Please complete the login in your web browser.", cls: "cortex-auth-hint" });
 	}
 
 	private async renderTodaysSchedule(): Promise<void> {
-		const calendarService = new GoogleCalendarService(
-			this.plugin.settings,
-			() => this.plugin.saveData(this.plugin.settings),
-		);
-
-		const targetDate = this.currentCalendarDate;
-		const events = await calendarService.getEventsForDay(targetDate);
-
+		const srv = this.calendarService;
+		const events = await srv.getEventsForDay(this.currentCalendarDate);
 		this.scheduleContainer.empty();
 
-		const headerRow = this.scheduleContainer.createDiv({ cls: "cortex-dashboard-header-row" });
-		headerRow.style.display = "flex";
-		headerRow.style.justifyContent = "space-between";
-		headerRow.style.alignItems = "center";
-		headerRow.style.marginBottom = "10px";
+		const hr = this.scheduleContainer.createDiv({ cls: "cortex-dashboard-header-row" });
+		hr.style.display = "flex"; hr.style.justifyContent = "space-between"; hr.style.alignItems = "center"; hr.style.marginBottom = "10px";
+		const titleStr = this.isToday(this.currentCalendarDate) ? `Today's Schedule (${events.length})` : `${this.currentCalendarDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })} Schedule (${events.length})`;
+		const t = hr.createEl("h2", { text: titleStr }); t.style.margin = "0";
 
-		const titleStr = this.isToday(targetDate) 
-			? `Today's Schedule (${events.length})` 
-			: `${targetDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })} Schedule (${events.length})`;
-		
-		const title = headerRow.createEl("h2", { text: titleStr });
-		title.style.margin = "0";
+		const nav = hr.createDiv({ cls: "cortex-date-nav" });
+		const pb = nav.createEl("button", { cls: "cortex-date-nav-btn", text: "\u2190" });
+		pb.addEventListener("click", () => { const d = new Date(this.currentCalendarDate); d.setDate(d.getDate() - 1); this.currentCalendarDate = d; this.renderTodaysSchedule(); });
+		const tb = nav.createEl("button", { cls: "cortex-date-nav-btn cortex-date-nav-today-btn", text: "Today" });
+		tb.addEventListener("click", () => { this.currentCalendarDate = this.getStartOfToday(); this.renderTodaysSchedule(); });
+		const nb = nav.createEl("button", { cls: "cortex-date-nav-btn", text: "\u2192" });
+		nb.addEventListener("click", () => { const d = new Date(this.currentCalendarDate); d.setDate(d.getDate() + 1); this.currentCalendarDate = d; this.renderTodaysSchedule(); });
 
-		const navDiv = headerRow.createDiv({ cls: "cortex-date-nav" });
+		if (events.length === 0) { this.scheduleContainer.createDiv({ cls: "cortex-schedule-placeholder", text: "No events scheduled for this day." }); return; }
 
-		const prevBtn = navDiv.createEl("button", {
-			cls: "cortex-date-nav-btn",
-			text: "←",
-		});
-		prevBtn.setAttr("aria-label", "Previous day");
-		prevBtn.addEventListener("click", () => {
-			this.currentCalendarDate = new Date(this.currentCalendarDate);
-			this.currentCalendarDate.setDate(this.currentCalendarDate.getDate() - 1);
-			this.renderTodaysSchedule();
-		});
-
-		const todayBtn = navDiv.createEl("button", {
-			cls: "cortex-date-nav-btn cortex-date-nav-today-btn",
-			text: "Today",
-		});
-		todayBtn.setAttr("aria-label", "Go to today");
-		todayBtn.addEventListener("click", () => {
-			this.currentCalendarDate = this.getStartOfToday();
-			this.renderTodaysSchedule();
-		});
-
-		const nextBtn = navDiv.createEl("button", {
-			cls: "cortex-date-nav-btn",
-			text: "→",
-		});
-		nextBtn.setAttr("aria-label", "Next day");
-		nextBtn.addEventListener("click", () => {
-			this.currentCalendarDate = new Date(this.currentCalendarDate);
-			this.currentCalendarDate.setDate(this.currentCalendarDate.getDate() + 1);
-			this.renderTodaysSchedule();
-		});
-
-		if (events.length === 0) {
-			this.scheduleContainer.createDiv({
-				cls: "cortex-schedule-placeholder",
-				text: "No events scheduled for this day.",
-			});
-			return;
-		}
-
-		const list = this.scheduleContainer.createEl("div", {
-			cls: "cortex-event-list",
-		});
-
-		// Events are already sorted by startTime from the API
-		for (const event of events) {
+		const list = this.scheduleContainer.createEl("div", { cls: "cortex-event-list" });
+		for (const ev of events) {
 			const item = list.createDiv({ cls: "cortex-event-item" });
-
-			// Time range
-			const timeStr = `${this.formatTime(event.startTime)} – ${this.formatTime(event.endTime)}`;
-			item.createEl("span", {
-				cls: "cortex-event-time",
-				text: timeStr,
-			});
-
-			// Event summary
-			const summaryEl = item.createEl("span", {
-				cls: "cortex-event-summary",
-				text: event.summary,
-			});
-
-			// Optional link to event in Google Calendar
-			if (event.htmlLink) {
-				const link = item.createEl("a", {
-					cls: "cortex-event-link",
-					text: "↗",
-					href: event.htmlLink,
-				});
-				link.setAttr("target", "_blank");
-				link.setAttr("title", "Open in Google Calendar");
-			}
+			item.createEl("span", { cls: "cortex-event-time", text: `${this.formatTime(ev.startTime)} \u2013 ${this.formatTime(ev.endTime)}` });
+			item.createEl("span", { cls: "cortex-event-summary", text: ev.summary });
+			if (ev.htmlLink) { const a = item.createEl("a", { cls: "cortex-event-link", text: "\u2197", href: ev.htmlLink }); a.setAttr("target", "_blank"); a.setAttr("title", "Open in Google Calendar"); }
 		}
 	}
-
-	// ── Due Reviews ──────────────────────────────────────────────────
 
 	private renderDueReviews(): void {
 		const targetDate = this.currentReviewsDate;
 		const dueNotes = this.getDueNotes(targetDate);
 		this.reviewsContainer.empty();
 
-		const headerRow = this.reviewsContainer.createDiv({ cls: "cortex-dashboard-header-row" });
-		headerRow.style.display = "flex";
-		headerRow.style.justifyContent = "space-between";
-		headerRow.style.alignItems = "center";
-		headerRow.style.marginBottom = "10px";
+		const hr = this.reviewsContainer.createDiv({ cls: "cortex-dashboard-header-row" });
+		hr.style.display = "flex"; hr.style.justifyContent = "space-between"; hr.style.alignItems = "center"; hr.style.marginBottom = "10px";
+		const header = hr.createEl("h2", { text: "" }); header.style.margin = "0";
 
-		const titleStr = this.isToday(targetDate) 
-			? `Due Reviews (${dueNotes.length})` 
-			: `${targetDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })} Reviews (${dueNotes.length})`;
+		const nav = hr.createDiv({ cls: "cortex-date-nav" });
+		const pb = nav.createEl("button", { cls: "cortex-date-nav-btn", text: "\u2190" });
+		pb.addEventListener("click", () => { const d = new Date(this.currentReviewsDate); d.setDate(d.getDate() - 1); this.currentReviewsDate = d; this.renderDueReviews(); });
+		const tb = nav.createEl("button", { cls: "cortex-date-nav-btn cortex-date-nav-today-btn", text: "Today" });
+		tb.addEventListener("click", () => { this.currentReviewsDate = this.getStartOfToday(); this.renderDueReviews(); });
+		const nb = nav.createEl("button", { cls: "cortex-date-nav-btn", text: "\u2192" });
+		nb.addEventListener("click", () => { const d = new Date(this.currentReviewsDate); d.setDate(d.getDate() + 1); this.currentReviewsDate = d; this.renderDueReviews(); });
 
-		const header = headerRow.createEl("h2", { text: titleStr });
-		header.style.margin = "0";
-
-		const navDiv = headerRow.createDiv({ cls: "cortex-date-nav" });
-
-		const prevBtn = navDiv.createEl("button", {
-			cls: "cortex-date-nav-btn",
-			text: "←",
-		});
-		prevBtn.setAttr("aria-label", "Previous day");
-		prevBtn.addEventListener("click", () => {
-			this.currentReviewsDate = new Date(this.currentReviewsDate);
-			this.currentReviewsDate.setDate(this.currentReviewsDate.getDate() - 1);
-			this.renderDueReviews();
+		const fb = nav.createEl("button", { cls: "cortex-date-nav-btn cortex-filter-btn" });
+		setIcon(fb, "filter");
+		fb.addEventListener("click", () => {
+			new ReviewFilterModal(this.app, this.reviewFilters, this.testService.getAllTests(), (f) => { this.reviewFilters = f; this.renderDueReviews(); }).open();
 		});
 
-		const todayBtn = navDiv.createEl("button", {
-			cls: "cortex-date-nav-btn cortex-date-nav-today-btn",
-			text: "Today",
-		});
-		todayBtn.setAttr("aria-label", "Go to today");
-		todayBtn.addEventListener("click", () => {
-			this.currentReviewsDate = this.getStartOfToday();
-			this.renderDueReviews();
-		});
-
-		const nextBtn = navDiv.createEl("button", {
-			cls: "cortex-date-nav-btn",
-			text: "→",
-		});
-		nextBtn.setAttr("aria-label", "Next day");
-		nextBtn.addEventListener("click", () => {
-			this.currentReviewsDate = new Date(this.currentReviewsDate);
-			this.currentReviewsDate.setDate(this.currentReviewsDate.getDate() + 1);
-			this.renderDueReviews();
-		});
-
-		if (dueNotes.length === 0) {
-			this.reviewsContainer.createDiv({
-				cls: "cortex-reviews-placeholder",
-				text: "No reviews due for this day.",
+		let filtered = dueNotes;
+		if (this.reviewFilters.selectedTestIds.size > 0) {
+			filtered = dueNotes.filter((note) => {
+				for (const t of this.testService.getAllTests()) {
+					if (this.reviewFilters.selectedTestIds.has(t.id) && t.filePaths.includes(note.file.path)) return true;
+				}
+				return false;
 			});
-			return;
 		}
 
-		// Sort: overdue first (oldest first), then today's
-		dueNotes.sort((a, b) => a.nextReview.getTime() - b.nextReview.getTime());
+		const titleStr = this.isToday(targetDate) ? `Due Reviews (${filtered.length})` : `${targetDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })} Reviews (${filtered.length})`;
+		header.setText(titleStr);
 
-		const list = this.reviewsContainer.createEl("ul", {
-			cls: "cortex-due-list",
-		});
+		if (filtered.length === 0) { this.reviewsContainer.createDiv({ cls: "cortex-reviews-placeholder", text: "No reviews due for this day." }); return; }
 
-		for (const { file, nextReview, isOverdue } of dueNotes) {
-			const li = list.createEl("li", {
-				cls: "cortex-due-item",
+		if (this.reviewFilters.sortOrder === "low-to-high") {
+			filtered.sort((a, b) => {
+				const sa = this.getDueNoteScore(a.file), sb = this.getDueNoteScore(b.file);
+				if (sa === null && sb !== null) return -1;
+				if (sa !== null && sb === null) return 1;
+				if (sa !== null && sb !== null && sa !== sb) return sa - sb;
+				return a.nextReview.getTime() - b.nextReview.getTime();
 			});
-			if (isOverdue) {
-				li.addClasses(["cortex-overdue"]);
-			}
+		} else {
+			filtered.sort((a, b) => {
+				const sa = this.getDueNoteScore(a.file), sb = this.getDueNoteScore(b.file);
+				if (sa === null && sb !== null) return 1;
+				if (sa !== null && sb === null) return -1;
+				if (sa !== null && sb !== null && sa !== sb) return sb - sa;
+				return a.nextReview.getTime() - b.nextReview.getTime();
+			});
+		}
 
-			// Overdue badge
-			if (isOverdue) {
-				li.createEl("span", {
-					cls: "cortex-badge cortex-overdue-badge",
-					text: "overdue",
-				});
-			}
-
-			// Clickable title
-			const link = li.createEl("a", {
-				cls: "cortex-note-link",
-				text: file.basename,
-			});
-			link.addEventListener("click", async (e) => {
-				e.preventDefault();
-				const leaf = this.app.workspace.getLeaf("tab");
-				await leaf.openFile(file);
-			});
-
-			// Date label
-			const dateStr = nextReview.toLocaleDateString(undefined, {
-				year: "numeric",
-				month: "short",
-				day: "numeric",
-			});
-			li.createSpan({
-				cls: "cortex-note-date",
-				text: dateStr,
-			});
+		const list = this.reviewsContainer.createEl("ul", { cls: "cortex-due-list" });
+		for (const { file, nextReview, isOverdue } of filtered) {
+			const li = list.createEl("li", { cls: "cortex-due-item" });
+			if (isOverdue) li.addClasses(["cortex-overdue"]);
+			if (isOverdue) li.createEl("span", { cls: "cortex-badge cortex-overdue-badge", text: "overdue" });
+			const link = li.createEl("a", { cls: "cortex-note-link", text: file.basename });
+			link.addEventListener("click", async (e) => { e.preventDefault(); await this.app.workspace.getLeaf("tab").openFile(file); });
+			li.createSpan({ cls: "cortex-note-date", text: nextReview.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) });
 		}
 	}
-
-	// ── Upcoming Tests ───────────────────────────────────────────────
 
 	private renderUpcomingTests(): void {
 		this.testsContainer.empty();
-
 		const tests = this.testService.getAllTests();
+		const active = tests.filter(t => !t.done);
+		const sorted = [...active].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-		// Sort tests by date (earliest first)
-		const sortedTests = [...tests].sort((a, b) => {
-			return new Date(a.date).getTime() - new Date(b.date).getTime();
-		});
+		const hr = this.testsContainer.createDiv({ cls: "cortex-tests-header" });
+		hr.createEl("h2", { text: `Upcoming Tests (${sorted.length})` });
+		const cbtn = hr.createEl("button", { cls: "cortex-create-test-btn" });
+		setIcon(cbtn, "plus");
+		cbtn.addEventListener("click", () => { new CreateTestModal(this.app, this.plugin, () => this.render()).open(); });
 
-		// Section header with count and create button
-		const headerRow = this.testsContainer.createDiv({ cls: "cortex-tests-header" });
-		headerRow.createEl("h2", {
-			text: `Upcoming Tests (${sortedTests.length})`,
-		});
+		if (sorted.length === 0) { this.testsContainer.createDiv({ cls: "cortex-tests-placeholder", text: "No upcoming tests. Click + to create one." }); return; }
 
-		const createBtn = headerRow.createEl("button", {
-			cls: "cortex-create-test-btn",
-		});
-		createBtn.setAttr("title", "Create New Test");
-		setIcon(createBtn, "plus");
-		createBtn.addEventListener("click", () => {
-			new CreateTestModal(this.app, this.plugin, () => this.render()).open();
-		});
-
-		if (sortedTests.length === 0) {
-			this.testsContainer.createDiv({
-				cls: "cortex-tests-placeholder",
-				text: "No upcoming tests. Click + to create one.",
-			});
-			return;
-		}
-
-		const list = this.testsContainer.createEl("div", {
-			cls: "cortex-test-list",
-		});
-
-		for (const test of sortedTests) {
-			const testItem = this.renderTestItem(test);
-			list.appendChild(testItem);
-		}
+		const list = this.testsContainer.createEl("div", { cls: "cortex-test-list" });
+		for (const t of sorted) list.appendChild(this.renderTestItem(t));
 	}
 
 	private renderTestItem(test: CortexTest): HTMLElement {
-		const item = document.createElement("div");
-		item.className = "cortex-test-item";
+		const item = document.createElement("div"); item.className = "cortex-test-item";
+		if (test.done) item.addClass("cortex-test-done");
+		const hr = item.createDiv({ cls: "cortex-test-header" });
+		const icon = hr.createDiv({ cls: "cortex-expand-icon" }); setIcon(icon, "chevron-right");
+		hr.createEl("span", { cls: "cortex-test-name", text: test.name });
 
-		// Header row (clickable for expand/collapse)
-		const headerRow = item.createDiv({ cls: "cortex-test-header" });
+		const doneBtn = hr.createEl("button", { cls: "cortex-done-btn" + (test.done ? " is-done" : ""), attr: { title: test.done ? "Mark as not done" : "Mark as done" } });
+		setIcon(doneBtn, test.done ? "check-circle" : "circle");
+		doneBtn.addEventListener("click", async (e) => { e.stopPropagation(); await this.testService.toggleDone(test.id); this.render(); });
 
-		// Expand icon
-		const expandIcon = headerRow.createDiv({ cls: "cortex-expand-icon" });
-		setIcon(expandIcon, "chevron-right");
+		const d = new Date(test.date);
+		const ds = d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+		const dif = moment(test.date).diff(moment().startOf("day"), "days");
+		const dl = dif < 0 ? " (past)" : dif === 0 ? " (today)" : dif === 1 ? " (tomorrow)" : ` (in ${dif} days)`;
+		hr.createEl("span", { cls: "cortex-test-date", text: `${ds}${dl}` });
 
-		// Test name
-		headerRow.createEl("span", {
-			cls: "cortex-test-name",
-			text: test.name,
-		});
+		const det = item.createDiv({ cls: "cortex-test-details" });
+		const pg = this.calculateTestProgress(test);
+		const pc = det.createDiv({ cls: "cortex-test-progress-container" });
+		const pb = pc.createDiv({ cls: "cortex-test-progress-bar" });
+		pb.createDiv({ cls: "cortex-test-progress-fill" }).style.width = `${pg}%`;
+		pc.createEl("span", { cls: "cortex-test-progress-label", text: `${Math.round(pg)}% prepared` });
 
-		const testDate = new Date(test.date);
-		const dateStr = testDate.toLocaleDateString(undefined, {
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-		});
-
-		// Calculate days until test
-		const today = moment().startOf("day");
-		const testDay = moment(test.date);
-		const daysUntil = testDay.diff(today, "days");
-
-		let daysLabel = "";
-		if (daysUntil < 0) {
-			daysLabel = " (past)";
-		} else if (daysUntil === 0) {
-			daysLabel = " (today)";
-		} else if (daysUntil === 1) {
-			daysLabel = " (tomorrow)";
-		} else {
-			daysLabel = ` (in ${daysUntil} days)`;
-		}
-
-		headerRow.createEl("span", {
-			cls: "cortex-test-date",
-			text: `${dateStr}${daysLabel}`,
-		});
-
-		// Details section (hidden by default)
-		const details = item.createDiv({ cls: "cortex-test-details" });
-
-		// Progress bar
-		const progress = this.calculateTestProgress(test);
-		const progressContainer = details.createDiv({ cls: "cortex-test-progress-container" });
-
-		const progressBar = progressContainer.createDiv({ cls: "cortex-test-progress-bar" });
-		const progressFill = progressBar.createDiv({ cls: "cortex-test-progress-fill" });
-		progressFill.style.width = `${progress}%`;
-		progressContainer.createEl("span", {
-			cls: "cortex-test-progress-label",
-			text: `${Math.round(progress)}% prepared`,
-		});
-
-		// Notes list
-		const notesList = details.createEl("ul", { cls: "cortex-test-notes-list" });
-
-		for (const filePath of test.filePaths) {
-			const file = this.app.vault.getFileByPath(filePath);
-			if (!file) continue;
-
+		const nl = det.createEl("ul", { cls: "cortex-test-notes-list" });
+		for (const fp of test.filePaths) {
+			const file = this.app.vault.getFileByPath(fp); if (!file) continue;
 			const cache = this.app.metadataCache.getFileCache(file);
-			const frontmatter = cache?.frontmatter;
-			const excludeFromExam = frontmatter?.exclude_from_exam === true;
-			const confidence = frontmatter?.confidence;
+			const fm = cache?.frontmatter;
+			const excl = fm?.exclude_from_exam === true;
 
-			const li = notesList.createEl("li", { cls: "cortex-test-note-item" });
-			if (excludeFromExam) {
-				li.addClass("excluded");
-			}
+			const li = nl.createEl("li", { cls: "cortex-test-note-item" });
+			if (excl) li.addClass("excluded");
 
-			// Note link
 			const link = li.createEl("a", { cls: "cortex-test-note-link", text: file.basename });
-			link.addEventListener("click", async (e) => {
-				e.preventDefault();
-				const leaf = this.app.workspace.getLeaf("tab");
-				await leaf.openFile(file);
-			});
+			link.addEventListener("click", async (e) => { e.preventDefault(); await this.app.workspace.getLeaf("tab").openFile(file); });
 
-			// Score display
-			const scoreSpan = li.createEl("span", { cls: "cortex-test-note-score" });
-			if (confidence !== undefined && confidence !== null) {
-				scoreSpan.addClass("has-score");
-				scoreSpan.setText(`Score: ${confidence}/5`);
-			} else {
-				scoreSpan.addClass("no-score");
-				scoreSpan.setText("No score");
-			}
+			const ss = li.createEl("span", { cls: "cortex-test-note-score" });
+			if (fm?.confidence !== undefined && fm?.confidence !== null) { ss.addClass("has-score"); ss.setText(`Score: ${fm.confidence}/5`); }
+			else { ss.addClass("no-score"); ss.setText("No score"); }
 
-			// Exclude button
-			const excludeBtn = li.createEl("button", {
-				cls: "cortex-exclude-btn" + (excludeFromExam ? " excluded" : ""),
-				text: excludeFromExam ? "Excluded" : "Exclude",
-			});
-			excludeBtn.addEventListener("click", async (e) => {
-				e.stopPropagation();
-				await this.toggleExcludeFromExam(file, excludeFromExam);
-				this.render();
-			});
-
-			li.appendChild(link);
-			li.appendChild(scoreSpan);
-			li.appendChild(excludeBtn);
+			const exb = li.createEl("button", { cls: "cortex-exclude-btn" + (excl ? " excluded" : ""), text: excl ? "Excluded" : "Exclude" });
+			exb.addEventListener("click", async (e) => { e.stopPropagation(); await this.toggleExcl(file, excl); this.render(); });
+			li.appendChild(link); li.appendChild(ss); li.appendChild(exb);
 		}
 
-		// Delete button (in header area)
-		const deleteBtn = item.createEl("button", {
-			cls: "cortex-test-delete-btn",
-		});
-		setIcon(deleteBtn, "trash");
-		deleteBtn.setAttr("title", "Delete test");
-		deleteBtn.addEventListener("click", async (e) => {
-			e.stopPropagation();
-			if (confirm(`Delete test "${test.name}"?`)) {
-				await this.testService.removeTest(test.id);
-				this.render();
-			}
-		});
+		const dbtn = item.createEl("button", { cls: "cortex-test-delete-btn" });
+		setIcon(dbtn, "trash");
+		dbtn.addEventListener("click", async (e) => { e.stopPropagation(); if (confirm(`Delete "${test.name}"?`)) { await this.testService.removeTest(test.id); this.render(); } });
 
-		// Click handler for expand/collapse
 		item.addEventListener("click", (e) => {
-			const target = e.target as HTMLElement;
-			// Don't toggle if clicking on delete button or exclude button
-			if (target.closest(".cortex-test-delete-btn") || target.closest(".cortex-exclude-btn")) {
-				return;
-			}
+			const el = e.target as HTMLElement;
+			if (el.closest(".cortex-test-delete-btn") || el.closest(".cortex-exclude-btn") || el.closest(".cortex-done-btn")) return;
 			item.classList.toggle("expanded");
 		});
 
 		return item;
 	}
 
-	private async toggleExcludeFromExam(file: TFile, currentlyExcluded: boolean): Promise<void> {
-		await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-			if (currentlyExcluded) {
-				// Remove the flag
-				delete frontmatter["exclude_from_exam"];
-			} else {
-				// Add the flag
-				frontmatter["exclude_from_exam"] = true;
-			}
-		});
+	private async toggleExcl(file: TFile, excl: boolean): Promise<void> {
+		await this.app.fileManager.processFrontMatter(file, (fm) => { if (excl) delete fm["exclude_from_exam"]; else fm["exclude_from_exam"] = true; });
 	}
 
-	/**
-	 * Calculate progress for a test based on confidence scores of ALL associated files.
-	 *
-	 * Formula:
-	 * Total Progress = (Sum of all scores) / (Total number of linked notes × Max Score)
-	 *
-	 * Any note linked to the exam that does NOT have a logged study session yet
-	 * is automatically treated as having a score/confidence of 0.
-	 *
-	 * This means unlogged notes drag the total percentage down to reflect the
-	 * actual reality of unstudied material.
-	 *
-	 * Max score per note = 5 (matching the 1-5 review scale in srsLogic.ts).
-	 */
 	private calculateTestProgress(test: CortexTest): number {
-		const MAX_SCORE = 5;
-		let totalScoreSum = 0;
-		let validNotesCount = 0;
+		const MAX = 5; let sum = 0, count = 0;
+		for (const fp of test.filePaths) {
+			const f = this.app.vault.getFileByPath(fp); if (!f) continue;
+			const fm = this.app.metadataCache.getFileCache(f)?.frontmatter;
+			if (!fm) { count++; continue; }
+			if (fm.exclude_from_exam === true || fm.exclude_from_exam === "true") continue;
+			count++;
+			if (fm.confidence !== undefined && fm.confidence !== null) sum += Math.max(0, Math.min(MAX, Number(fm.confidence) || 0));
+		}
+		const max = count * MAX;
+		return max === 0 ? 0 : (sum / max) * 100;
+	}
 
-		for (const filePath of test.filePaths) {
-			const file = this.app.vault.getFileByPath(filePath);
-			if (!file) {
-				// File not found in vault — skip it
-				continue;
-			}
+	// ── Focus panels (side-by-side) ──────────────────────────────────
 
-			const cache = this.app.metadataCache.getFileCache(file);
-			const frontmatter = cache?.frontmatter;
+	private renderFocusPanels(): void {
+		this.renderBlePanel();
+		this.renderFacePanel();
+	}
 
-			if (!frontmatter) {
-				// No frontmatter at all — treat as score 0 (unstudied)
-				validNotesCount++;
-				continue;
-			}
+	private renderBlePanel(): void {
+		this.bleContainer.empty();
 
-			// Skip notes explicitly excluded from the exam
-			if (frontmatter.exclude_from_exam === true || frontmatter.exclude_from_exam === "true") {
-				continue;
-			}
-
-			validNotesCount++;
-
-			const confidence = frontmatter.confidence;
-			// If confidence is undefined or null, this note has never been reviewed — score = 0
-			if (confidence === undefined || confidence === null) {
-				continue; // totalScoreSum += 0
-			}
-
-			// Clamp to valid range just in case
-			const score = Math.max(0, Math.min(MAX_SCORE, Number(confidence) || 0));
-			totalScoreSum += score;
+		if (Platform.isMobile || !this.plugin.bleDetector) {
+			return;
 		}
 
-		const maxPossibleScore = validNotesCount * MAX_SCORE;
-		if (maxPossibleScore === 0) {
-			return 0;
+		const intendedOn = this.plugin.settings.bleEnabled;
+		const isScanning = this.plugin.bleDetector.isScanning();
+		const intendedActive = this.plugin.bleDetector.isIntendedActive();
+		const calibrated = !!this.plugin.settings.bleCalibrationData;
+
+		const effectivelyOn = intendedOn || intendedActive;
+
+		this.bleContainer.createEl("h4", { text: "Focus Lock" });
+
+		const row = this.bleContainer.createDiv({ cls: "cortex-toggle-row" });
+		const tog = row.createDiv({ cls: "cortex-toggle" + (effectivelyOn ? " is-enabled" : "") });
+		const lbl = row.createDiv({ cls: "cortex-toggle-label" });
+		lbl.setText(effectivelyOn ? "ON" : "OFF");
+
+		tog.addEventListener("click", async () => {
+			if (!this.plugin.detection || (!calibrated && !effectivelyOn)) return;
+			await this.plugin.detection.toggleBle();
+			this.renderBlePanel();
+		});
+
+		const statusArea = this.bleContainer.createDiv({ cls: "cortex-ble-status", attr: { "data-ble-status-area": "" } });
+
+		if (effectivelyOn) {
+			if (!isScanning) {
+				statusArea.createSpan({ text: "Connecting...", cls: "cortex-focus-state cortex-state-gray", attr: { "data-ble-state": "" } });
+			} else {
+				const state = this.plugin.bleDetector.getCurrentState();
+				const st = this.plugin.bleDetector.getLatestStatus();
+				statusArea.createSpan({ text: state, cls: `cortex-focus-state ${this.stateClass(state)}`, attr: { "data-ble-state": "" } });
+				statusArea.createSpan({ text: st.phoneFound ? `${st.smoothedRssi} dBm` : "Searching...", cls: "cortex-focus-rssi", attr: { "data-ble-rssi": "" } });
+			}
 		}
 
-		return (totalScoreSum / maxPossibleScore) * 100;
+		if (this.plugin.settings.bleDeviceName) {
+			this.bleContainer.createDiv({ text: this.plugin.settings.bleDeviceName, cls: "cortex-focus-device" });
+		}
+	}
+
+	private renderFacePanel(): void {
+		this.faceContainer.empty();
+
+		if (Platform.isMobile) return;
+
+		const intendedOn = this.plugin.settings.faceEnabled;
+		const isRunning = this.plugin.faceEvaluator?.isRunning() ?? false;
+		const errorMsg = this.plugin.faceEvaluator?.lastError ?? null;
+
+		this.faceContainer.createEl("h4", { text: "Face Tracking" });
+
+		const row = this.faceContainer.createDiv({ cls: "cortex-toggle-row" });
+		const tog = row.createDiv({ cls: "cortex-toggle" + (intendedOn ? " is-enabled" : "") });
+		const lbl = row.createDiv({ cls: "cortex-toggle-label" });
+		lbl.setText(intendedOn ? "ON" : "OFF");
+
+		tog.addEventListener("click", async () => {
+			await this.plugin.detection?.toggleFace();
+			this.renderFacePanel();
+		});
+
+		if (intendedOn) {
+			const statsEl = this.faceContainer.createDiv({ cls: "cortex-face-stats", attr: { "data-face-stats": "" } });
+
+			if (errorMsg) {
+				statsEl.createSpan({ text: `Error: ${errorMsg}`, cls: "cortex-focus-state cortex-state-gray" });
+			} else if (!isRunning) {
+				statsEl.createSpan({ text: "Initializing...", cls: "cortex-focus-state cortex-state-gray" });
+			} else {
+				const state = this.plugin.faceEvaluator!.getCurrentState();
+				const fs = this.plugin.faceEvaluator!.getLastFaceState();
+				this.populateStats(statsEl, fs, state);
+			}
+		} else if (errorMsg) {
+			this.faceContainer.createDiv({ text: `Last error: ${errorMsg}`, cls: "cortex-face-error-hint" });
+		}
+	}
+
+	private populateStats(el: HTMLElement, fs: any, state: string): void {
+		el.empty();
+		el.createSpan({ text: state, cls: `cortex-focus-state ${this.stateClass(state)}` });
+		if (fs?.faceVisible) {
+			if (fs.gazeAtScreen !== null) el.createDiv({ text: `Gaze: ${Math.round(fs.gazeAtScreen * 100)}%`, cls: "cortex-face-stat" });
+			if (fs.blinkRate !== null) el.createDiv({ text: `Blinks: ${fs.blinkRate}/min`, cls: "cortex-face-stat" });
+			if (fs.headStability !== null) el.createDiv({ text: `Stability: ${Math.round(fs.headStability * 100)}%`, cls: "cortex-face-stat" });
+		} else { el.createDiv({ text: "No face detected", cls: "cortex-face-stat" }); }
+	}
+
+	private updateBleStatusDisplay(): void {
+		if (!this.plugin.bleDetector) return;
+		if (Platform.isMobile) return;
+
+		const intendedOn = this.plugin.settings.bleEnabled || this.plugin.bleDetector.isIntendedActive();
+		if (!intendedOn) return;
+
+		const statusArea = this.bleContainer.querySelector('[data-ble-status-area]') as HTMLElement | null;
+		if (!statusArea) {
+			this.renderBlePanel();
+			return;
+		}
+
+		statusArea.empty();
+
+		const isScanning = this.plugin.bleDetector.isScanning();
+
+		if (!isScanning) {
+			statusArea.createSpan({ text: "Connecting...", cls: "cortex-focus-state cortex-state-gray", attr: { "data-ble-state": "" } });
+			return;
+		}
+
+		const state = this.plugin.bleDetector.getCurrentState();
+		const st = this.plugin.bleDetector.getLatestStatus();
+		statusArea.createSpan({ text: state, cls: `cortex-focus-state ${this.stateClass(state)}`, attr: { "data-ble-state": "" } });
+		statusArea.createSpan({ text: st.phoneFound ? `${st.smoothedRssi} dBm` : "Searching...", cls: "cortex-focus-rssi", attr: { "data-ble-rssi": "" } });
+	}
+
+	private updateFaceDisplay(): void {
+		if (Platform.isMobile) return;
+
+		const intendedOn = this.plugin.settings.faceEnabled;
+		if (!intendedOn) return;
+
+		const isRunning = this.plugin.faceEvaluator?.isRunning() ?? false;
+		const errorMsg = this.plugin.faceEvaluator?.lastError ?? null;
+
+		const statsEl = this.faceContainer.querySelector('[data-face-stats]') as HTMLElement | null;
+		if (!statsEl) {
+			this.renderFacePanel();
+			return;
+		}
+
+		statsEl.empty();
+
+		if (errorMsg) {
+			statsEl.createSpan({ text: `Error: ${errorMsg}`, cls: "cortex-focus-state cortex-state-gray" });
+		} else if (!isRunning) {
+			statsEl.createSpan({ text: "Initializing...", cls: "cortex-focus-state cortex-state-gray" });
+		} else {
+			const fs = this.plugin.faceEvaluator!.getLastFaceState();
+			const state = this.plugin.faceEvaluator!.getCurrentState();
+			this.populateStats(statsEl, fs, state);
+		}
+	}
+
+	private stateClass(s: string): string {
+		return s === "LOCKED_IN" ? "cortex-state-locked" : s === "DISTRACTED" ? "cortex-state-distracted" : "cortex-state-gray";
 	}
 
 	// ── Helpers ──────────────────────────────────────────────────────
 
-	private isToday(date: Date): boolean {
-		const today = new Date();
-		return date.getDate() === today.getDate() &&
-			date.getMonth() === today.getMonth() &&
-			date.getFullYear() === today.getFullYear();
+	private isToday(d: Date): boolean {
+		const n = new Date();
+		return d.getDate() === n.getDate() && d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
 	}
+	private formatTime(d: Date): string { return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }); }
 
-	private formatTime(date: Date): string {
-		return date.toLocaleTimeString(undefined, {
-			hour: "2-digit",
-			minute: "2-digit",
-		});
-	}
-
-	/**
-	 * Scan the vault for markdown files whose next_review date is the targetDate or earlier.
-	 * Supports both YYYY-MM-DD and DD.MM.YYYY formats.
-	 */
-	private getDueNotes(targetDate: Date): DueNote[] {
-		const targetDateStart = this.startOfDay(targetDate);
-		const dueNotes: DueNote[] = [];
-
-		const files = this.app.vault.getMarkdownFiles();
-		for (const file of files) {
-			const cache = this.app.metadataCache.getFileCache(file);
-			const frontmatter = cache?.frontmatter;
-			if (!frontmatter) continue;
-
-			const rawDate = frontmatter.next_review;
-			if (rawDate === undefined || rawDate === null) continue;
-
-			const parsedDate = this.parseDate(rawDate);
-			if (!parsedDate) continue;
-
-			// Due if next_review is targetDateStart or in the past
-			if (parsedDate <= targetDateStart) {
-				dueNotes.push({
-					file,
-					nextReview: parsedDate,
-					isOverdue: parsedDate < targetDateStart,
-				});
+	private getDueNotes(target: Date): DueNote[] {
+		const ts = this.startOfDay(target);
+		const donePaths = new Set<string>();
+		for (const t of this.plugin.settings.tests) {
+			if (t.done) {
+				for (const fp of t.filePaths) donePaths.add(fp);
 			}
 		}
-
-		return dueNotes;
+		const r: DueNote[] = [];
+		const today = this.getStartOfToday();
+		for (const f of this.app.vault.getMarkdownFiles()) {
+			if (donePaths.has(f.path)) continue;
+			const fm = this.app.metadataCache.getFileCache(f)?.frontmatter;
+			if (!fm) continue;
+			const examDate = this.parseDate(fm.exam_date);
+			if (examDate && examDate < today) continue;
+			const pd = this.parseDate(fm.next_review);
+			if (pd && pd <= ts) r.push({ file: f, nextReview: pd, isOverdue: pd < ts });
+		}
+		return r;
 	}
 
-	/**
-	 * Parse a date string that may be in YYYY-MM-DD or DD.MM.YYYY format.
-	 * Returns the start of that day (midnight), or null if unparseable.
-	 */
 	private parseDate(raw: unknown): Date | null {
-		if (raw instanceof Date) {
-			return this.startOfDay(raw);
-		}
-
-		if (typeof raw === "number") {
-			return this.startOfDay(new Date(raw));
-		}
-
+		if (raw instanceof Date) return this.startOfDay(raw);
+		if (typeof raw === "number") return this.startOfDay(new Date(raw));
 		if (typeof raw !== "string") return null;
-
-		const trimmed = raw.trim();
-		if (!trimmed) return null;
-
-		// Try DD.MM.YYYY
-		const ddMmYyyy = trimmed.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-		if (ddMmYyyy) {
-			const day = parseInt(ddMmYyyy[1], 10);
-			const month = parseInt(ddMmYyyy[2], 10) - 1; // JS months are 0-indexed
-			const year = parseInt(ddMmYyyy[3], 10);
-			const d = new Date(year, month, day);
-			if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
-				return d;
-			}
-			return null; // invalid date
-		}
-
-		// Try YYYY-MM-DD
-		const yyyyMmDd = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-		if (yyyyMmDd) {
-			const year = parseInt(yyyyMmDd[1], 10);
-			const month = parseInt(yyyyMmDd[2], 10) - 1;
-			const day = parseInt(yyyyMmDd[3], 10);
-			const d = new Date(year, month, day);
-			if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
-				return d;
-			}
-			return null;
-		}
-
-		// Fallback: try native Date.parse
-		const fallback = new Date(trimmed);
-		if (!isNaN(fallback.getTime())) {
-			return this.startOfDay(fallback);
-		}
-
+		const s = raw.trim(); if (!s) return null;
+		let m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+		if (m) { const d = new Date(+m[3], +m[2] - 1, +m[1]); if (d.getFullYear() === +m[3] && d.getMonth() === +m[2] - 1 && d.getDate() === +m[1]) return d; return null; }
+		m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+		if (m) { const d = new Date(+m[1], +m[2] - 1, +m[3]); if (d.getFullYear() === +m[1] && d.getMonth() === +m[2] - 1 && d.getDate() === +m[3]) return d; return null; }
+		const fb = new Date(s); if (!isNaN(fb.getTime())) return this.startOfDay(fb);
 		return null;
 	}
 
-	private getStartOfToday(): Date {
-		const now = new Date();
-		return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	private getStartOfToday(): Date { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+
+	private getDueNoteScore(f: TFile): number | null {
+		const raw = this.app.metadataCache.getFileCache(f)?.frontmatter?.confidence;
+		if (raw === undefined || raw === null) return null;
+		const v = Number(raw); if (!Number.isFinite(v)) return null;
+		return Math.max(1, Math.min(5, v));
 	}
 
-	private startOfDay(d: Date): Date {
-		return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-	}
+	private startOfDay(d: Date): Date { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
 }

@@ -222,6 +222,24 @@
   background: var(--background-modifier-hover);
 }
 
+.cortex-due-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+}
+
+.cortex-due-sort-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.cortex-due-sort-btn.is-active {
+  border-color: var(--interactive-accent);
+  color: var(--interactive-accent);
+  background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+}
+
 .cortex-date-nav-today-btn {
   font-size: 0.8rem;
   padding: 2px 10px;
@@ -715,6 +733,42 @@
 	height: 14px;
 }
 
+.cortex-done-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	background: transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	border-radius: 4px;
+	padding: 2px;
+	transition: color 0.15s ease, background 0.15s ease;
+	flex-shrink: 0;
+}
+
+.cortex-done-btn:hover {
+	color: var(--color-green);
+	background: rgba(0, 180, 0, 0.08);
+}
+
+.cortex-done-btn.is-done {
+	color: var(--color-green);
+}
+
+.cortex-done-btn svg {
+	width: 16px;
+	height: 16px;
+}
+
+.cortex-test-item.cortex-test-done {
+	opacity: 0.55;
+}
+
+.cortex-test-item.cortex-test-done .cortex-test-name {
+	text-decoration: line-through;
+}
+
 /* ── Expandable Exam Accordion ── */
 .cortex-test-item {
 	cursor: pointer;
@@ -829,4 +883,745 @@
 
 .cortex-test-note-item.excluded {
 	opacity: 0.5;
+}
+
+/* ── Review score modal ─────────────────────────────────────────── */
+
+.cortex-review-score-setting .setting-item-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.cortex-score-info-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.cortex-score-info-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  border-color: var(--interactive-accent);
+}
+
+.cortex-score-legend {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 4px;
+  color: var(--text-muted);
+  font-size: 0.8em;
+  margin-bottom: 1.5em;
+}
+
+.cortex-score-info-modal h3 {
+  margin: 0 0 0.75rem;
+}
+
+.cortex-score-info-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.cortex-score-info-note {
+  margin-top: 0.9rem;
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+
+/* ── BLE Warning Overlay (full screen) ────────────────────────────── */
+
+.cortex-ble-warning-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  animation: cortex-ble-fade-in 0.3s ease-out;
+}
+
+@keyframes cortex-ble-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cortex-ble-warning-box {
+  background: var(--background-primary);
+  border: 2px solid var(--color-red);
+  border-radius: 16px;
+  padding: 3rem 4rem;
+  text-align: center;
+  max-width: 460px;
+  width: 90vw;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: cortex-ble-scale-in 0.35s ease-out;
+}
+
+@keyframes cortex-ble-scale-in {
+  from { transform: scale(0.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.cortex-ble-warning-emoji {
+  font-size: 4rem;
+  margin-bottom: 0.75rem;
+}
+
+.cortex-ble-warning-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+  color: var(--color-red);
+}
+
+.cortex-ble-warning-sub {
+  font-size: 1.05rem;
+  color: var(--text-muted);
+  margin: 0 0 1.75rem;
+  line-height: 1.5;
+}
+
+.cortex-ble-warning-dismiss {
+  padding: 0.7rem 2.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* ── BLE Dashboard Section ───────────────────────────────────────── */
+
+.cortex-ble-dash-rssi {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.cortex-ble-dash-menu-header {
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+  margin-bottom: 0.35rem;
+}
+
+.cortex-ble-dash-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85em;
+  transition: background 0.1s ease;
+}
+
+.cortex-ble-dash-menu-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+.cortex-ble-dash-check {
+  font-size: 0.7em;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.cortex-ble-dash-item-name {
+  flex: 1;
+}
+
+.cortex-ble-dash-item-rssi {
+  font-size: 0.8em;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cortex-ble-dash-empty {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 0.35rem 0.5rem;
+}
+
+.cortex-ble-dash-stop-btn {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.45rem;
+  font-weight: 600;
+  font-size: 0.9em;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+}
+
+.cortex-ble-dash-stop-btn:hover:not(:disabled) {
+  background: var(--background-primary-alt);
+}
+
+.cortex-ble-dash-stop-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── BLE Calibration Modal ─────────────────────────────────────── */
+
+.cortex-ble-calibration-modal {
+  min-width: 420px;
+}
+
+.cortex-ble-cal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cortex-ble-cal-body h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.cortex-ble-cal-body h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.cortex-ble-cal-explanation {
+  font-size: 0.9em;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.cortex-ble-cal-exp-phase {
+  margin: 0.75rem 0 0.5rem;
+}
+
+.cortex-ble-cal-exp-phase strong {
+  color: var(--text-normal);
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.cortex-ble-cal-exp-detail {
+  margin: 0;
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+
+.cortex-ble-cal-exp-note {
+  font-size: 0.85em;
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.cortex-ble-cal-instruction {
+  font-size: 0.95em;
+  font-weight: 500;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.cortex-ble-cal-countdown {
+  font-size: 5rem;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1;
+  color: var(--text-normal);
+  padding: 1.5rem 0;
+}
+
+.cortex-ble-cal-go {
+  color: var(--color-green);
+  animation: cortex-ble-pulse 0.5s ease-out;
+}
+
+@keyframes cortex-ble-pulse {
+  0% { transform: scale(0.5); opacity: 0.5; }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.cortex-ble-cal-status {
+  font-size: 0.9em;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0 0 0.5rem;
+}
+
+.cortex-ble-cal-progress {
+  height: 6px;
+  background: var(--background-modifier-border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.cortex-ble-cal-progress-fill {
+  height: 100%;
+  background: var(--interactive-accent);
+  border-radius: 3px;
+  transition: width 0.15s linear;
+}
+
+.cortex-ble-cal-error {
+  color: var(--color-red);
+  font-size: 0.9em;
+}
+
+.cortex-ble-cal-summary {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: var(--background-secondary);
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.cortex-ble-cal-summary p {
+  margin: 0.2rem 0;
+  font-size: 0.9em;
+}
+
+.cortex-ble-cal-bad {
+  color: var(--color-red);
+  font-weight: 500;
+}
+
+.cortex-ble-cal-label {
+  display: block;
+  font-size: 0.85em;
+  margin-bottom: 0.35rem;
+  color: var(--text-muted);
+}
+
+.cortex-ble-cal-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.cortex-ble-cal-preset-input {
+  flex: 1;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 0.9em;
+  box-sizing: border-box;
+}
+
+.cortex-ble-cal-preset-input:focus {
+  border-color: var(--interactive-accent);
+  outline: none;
+}
+
+.cortex-ble-cal-btn-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.cortex-ble-cal-btn-row button {
+  flex: 1;
+  padding: 0.5rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.cortex-ble-cal-btn {
+  padding: 0.5rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+}
+
+.cortex-ble-cal-btn:hover {
+  background: var(--background-primary-alt);
+}
+
+.cortex-ble-cal-existing {
+  font-size: 0.85em;
+  color: var(--color-green);
+  font-family: monospace;
+  background: rgba(0, 180, 0, 0.08);
+  padding: 0.35rem 0.6rem;
+  border-radius: 4px;
+}
+
+.cortex-ble-cal-selected {
+  font-size: 0.9em;
+  color: var(--color-green);
+  font-weight: 600;
+}
+
+.cortex-ble-cal-footer {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* ── BLE Device List ─────────────────────────────────────────────── */
+
+.cortex-ble-device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-height: 280px;
+  overflow-y: auto;
+  margin-bottom: 0.5rem;
+}
+
+.cortex-ble-device-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  cursor: pointer;
+  transition: background 0.1s ease, border-color 0.1s ease;
+}
+
+.cortex-ble-device-item:hover {
+  background: var(--background-primary-alt);
+  border-color: var(--interactive-accent);
+}
+
+.cortex-ble-device-rssi {
+  font-weight: 700;
+  font-size: 0.8em;
+  color: var(--text-accent);
+  font-variant-numeric: tabular-nums;
+  min-width: 55px;
+}
+
+.cortex-ble-device-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.cortex-ble-device-name {
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.cortex-ble-device-uuid {
+  font-size: 0.7em;
+  color: var(--text-faint);
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.cortex-ble-settings-presets {
+  margin-top: 0.5rem;
+}
+
+.cortex-ble-settings-presets h5 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9em;
+}
+
+.cortex-ble-settings-preset-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  font-size: 0.85em;
+}
+
+.cortex-ble-settings-preset-row:last-child {
+  border-bottom: none;
+}
+
+.cortex-ble-settings-preset-name {
+  font-weight: 600;
+  min-width: 100px;
+}
+
+.cortex-ble-settings-preset-data {
+  flex: 1;
+  color: var(--text-muted);
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+}
+
+.cortex-ble-settings-delete-btn {
+  padding: 2px 8px;
+  font-size: 0.8em;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-red);
+  cursor: pointer;
+}
+
+.cortex-ble-settings-delete-btn:hover {
+  background: rgba(200, 0, 0, 0.1);
+}
+
+/* ── BLE State (reusable) ────────────────────────────────────────── */
+
+.cortex-ble-locked {
+  color: var(--color-green);
+  background: rgba(0, 180, 0, 0.1);
+}
+
+.cortex-ble-distracted {
+  color: var(--color-red);
+  background: rgba(200, 0, 0, 0.1);
+}
+
+.cortex-ble-gray {
+  color: var(--text-muted);
+  background: var(--background-modifier-border);
+}
+
+/* ── BLE Device Picker Modal ─────────────────────────────────── */
+
+.cortex-ble-device-picker-modal {
+  min-width: 420px;
+}
+
+.cortex-ble-device-picker-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cortex-ble-device-picker-body h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.cortex-ble-device-picker-desc {
+  font-size: 0.9em;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.cortex-ble-device-picker-current {
+  font-size: 0.85em;
+  padding: 0.35rem 0.6rem;
+  background: rgba(0, 180, 0, 0.08);
+  border-radius: 4px;
+  color: var(--text-muted);
+}
+
+.cortex-ble-device-picker-current-name {
+  color: var(--color-green);
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.cortex-ble-device-picker-btn-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.cortex-ble-device-picker-btn-row button {
+  flex: 1;
+  padding: 0.5rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.cortex-ble-device-picker-status {
+  font-size: 0.9em;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.cortex-ble-device-picker-error {
+  color: var(--color-red);
+  font-size: 0.9em;
+  margin: 0;
+}
+
+.cortex-ble-device-picker-footer {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.cortex-ble-device-signal {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.cortex-ble-signal-bar {
+  width: 4px;
+  background: var(--background-modifier-border);
+  border-radius: 1px;
+  transition: background 0.15s ease;
+}
+
+.cortex-ble-signal-bar:nth-child(1) { height: 4px; }
+.cortex-ble-signal-bar:nth-child(2) { height: 7px; }
+.cortex-ble-signal-bar:nth-child(3) { height: 11px; }
+.cortex-ble-signal-bar:nth-child(4) { height: 16px; }
+
+.cortex-ble-signal-active {
+  background: var(--interactive-accent);
+}
+
+.cortex-ble-device-item-active {
+  border-color: var(--color-green);
+  background: rgba(0, 180, 0, 0.06);
+}
+
+.cortex-ble-device-item-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Focus panels (side-by-side) ─────────────────────────────────── */
+
+.cortex-focus-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.cortex-focus-panel {
+  flex: 1;
+  min-width: 0;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.cortex-focus-panel h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95em;
+}
+
+/* ── Toggle switch ──────────────────────────────────────────────── */
+
+.cortex-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cortex-toggle {
+  width: 32px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--background-modifier-border);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+
+.cortex-toggle::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease;
+}
+
+.cortex-toggle.is-enabled {
+  background: var(--color-green);
+}
+
+.cortex-toggle.is-enabled::after {
+  transform: translateX(14px);
+}
+
+.cortex-toggle-label {
+  font-size: 0.85em;
+  color: var(--text-muted);
+}
+
+/* ── Focus status ────────────────────────────────────────────────── */
+
+.cortex-ble-status {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.35rem;
+  font-size: 0.8em;
+}
+
+.cortex-focus-rssi {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cortex-focus-device {
+  font-size: 0.75em;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.cortex-focus-state {
+  font-weight: 700;
+  font-size: 0.75em;
+  padding: 0.1em 0.4em;
+  border-radius: 3px;
+}
+
+.cortex-state-locked {
+  color: var(--color-green);
+  background: rgba(0, 180, 0, 0.1);
+}
+
+.cortex-state-distracted {
+  color: var(--color-red);
+  background: rgba(200, 0, 0, 0.1);
+}
+
+.cortex-state-gray {
+  color: var(--text-muted);
+  background: var(--background-modifier-border);
+}
+
+.cortex-face-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-size: 0.8em;
+  margin-top: 0.35rem;
+}
+
+.cortex-face-stat {
+  color: var(--text-muted);
 }
