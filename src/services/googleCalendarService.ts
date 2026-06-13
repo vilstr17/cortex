@@ -1,7 +1,6 @@
 import { requestUrl } from "obsidian";
 import { CortexSettings } from "../settings";
 
-const GOOGLE_CLIENT_ID = "243033885510-h3dur7p7gm579nk5o2s0prr3pppp1fjb.apps.googleusercontent.com";
 const GOOGLE_REFRESH_PROXY_BASE_URL = "https://cortex-proxy.vercel.app";
 const PREEMPTIVE_REFRESH_MS = 5 * 60 * 1000; // refresh 5 min before expiry
 

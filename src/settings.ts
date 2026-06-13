@@ -1,60 +1,13 @@
 import { App, Notice, Platform, PluginSettingTab, Setting } from "obsidian";
 import CortexPlugin from "./main";
-import type { BleCalibration } from "./ble/types";
 
-export interface CortexTest {
-  id: string;
-  name: string;
-  date: string; // ISO date string
-  filePaths: string[];
-  done?: boolean;
-}
-
-export interface CortexSettings {
-  geminiApiKey: string;
-  geminiModel: string;
-  planningPreferences: string;
-  timeZone: string;
-  googleAccessToken: string;
-  googleRefreshToken: string;
-  googleTokenExpiry: number;
-  tests: CortexTest[];
-  wakeUpTime: string;
-  bedTime: string;
-  dailyLimitMax: number | null;
-  maxReviewIntervalDays: number | null;
-  bleEnabled: boolean;
-  bleDeviceName: string;
-  bleCalibrationData: BleCalibration | null;
-  faceEnabled: boolean;
-  faceSampleIntervalSec: number;
-  faceBlinkThreshold: number;
-  facePitchThreshold: number;
-  faceGracePeriodSec: number;
-}
-
-export const DEFAULT_SETTINGS: CortexSettings = {
-  geminiApiKey: "",
-  geminiModel: "gemini-2.5-flash",
-  planningPreferences: "",
-  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  googleAccessToken: "",
-  googleRefreshToken: "",
-  googleTokenExpiry: 0,
-  tests: [],
-  wakeUpTime: "07:00",
-  bedTime: "23:00",
-  dailyLimitMax: null,
-  maxReviewIntervalDays: null,
-  bleEnabled: false,
-  bleDeviceName: "",
-  bleCalibrationData: null,
-  faceEnabled: false,
-  faceSampleIntervalSec: 10,
-  faceBlinkThreshold: 0.25,
-  facePitchThreshold: -0.08,
-  faceGracePeriodSec: 2,
-};
+// Re-export the pure data types from the dependency-free module so tests
+// and other non-Obsidian code paths can import them without pulling in
+// the full plugin runtime.
+export type { CortexTest, CortexSettings } from "./settingsTypes";
+export { DEFAULT_SETTINGS } from "./settingsTypes";
+import type { CortexSettings } from "./settingsTypes";
+import { DEFAULT_SETTINGS } from "./settingsTypes";
 
 export class CortexSettingTab extends PluginSettingTab {
   plugin: CortexPlugin;

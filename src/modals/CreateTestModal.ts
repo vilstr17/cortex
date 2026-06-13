@@ -4,8 +4,8 @@ import CortexPlugin from "../main";
 export class CreateTestModal extends Modal {
   private plugin: CortexPlugin;
   private onSubmit: () => void;
-  private testName: string = "";
-  private testDate: string = "";
+  private testName = "";
+  private testDate = "";
   private saveButtonComponent: ButtonComponent | null = null;
 
   constructor(app: App, plugin: CortexPlugin, onSubmit: () => void) {

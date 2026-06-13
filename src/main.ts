@@ -12,6 +12,7 @@ import { GoogleCalendarService } from "./services/googleCalendarService";
 import { TestService } from "./services/testService";
 import type { BleFocusDetector } from "./ble/BleFocusDetector";
 import type { FaceFocusEvaluator } from "./face/FaceFocusEvaluator";
+import { migrateSettings } from "./utils/settingsMigration";
 
 export type { CortexSettings };
 export { DEFAULT_SETTINGS };
@@ -50,11 +51,17 @@ export default class CortexPlugin extends Plugin {
   }
 
   async onload() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    const raw = await this.loadData();
+    this.settings = migrateSettings(raw);
 
     if (!Array.isArray(this.settings.tests)) {
       this.settings.tests = [];
     }
+
+    // Persist the migrated blob so obsolete keys (e.g. legacy OAuth
+    // client secrets) are physically removed from data.json rather than
+    // just ignored at runtime.
+    await this.saveData(this.settings);
 
     this.registerView(
       CORTEX_DASHBOARD_VIEW,

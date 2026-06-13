@@ -34,7 +34,7 @@ export class CortexChatModal extends Modal {
     this.historyContainer = contentEl.createDiv({ cls: "chat-history" });
 
     // Welcome message
-    this.appendMessage("assistant", "Hi! I'm Cortex. Ask me about your review schedule, or request a study plan for tomorrow.");
+    this.appendMessage("assistant", "Hi! I'm Cortex. Ask me about your review schedule, or request a study plan for today.");
 
     // Input area
     const inputArea = contentEl.createDiv({ cls: "chat-input-area" });
@@ -101,9 +101,13 @@ export class CortexChatModal extends Modal {
 
       if (isSchedulingQuery) {
         dueNotes = this.getDueNotesData();
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const events = await this.plugin.getCalendarService().getEventsForDay(tomorrow);
+        // Scheduling always plans for TODAY. The AI prompt and dashboard
+        // both anchor on the local current date, so the calendar context
+        // we hand Gemini must match — otherwise we'd tell it to "schedule
+        // for today" while feeding it tomorrow's free slots.
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const events = await this.plugin.getCalendarService().getEventsForDay(today);
         calendarEvents = events.map((e) => ({
           summary: e.summary,
           startTime: e.startTime.toISOString(),
@@ -274,7 +278,7 @@ export class CortexChatModal extends Modal {
   private isSchedulingQuery(text: string): boolean {
     const lower = text.toLowerCase();
     const keywords = [
-      "plan", "schedule", "study", "calendar", "tomorrow",
+      "plan", "schedule", "study", "calendar", "today", "tomorrow",
       "when should i", "what should i review", "review plan",
       "create events", "add to calendar", "organize my day",
     ];

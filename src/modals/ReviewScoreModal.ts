@@ -3,7 +3,7 @@ import { ReviewScoreInfoModal } from "./ReviewScoreInfoModal";
 
 export class ReviewScoreModal extends Modal {
   private onSubmit: (score: number) => void;
-  private score: number = 3;
+  private score = 3;
   private slider!: SliderComponent;
   private scoreLabel!: HTMLElement;
 

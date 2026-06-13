@@ -566,7 +566,16 @@ export class GeminiService {
     }
 
     // Prepend system instruction
-    const url = `${this.API_URL}/${this.model}:generateContent?key=${this.apiKey}`;
+    // SECURITY: pass the API key via the `x-goog-api-key` header, never
+    // as a `?key=` query parameter. Query-string keys can leak into
+    // request logs, browser history, referer headers, and any HTTP
+    // proxy in the chain. The header value is treated as an
+    // authentication credential by Gemini and is not echoed in URLs.
+    const url = `${this.API_URL}/${this.model}:generateContent`;
+    const authHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+      "x-goog-api-key": this.apiKey,
+    };
 
     // Maximum number of function call rounds to prevent infinite loops
     const MAX_FUNCTION_CALL_ROUNDS = 10;
@@ -594,7 +603,7 @@ export class GeminiService {
       const response = await requestUrl({
         url,
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders,
         body: JSON.stringify(body),
       });
 

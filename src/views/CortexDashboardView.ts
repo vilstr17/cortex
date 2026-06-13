@@ -33,7 +33,7 @@ export class CortexDashboardView extends ItemView {
 	private faceContainer!: HTMLElement;
 	private testService!: TestService;
 	private focusUpdateInterval: ReturnType<typeof setInterval> | null = null;
-	private lastCalendarFetch: number = 0;
+	private lastCalendarFetch = 0;
 	private lastFetchedEvents: DisplayCalendarEvent[] | null = null;
 	private lastFetchedCalendarDate: Date | null = null;
 

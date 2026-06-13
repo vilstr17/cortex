@@ -23,5 +23,8 @@ data.json
 
 dist/
 
+# Test coverage output
+coverage/
+
 # Exclude macOS Finder (System Explorer) View States
 .DS_Storedata.json
