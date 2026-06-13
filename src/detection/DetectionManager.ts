@@ -70,7 +70,6 @@ export class DetectionManager {
 				if (!(await adapter.exists(dir))) await adapter.mkdir(dir);
 				await adapter.writeBinary(path(name), data);
 			},
-			getResourcePath: (name) => adapter.getResourcePath(path(name)),
 		};
 	}
 
@@ -141,7 +140,8 @@ export class DetectionManager {
 					this.plugin.settings.bleEnabled = true;
 					await this.plugin.saveData(this.plugin.settings);
 				} else if (notify) {
-					new Notice("Cortex: Bluetooth unavailable. Make sure Bluetooth is on and Obsidian has access in System Settings → Privacy & Security → Bluetooth.");
+					const err = this.ble?.getLastError();
+					new Notice(err ? `Cortex: ${err}` : "Cortex: Bluetooth unavailable. Make sure Bluetooth is on and Obsidian has access in System Settings → Privacy & Security → Bluetooth.");
 				}
 			}
 		} catch (e) {
@@ -178,6 +178,11 @@ export class DetectionManager {
 
 	isFaceOn(): boolean {
 		return this.plugin.settings.faceEnabled;
+	}
+
+	/** True while face detection is starting up (camera/model init). */
+	isFaceStarting(): boolean {
+		return this.toggling.face && !this.plugin.settings.faceEnabled;
 	}
 
 	async toggleFace(notify = true): Promise<void> {

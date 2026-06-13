@@ -1,6 +1,13 @@
 const http = require("node:http");
 const noble = require("@abandonware/noble");
 
+process.on("uncaughtException", (err) => {
+	console.error("[ble-scanner] uncaughtException:", err);
+});
+process.on("unhandledRejection", (reason) => {
+	console.error("[ble-scanner] unhandledRejection:", reason);
+});
+
 const EMA_ALPHA = 0.8;
 const SESSION_TIMEOUT_MS = 5000;
 // If no advertisement (from any device) arrives for this long while we are
@@ -259,12 +266,20 @@ const server = http.createServer((req, res) => {
 				const duration = data.duration || 8;
 
 				const wasScanning = scanning;
+				const savedConfig = scanConfig;
 				if (wasScanning) {
 					stopContinuousScan();
 					await new Promise(r => setTimeout(r, 400));
 				}
 
 				const devices = await discoverDevices(duration);
+
+				if (savedConfig) {
+					scanConfig = savedConfig;
+					if (noble.state === "poweredOn" && !scanning) {
+						await startContinuousScan();
+					}
+				}
 
 				res.writeHead(200);
 				res.end(JSON.stringify({ devices }));
@@ -305,6 +320,28 @@ noble.on("stateChange", async (state) => {
 	}
 });
 
+// If the port is taken (stale scanner from a previous session), exit
+// immediately with a distinct code instead of lingering half-alive —
+// the uncaughtException handler above must not swallow this.
+server.on("error", (err) => {
+	console.error("[ble-scanner] server error:", err.message);
+	if (err.code === "EADDRINUSE") {
+		process.exit(2);
+	}
+});
+
 server.listen(PORT, "127.0.0.1", () => {
 	console.log(`[ble-scanner] HTTP API on 127.0.0.1:${PORT}`);
+});
+
+// The plugin pipes our stdin; when Obsidian dies (even force-quit), the
+// pipe closes and we exit instead of becoming an orphan that holds the
+// port and burns CPU.
+process.stdin.on("end", () => { console.log("[ble-scanner] stdin closed, exiting"); process.exit(0); });
+process.stdin.on("error", () => process.exit(0));
+process.stdin.resume();
+
+process.on("SIGTERM", () => {
+	stopContinuousScan();
+	process.exit(0);
 });

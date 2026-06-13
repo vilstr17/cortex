@@ -1,12 +1,14 @@
-# Obsidian community plugin
+# Obsidian Community Plugin
 
-## Project overview
+> **Status:** This file originated as the sample-plugin template guide. It has been kept as a general reference for Obsidian plugin conventions. For Cortex-specific documentation, see [`docs/`](docs/) and [`PERFORMANCE.md`](PERFORMANCE.md).
+
+## Project Overview
 
 - Target: Obsidian Community Plugin (TypeScript → bundled JavaScript).
 - Entry point: `main.ts` compiled to `main.js` and loaded by Obsidian.
 - Required release artifacts: `main.js`, `manifest.json`, and optional `styles.css`.
 
-## Environment & tooling
+## Environment & Tooling
 
 - Node.js: use current LTS (Node 18+ recommended).
 - **Package manager: npm** (required for this sample - `package.json` defines npm scripts and dependencies).
@@ -40,7 +42,7 @@ npm run build
 - eslint will then create a report with suggestions for code improvement by file and line number.
 - If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder: `eslint ./src/`
 
-## File & folder conventions
+## File & Folder Conventions
 
 - **Organize code into multiple files**: Split functionality across separate modules rather than putting everything in `main.ts`.
 - Source lives in `src/`. Keep `main.ts` small and focused on plugin lifecycle (loading, unloading, registering commands).
@@ -64,15 +66,15 @@ npm run build
 - Keep the plugin small. Avoid large dependencies. Prefer browser-compatible packages.
 - Generated output should be placed at the plugin root or `dist/` depending on your build setup. Release artifacts must end up at the top level of the plugin folder in the vault (`main.js`, `manifest.json`, `styles.css`).
 
-## Manifest rules (`manifest.json`)
+## Manifest Rules (`manifest.json`)
 
-- Must include (non-exhaustive):  
-  - `id` (plugin ID; for local dev it should match the folder name)  
-  - `name`  
-  - `version` (Semantic Versioning `x.y.z`)  
-  - `minAppVersion`  
-  - `description`  
-  - `isDesktopOnly` (boolean)  
+- Must include (non-exhaustive):
+  - `id` (plugin ID; for local dev it should match the folder name)
+  - `name`
+  - `version` (Semantic Versioning `x.y.z`)
+  - `minAppVersion`
+  - `description`
+  - `isDesktopOnly` (boolean)
   - Optional: `author`, `authorUrl`, `fundingUrl` (string or map)
 - Never change `id` after release. Treat it as stable API.
 - Keep `minAppVersion` accurate when using newer APIs.
@@ -86,21 +88,21 @@ npm run build
   ```
 - Reload Obsidian and enable the plugin in **Settings → Community plugins**.
 
-## Commands & settings
+## Commands & Settings
 
 - Any user-facing commands should be added via `this.addCommand(...)`.
 - If the plugin has configuration, provide a settings tab and sensible defaults.
 - Persist settings using `this.loadData()` / `this.saveData()`.
 - Use stable command IDs; avoid renaming once released.
 
-## Versioning & releases
+## Versioning & Releases
 
 - Bump `version` in `manifest.json` (SemVer) and update `versions.json` to map plugin version → minimum app version.
 - Create a GitHub release whose tag exactly matches `manifest.json`'s `version`. Do not use a leading `v`.
 - Attach `manifest.json`, `main.js`, and `styles.css` (if present) to the release as individual assets.
 - After the initial release, follow the process to add/update your plugin in the community catalog as required.
 
-## Security, privacy, and compliance
+## Security, Privacy, and Compliance
 
 Follow Obsidian's **Developer Policies** and **Plugin Guidelines**. In particular:
 
@@ -113,7 +115,7 @@ Follow Obsidian's **Developer Policies** and **Plugin Guidelines**. In particula
 - Avoid deceptive patterns, ads, or spammy notifications.
 - Register and clean up all DOM, app, and interval listeners using the provided `register*` helpers so the plugin unloads safely.
 
-## UX & copy guidelines (for UI text, commands, settings)
+## UX & Copy Guidelines (for UI text, commands, settings)
 
 - Prefer sentence case for headings, buttons, and titles.
 - Use clear, action-oriented imperatives in step-by-step copy.
@@ -128,7 +130,7 @@ Follow Obsidian's **Developer Policies** and **Plugin Guidelines**. In particula
 - Batch disk access and avoid excessive vault scans.
 - Debounce/throttle expensive operations in response to file system events.
 
-## Coding conventions
+## Coding Conventions
 
 - TypeScript with `"strict": true` preferred.
 - **Keep `main.ts` minimal**: Focus only on plugin lifecycle (onload, onunload, addCommand calls). Delegate all feature logic to separate modules.
@@ -144,7 +146,7 @@ Follow Obsidian's **Developer Policies** and **Plugin Guidelines**. In particula
 - Don't assume desktop-only behavior unless `isDesktopOnly` is `true`.
 - Avoid large in-memory structures; be mindful of memory and storage constraints.
 
-## Agent do/don't
+## Agent Do/Don't
 
 **Do**
 - Add commands with stable IDs (don't rename once released).
@@ -157,7 +159,7 @@ Follow Obsidian's **Developer Policies** and **Plugin Guidelines**. In particula
 - Ship features that require cloud services without clear disclosure and explicit opt-in.
 - Store or transmit vault contents unless essential and consented.
 
-## Common tasks
+## Common Tasks
 
 ### Organize code across multiple files
 
@@ -236,7 +238,7 @@ this.registerInterval(window.setInterval(() => { /* ... */ }, 1000));
 
 ## Troubleshooting
 
-- Plugin doesn't load after build: ensure `main.js` and `manifest.json` are at the top level of the plugin folder under `<Vault>/.obsidian/plugins/<plugin-id>/`. 
+- Plugin doesn't load after build: ensure `main.js` and `manifest.json` are at the top level of the plugin folder under `<Vault>/.obsidian/plugins/<plugin-id>/`.
 - Build issues: if `main.js` is missing, run `npm run build` or `npm run dev` to compile your TypeScript source code.
 - Commands not appearing: verify `addCommand` runs after `onload` and IDs are unique.
 - Settings not persisting: ensure `loadData`/`saveData` are awaited and you re-render the UI after changes.

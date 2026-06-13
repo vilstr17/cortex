@@ -1,7 +1,6 @@
 import { App, Modal, Notice, Setting } from "obsidian";
 import CortexPlugin from "../main";
 import { GeminiService, ChatMessage } from "../services/geminiService";
-import { GoogleCalendarService } from "../services/googleCalendarService";
 import { ScheduledEvent } from "../services/geminiService";
 
 interface AIResponseWithEvents {
@@ -12,7 +11,6 @@ interface AIResponseWithEvents {
 export class CortexChatModal extends Modal {
   private plugin: CortexPlugin;
   private geminiService: GeminiService;
-  private calendarService: GoogleCalendarService;
   private chatHistory: ChatMessage[] = [];
   private historyContainer!: HTMLElement;
   private inputEl!: HTMLTextAreaElement;
@@ -22,11 +20,7 @@ export class CortexChatModal extends Modal {
   constructor(app: App, plugin: CortexPlugin) {
     super(app);
     this.plugin = plugin;
-    this.calendarService = new GoogleCalendarService(
-      plugin.settings,
-      () => plugin.saveData(plugin.settings),
-    );
-    this.geminiService = new GeminiService(plugin.settings, this.calendarService);
+    this.geminiService = new GeminiService(plugin.settings, this.plugin.getCalendarService());
   }
 
   onOpen(): void {
@@ -109,7 +103,7 @@ export class CortexChatModal extends Modal {
         dueNotes = this.getDueNotesData();
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
-        const events = await this.calendarService.getEventsForDay(tomorrow);
+        const events = await this.plugin.getCalendarService().getEventsForDay(tomorrow);
         calendarEvents = events.map((e) => ({
           summary: e.summary,
           startTime: e.startTime.toISOString(),
@@ -225,7 +219,7 @@ export class CortexChatModal extends Modal {
     let successCount = 0;
     for (const event of events) {
       try {
-        const ok = await this.calendarService.createEvent({
+        const ok = await this.plugin.getCalendarService().createEvent({
           summary: event.summary,
           description: event.description,
           startTime: event.startTime,

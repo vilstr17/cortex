@@ -5,6 +5,7 @@ import { AddToTestModal } from "./modals/AddToTestModal";
 import { MarkTestDoneModal } from "./modals/MarkTestDoneModal";
 import { calculateNextReview } from "./utils/srsLogic";
 import { cortexNotice } from "./utils/notice";
+import { localISODate, parseLocalDate, startOfLocalDay, addDays } from "./utils/dateUtils";
 
 export default class Commands {
   plugin: CortexPlugin;
@@ -113,8 +114,6 @@ async function applyReviewToFrontmatter(
     const currentInterval: number =
       typeof frontmatter.interval === "number"
         ? frontmatter.interval
-        : frontmatter.interval === "number"
-        ? Number(frontmatter.interval)
         : 0;
 
     // Read exam date if present (used by SRS algorithm to compress intervals near exam)
@@ -125,10 +124,9 @@ async function applyReviewToFrontmatter(
 
     // Check if this is the last review before the exam
     if (examDateStr) {
-      const examDate = new Date(examDateStr);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (examDate.getTime() <= today.getTime()) {
+      const examDate = parseLocalDate(examDateStr);
+      const today = startOfLocalDay(new Date());
+      if (examDate && examDate.getTime() <= today.getTime()) {
         lastReviewBeforeExam = true;
       }
     }
@@ -164,12 +162,12 @@ async function applyReviewToFrontmatter(
   };
 
   if (maxPerDay !== null) {
-    let overflowDate = new Date(nextReviewDate);
+    let overflowDate = parseLocalDate(nextReviewDate) || startOfLocalDay(new Date());
 
     while (getNotesScheduledFor(nextReviewDate) >= maxPerDay) {
       // overflow to the next day
-      overflowDate.setDate(overflowDate.getDate() + 1);
-      const newStr = overflowDate.toISOString().split("T")[0];
+      overflowDate = addDays(overflowDate, 1);
+      const newStr = localISODate(overflowDate);
       nextReviewDate = newStr;
       nextInterval++;
     }

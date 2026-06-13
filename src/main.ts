@@ -8,6 +8,8 @@ import { CortexSettings, DEFAULT_SETTINGS, CortexSettingTab } from "./settings";
 import { DetectionManager } from "./detection/DetectionManager";
 import { CalibrationModal } from "./ble/CalibrationModal";
 import { BleDevicePickerModal } from "./ble/BleDevicePickerModal";
+import { GoogleCalendarService } from "./services/googleCalendarService";
+import { TestService } from "./services/testService";
 import type { BleFocusDetector } from "./ble/BleFocusDetector";
 import type { FaceFocusEvaluator } from "./face/FaceFocusEvaluator";
 
@@ -18,6 +20,7 @@ export default class CortexPlugin extends Plugin {
   settings: CortexSettings = DEFAULT_SETTINGS;
   commands!: Commands;
   detection: DetectionManager | null = null;
+  private oauthState: string | null = null;
 
   /** Convenience accessors for views/modals. */
   get bleDetector(): BleFocusDetector | null {
@@ -25,6 +28,25 @@ export default class CortexPlugin extends Plugin {
   }
   get faceEvaluator(): FaceFocusEvaluator | null {
     return this.detection?.face ?? null;
+  }
+
+  calendarService: GoogleCalendarService | null = null;
+  testService!: TestService;
+
+  getCalendarService(): GoogleCalendarService {
+    if (!this.calendarService) {
+      this.calendarService = new GoogleCalendarService(
+        this.settings,
+        () => this.saveData(this.settings),
+      );
+    }
+    return this.calendarService;
+  }
+
+  generateOAuthState(): string {
+    const state = crypto.randomUUID();
+    this.oauthState = state;
+    return state;
   }
 
   async onload() {
@@ -46,7 +68,20 @@ export default class CortexPlugin extends Plugin {
       this.detection = new DetectionManager(this);
     }
 
+    this.testService = new TestService(this);
+
     this.registerObsidianProtocolHandler("cortex-auth", async (params) => {
+      if (!params.state || params.state !== this.oauthState) {
+        this.settings.googleAccessToken = "";
+        this.settings.googleRefreshToken = "";
+        this.settings.googleTokenExpiry = 0;
+        await this.saveData(this.settings);
+        new Notice("Cortex: OAuth state mismatch or missing. Authentication rejected for security.");
+        this.oauthState = null;
+        return;
+      }
+      this.oauthState = null;
+
       if (params.access_token) {
         this.settings.googleAccessToken = params.access_token;
         if (params.refresh_token) {
@@ -112,6 +147,8 @@ export default class CortexPlugin extends Plugin {
   async onunload(): Promise<void> {
     this.app.workspace.detachLeavesOfType(CORTEX_DASHBOARD_VIEW);
     await this.detection?.destroy();
+    this.calendarService?.destroy();
+    this.calendarService = null;
   }
 
   async openDashboard() {

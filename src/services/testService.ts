@@ -46,21 +46,6 @@ export class TestService {
     return test;
   }
 
-  async updateTest(id: string, updates: Partial<Pick<CortexTest, "name" | "date">>): Promise<CortexTest | undefined> {
-    const test = this.getTestById(id);
-    if (!test) return undefined;
-
-    if (updates.name !== undefined) test.name = updates.name;
-    if (updates.date !== undefined) {
-      test.date = updates.date;
-      // Sync the new exam date to all linked notes' frontmatter
-      await this.syncExamDateToNotes(test.id);
-    }
-
-    await this.plugin.saveData(this.plugin.settings);
-    return test;
-  }
-
   async addFileToTest(testId: string, filePath: string): Promise<CortexTest | undefined> {
     const test = this.getTestById(testId);
     if (!test) return undefined;
@@ -74,16 +59,6 @@ export class TestService {
 
       return test;
     }
-
-    return test;
-  }
-
-  async removeFileFromTest(testId: string, filePath: string): Promise<CortexTest | undefined> {
-    const test = this.getTestById(testId);
-    if (!test) return undefined;
-
-    test.filePaths = test.filePaths.filter((path) => path !== filePath);
-    await this.plugin.saveData(this.plugin.settings);
 
     return test;
   }

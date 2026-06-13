@@ -109,7 +109,26 @@ shrink a single-file plugin bundle).
   on dashboard turns green and shows dBm within ~10 s, and face tracking shows
   stats after the one-time model download.
 
-## 5. Known residual risks / follow-ups
+## 5. Follow-up incident (2026-06-12): orphaned scanner on port 18888
+
+After the initial fixes, BLE failed with `EADDRINUSE` and face tracking was
+sluggish. Diagnosis: an **orphaned scanner process from a previous session
+(old scan-churn code) was still listening on port 18888 at 99.5 % CPU** —
+every newly spawned scanner crashed on bind, and the pegged core slowed
+everything else. Fixes:
+
+- Plugin kills any stale listener on the port (`lsof -sTCP:LISTEN`) before
+  spawning a scanner.
+- Scanner exits with code 2 on `EADDRINUSE` instead of lingering half-alive.
+- Scanner stdin is piped from the plugin; when Obsidian dies — even
+  force-quit — the pipe closes and the scanner exits, so it can never orphan
+  again. (Verified: bind-conflict exit and stdin-close exit both tested.)
+- Face wasm/loader now served via `blob:` URLs from the disk cache (immune
+  to vault-path/URL-scheme quirks), and the dashboard shows init progress
+  ("Downloading face_landmarker.task (one-time)…") plus a STARTING toggle
+  state instead of appearing dead during the first-run model download.
+
+## 6. Known residual risks / follow-ups
 - The scanner still depends on a system Node + globally installed
   `@abandonware/noble` (native module; cannot run under Electron's ABI).
   Bundling a prebuilt binary would remove this external dependency.

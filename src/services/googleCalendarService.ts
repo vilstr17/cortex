@@ -5,6 +5,43 @@ const GOOGLE_CLIENT_ID = "243033885510-h3dur7p7gm579nk5o2s0prr3pppp1fjb.apps.goo
 const GOOGLE_REFRESH_PROXY_BASE_URL = "https://cortex-proxy.vercel.app";
 const PREEMPTIVE_REFRESH_MS = 5 * 60 * 1000; // refresh 5 min before expiry
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// ── Proxy / API Response Types ────────────────────────────────────
+
+interface ProxyRefreshResponse {
+  access_token?: string;
+  refresh_token?: string;
+  error?: string;
+  expires_in?: number;
+}
+
+function isValidProxyRefreshResponse(obj: unknown): obj is ProxyRefreshResponse {
+  if (!isPlainObject(obj)) return false;
+  const rec = obj as Record<string, unknown>;
+  if ("access_token" in rec && typeof rec.access_token !== "string") return false;
+  if ("refresh_token" in rec && typeof rec.refresh_token !== "string") return false;
+  if ("error" in rec && typeof rec.error !== "string") return false;
+  if ("expires_in" in rec && typeof rec.expires_in !== "number") return false;
+  return true;
+}
+
+interface CalendarListResponse {
+  items?: unknown[];
+}
+
+function isValidCalendarListResponse(obj: unknown): obj is CalendarListResponse {
+  return isPlainObject(obj) && (!("items" in obj) || Array.isArray((obj as Record<string, unknown>).items));
+}
+
+function isCalendarEvent(value: unknown): value is CalendarEvent {
+  if (!isPlainObject(value)) return false;
+  const rec = value as Record<string, unknown>;
+  return isPlainObject(rec.start) && isPlainObject(rec.end);
+}
+
 export interface DisplayCalendarEvent {
   id: string;
   summary: string;
@@ -69,17 +106,16 @@ export class GoogleCalendarService {
         }
 
         try {
-          const url = `${GOOGLE_REFRESH_PROXY_BASE_URL}/api/refresh?refresh_token=${encodeURIComponent(rt)}`;
-          const response = await requestUrl({ url, method: "GET" });
-          const data = response.json as {
-            access_token?: string;
-            refresh_token?: string;
-            error?: string;
-            expires_in?: number;
-          };
-
-          if (!data?.access_token) {
-            throw new Error(data?.error || "Proxy refresh failed");
+          const url = `${GOOGLE_REFRESH_PROXY_BASE_URL}/api/refresh`;
+          const response = await requestUrl({
+            url,
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refresh_token: rt }),
+          });
+          const data = response.json;
+          if (!isValidProxyRefreshResponse(data) || !data.access_token) {
+            throw new Error(isValidProxyRefreshResponse(data) && data.error ? data.error : "Proxy refresh failed");
           }
 
           this.settings.googleAccessToken = data.access_token;
@@ -243,7 +279,9 @@ export class GoogleCalendarService {
       });
 
       const data = response.json;
-      const items: CalendarEvent[] = data?.items ?? [];
+      const items: CalendarEvent[] = isValidCalendarListResponse(data)
+        ? (data.items ?? []).filter(isCalendarEvent)
+        : [];
 
       return items
         .map((item): DisplayCalendarEvent | null => {
@@ -291,21 +329,6 @@ export class GoogleCalendarService {
 
     console.error(`Cortex: Failed to delete event ${eventId}. Status: ${response.status}`, response.text);
     return false;
-  }
-
-  async deleteEventsForDay(day: Date): Promise<{ attempted: number; succeeded: number; failed: number }> {
-    const events = await this.getEventsForDay(day);
-
-    let succeeded = 0;
-    let failed = 0;
-
-    for (const event of events) {
-      const ok = await this.deleteEvent(event.id);
-      if (ok) succeeded++;
-      else failed++;
-    }
-
-    return { attempted: events.length, succeeded, failed };
   }
 
   async updateEvent(eventId: string, options: {

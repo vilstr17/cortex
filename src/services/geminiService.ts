@@ -1,6 +1,7 @@
 import { requestUrl } from "obsidian";
 import { CortexSettings, CortexTest } from "../settings";
 import { GoogleCalendarService } from "./googleCalendarService";
+import { localISODate, parseLocalDate, startOfLocalDay } from "../utils/dateUtils";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -12,6 +13,30 @@ export interface ScheduledEvent {
   description: string;
   startTime: string; // ISO 8601 datetime string
   endTime: string;   // ISO 8601 datetime string
+}
+
+// ── Gemini API Response Types ─────────────────────────────────────
+
+interface GeminiApiCandidate {
+  content?: {
+    parts?: Array<{
+      text?: string;
+      functionCall?: GeminiFunctionCall;
+    }>;
+  };
+}
+
+interface GeminiApiResponse {
+  candidates?: GeminiApiCandidate[];
+}
+
+function isGeminiApiResponse(obj: unknown): obj is GeminiApiResponse {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    !Array.isArray(obj) &&
+    ("candidates" in obj ? Array.isArray((obj as Record<string, unknown>).candidates) : true)
+  );
 }
 
 // ── Gemini Function Calling Types ──────────────────────────────────
@@ -89,7 +114,7 @@ export class GeminiService {
       month: "long",
       day: "numeric",
     });
-    const isoDate = now.toISOString().split("T")[0];
+    const isoDate = localISODate(now);
     const timeStr = now.toLocaleTimeString(locale, {
       hour: "2-digit",
       minute: "2-digit",
@@ -217,8 +242,8 @@ export class GeminiService {
     try {
       switch (name) {
         case "list_events": {
-          const dateStr = (args.date as string) ?? new Date().toISOString().split("T")[0];
-          const targetDate = new Date(dateStr);
+          const dateStr = typeof args.date === "string" ? args.date : localISODate();
+          const targetDate = parseLocalDate(dateStr) || startOfLocalDay(new Date());
           const events = await this.calendarService.getEventsForDay(targetDate);
 
           if (events.length === 0) {
@@ -236,7 +261,7 @@ export class GeminiService {
         }
 
         case "delete_event": {
-          const eventId = args.event_id as string;
+          const eventId = typeof args.event_id === "string" ? args.event_id : "";
           if (!eventId) {
             return "Error: event_id is required to delete an event.";
           }
@@ -250,10 +275,10 @@ export class GeminiService {
         }
 
         case "create_event": {
-          const summary = args.summary as string;
-          let startTime = args.start_time as string;
-          let endTime = args.end_time as string;
-          const description = (args.description as string) ?? "";
+          const summary = typeof args.summary === "string" ? args.summary : "";
+          let startTime = typeof args.start_time === "string" ? args.start_time : "";
+          let endTime = typeof args.end_time === "string" ? args.end_time : "";
+          const description = typeof args.description === "string" ? args.description : "";
         
           if (!summary || !startTime || !endTime) {
             return "Error: summary, start_time, and end_time are required to create an event.";
@@ -281,13 +306,13 @@ export class GeminiService {
         }
 
         case "update_event": {
-          const eventId = args.event_id as string;
+          const eventId = typeof args.event_id === "string" ? args.event_id : "";
           if (!eventId) {
             return "Error: event_id is required to update an event.";
           }
-        
-          let startTime = args.start_time as string | undefined;
-          let endTime = args.end_time as string | undefined;
+
+          let startTime = typeof args.start_time === "string" ? args.start_time : undefined;
+          let endTime = typeof args.end_time === "string" ? args.end_time : undefined;
         
           // Strip 'Z' suffix if present (Gemini sometimes sends UTC format)
           if (startTime) startTime = startTime.replace(/Z$/, "");
@@ -296,8 +321,8 @@ export class GeminiService {
           const timeZone = this.settings.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
         
           const success = await this.calendarService.updateEvent(eventId, {
-            summary: args.summary as string | undefined,
-            description: args.description as string | undefined,
+            summary: typeof args.summary === "string" ? args.summary : undefined,
+            description: typeof args.description === "string" ? args.description : undefined,
             startTime,
             endTime,
             timeZone,
@@ -329,7 +354,7 @@ export class GeminiService {
   ): string {
     const timeContext = this.getTimeContext();
     const now = new Date();
-    const isoDate = now.toISOString().split("T")[0];
+    const isoDate = localISODate(now);
 
     const parts = [
       timeContext,
@@ -465,6 +490,45 @@ export class GeminiService {
   }
 
   /**
+   * Build the general (non-scheduling) system prompt for chat mode.
+   */
+  private buildGeneralSystemPrompt(): string {
+    const wakeUp = this.settings.wakeUpTime || "07:00";
+    const bedTime = this.settings.bedTime || "23:00";
+
+    return (
+      this.getTimeContext() +
+      "\n\nYou operate in the timezone specified in the context. Always provide and accept times in local format. Do not convert to UTC." +
+      "\n\nYou are an intelligent personal assistant integrated into Obsidian. " +
+      "Your goal is to help the user manage their knowledge and schedule. " +
+      `\n\nDaily Routine:\nWake Up Time: ${wakeUp}\nBed Time: ${bedTime}` +
+      "\n\nScheduling Rules:\n" +
+      "- Your primary goal is to optimize the user's learning efficiency, not just fill slots.\n" +
+      "- Respect the Daily Routine: Never schedule study during sleep hours.\n" +
+      "- Block Limits: Never schedule continuous study blocks longer than 2 hours. Automatically insert a 15-minute 'Break' event after any long block.\n" +
+      "- Prioritization: Look at the lastScore of pending reviews. Schedule the lowest scores during the user's peak morning hours. High scores can be reviewed later in the day.\n" +
+      "- Calendar Awareness: You MUST check existing calendar events and only place new study sessions in genuine free gaps.\n" +
+      "\nONLY create or modify calendar events when explicitly asked. " +
+      "Do not generate study plans or calendar events unless specifically requested. " +
+      "You can answer questions, summarize notes, and manage Google Calendar (list, create, delete, move events). " +
+      "Always check the current date and time provided in the context before performing any calendar actions. " +
+      "Be concise and practical. Always respond in users language." +
+      "\n\nTOOL USAGE — CRITICAL: " +
+      "You have access to calendar management tools: list_events, delete_event, create_event, update_event. " +
+      "When the user asks you to list, delete, create, or modify calendar events, YOU MUST USE THESE TOOLS. " +
+      "Do NOT just say you performed an action — actually call the appropriate tool. " +
+      "If you say you deleted an event without calling delete_event, the user will not see any change. " +
+      "Always use tools to get real results before confirming any calendar action to the user." +
+      "\n\nAUTONOMOUS BEHAVIOR — STRICT RULES:" +
+      "1. NEVER ask the user for an Event ID. Users do not know IDs." +
+      "2. If the user asks to delete, move, or modify an event by its name, DO NOT ask for permission to search. Immediately use the list_events tool to find the event's ID, then call the appropriate tool (delete_event, update_event) in the same turn." +
+      "3. Chain actions: After list_events returns results, immediately execute the requested action (delete, update) without asking for confirmation." +
+      "4. No unnecessary confirmations: Only ask for clarification if multiple events have the exact same name and you are genuinely confused. Otherwise, just execute the user's request silently and reply with 'Done'." +
+      "5. Be proactive: If the user says 'delete my 3pm meeting', search for events around 3pm using list_events and delete the matching one automatically."
+    );
+  }
+
+  /**
    * General-purpose chat with Gemini, with optional study-planner context.
    * Pass dueNotes, calendarEvents, and tests to enable scheduling mode.
    * Returns the assistant's text response.
@@ -484,38 +548,7 @@ export class GeminiService {
         tests ? JSON.stringify(tests, null, 2) : undefined,
       );
     } else {
-      const wakeUp = this.settings.wakeUpTime || "07:00";
-      const bedTime = this.settings.bedTime || "23:00";
-
-      systemPrompt =
-        this.getTimeContext() +
-        "\n\nYou operate in the timezone specified in the context. Always provide and accept times in local format. Do not convert to UTC." +
-        "\n\nYou are an intelligent personal assistant integrated into Obsidian. " +
-        "Your goal is to help the user manage their knowledge and schedule. " +
-        `\n\nDaily Routine:\nWake Up Time: ${wakeUp}\nBed Time: ${bedTime}` +
-        "\n\nScheduling Rules:\n" +
-        "- Your primary goal is to optimize the user's learning efficiency, not just fill slots.\n" +
-        "- Respect the Daily Routine: Never schedule study during sleep hours.\n" +
-        "- Block Limits: Never schedule continuous study blocks longer than 2 hours. Automatically insert a 15-minute 'Break' event after any long block.\n" +
-        "- Prioritization: Look at the lastScore of pending reviews. Schedule the lowest scores during the user's peak morning hours. High scores can be reviewed later in the day.\n" +
-        "- Calendar Awareness: You MUST check existing calendar events and only place new study sessions in genuine free gaps.\n" +
-        "\nONLY create or modify calendar events when explicitly asked. " +
-        "Do not generate study plans or calendar events unless specifically requested. " +
-        "You can answer questions, summarize notes, and manage Google Calendar (list, create, delete, move events). " +
-        "Always check the current date and time provided in the context before performing any calendar actions. " +
-        "Be concise and practical. Always respond in users language." +
-        "\n\nTOOL USAGE — CRITICAL: " +
-        "You have access to calendar management tools: list_events, delete_event, create_event, update_event. " +
-        "When the user asks you to list, delete, create, or modify calendar events, YOU MUST USE THESE TOOLS. " +
-        "Do NOT just say you performed an action — actually call the appropriate tool. " +
-        "If you say you deleted an event without calling delete_event, the user will not see any change. " +
-        "Always use tools to get real results before confirming any calendar action to the user." +
-        "\n\nAUTONOMOUS BEHAVIOR — STRICT RULES:" +
-        "1. NEVER ask the user for an Event ID. Users do not know IDs." +
-        "2. If the user asks to delete, move, or modify an event by its name, DO NOT ask for permission to search. Immediately use the list_events tool to find the event's ID, then call the appropriate tool (delete_event, update_event) in the same turn." +
-        "3. Chain actions: After list_events returns results, immediately execute the requested action (delete, update) without asking for confirmation." +
-        "4. No unnecessary confirmations: Only ask for clarification if multiple events have the exact same name and you are genuinely confused. Otherwise, just execute the user's request silently and reply with 'Done'." +
-        "5. Be proactive: If the user says 'delete my 3pm meeting', search for events around 3pm using list_events and delete the matching one automatically.";
+      systemPrompt = this.buildGeneralSystemPrompt();
     }
 
     // Reset history for this conversation turn
@@ -566,7 +599,11 @@ export class GeminiService {
       });
 
       const data = response.json;
-      const candidates = data?.candidates;
+      if (!isGeminiApiResponse(data)) {
+        console.error("Cortex: Gemini returned an unexpected response structure.", data);
+        return "Sorry, I couldn't process that request.";
+      }
+      const candidates = data.candidates;
       if (!candidates || candidates.length === 0) {
         console.error("Cortex: Gemini returned no candidates.", data);
         return "Sorry, I couldn't process that request.";
@@ -639,119 +676,4 @@ export class GeminiService {
     return "I processed your request but hit a limit on the number of operations. Please try again if needed.";
   }
 
-  /**
-   * Send the prompt to Gemini via the REST API and parse the JSON response.
-   */
-  async generateStudyPlan(
-    dueNotes: unknown[],
-    calendarEvents: unknown[],
-    tests?: CortexTest[],
-  ): Promise<ScheduledEvent[]> {
-    const dueNotesJson = JSON.stringify(dueNotes, null, 2);
-    const calendarEventsJson = JSON.stringify(calendarEvents, null, 2);
-    const testsJson = tests ? JSON.stringify(tests, null, 2) : undefined;
-
-    const systemPrompt = this.buildSystemPrompt(dueNotesJson, calendarEventsJson, testsJson);
-
-    const url = `${this.API_URL}/${this.model}:generateContent?key=${this.apiKey}`;
-
-    const response = await requestUrl({
-      url,
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: systemPrompt },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 4096,
-        },
-      }),
-    });
-
-    const data = response.json;
-
-    // Navigate the Gemini response structure to extract the text.
-    const candidates = data?.candidates;
-    if (!candidates || candidates.length === 0) {
-      console.error("Cortex: Gemini returned no candidates.", data);
-      return [];
-    }
-
-    const rawText: string =
-      candidates[0]?.content?.parts?.[0]?.text ?? "";
-
-    if (!rawText) {
-      console.warn("Cortex: Gemini returned empty text.");
-      return [];
-    }
-
-    // Strip any accidental markdown code fences that might sneak in.
-    const cleaned = rawText
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/\s*```$/i, "")
-      .trim();
-
-    try {
-      const parsed: ScheduledEvent[] = JSON.parse(cleaned);
-      if (!Array.isArray(parsed)) return [];
-
-      // ── Post-process: enforce correct date on all events ────────────
-      const todayIso = new Date().toISOString().split("T")[0];
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowIso = tomorrow.toISOString().split("T")[0];
-
-      const fixed = parsed.map((event, i) => {
-        const start = new Date(event.startTime);
-        const end = new Date(event.endTime);
-
-        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-          console.warn(`Cortex: Event #${i + 1} has unparseable dates, skipping.`, event);
-          return null;
-        }
-
-        // If the AI produced the wrong date, force it to tomorrow while keeping
-        // the hours/minutes/seconds and timezone offset the AI intended.
-        const startIsoDate = start.toISOString().split("T")[0];
-        if (startIsoDate !== tomorrowIso) {
-          console.warn(
-            `Cortex: Event #${i + 1} startTime date (${startIsoDate}) != tomorrow (${tomorrowIso}), forcing correction.`,
-            event
-          );
-          start.setFullYear(tomorrow.getFullYear());
-          start.setMonth(tomorrow.getMonth());
-          start.setDate(tomorrow.getDate());
-        }
-
-        const endIsoDate = end.toISOString().split("T")[0];
-        if (endIsoDate !== tomorrowIso) {
-          end.setFullYear(tomorrow.getFullYear());
-          end.setMonth(tomorrow.getMonth());
-          end.setDate(tomorrow.getDate());
-        }
-
-        return {
-          summary: event.summary,
-          description: event.description,
-          startTime: start.toISOString(),
-          endTime: end.toISOString(),
-        };
-      }).filter((e): e is ScheduledEvent => e !== null);
-
-      console.log(`Cortex: Gemini returned ${parsed.length} event(s), ${fixed.length} after date validation.`);
-      return fixed;
-    } catch (err) {
-      console.error("Cortex: Failed to parse Gemini JSON response.", err);
-      console.error("Raw response:", cleaned);
-      return [];
-    }
-  }
 }

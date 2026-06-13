@@ -1,3 +1,5 @@
+import { localISODate, addDays, parseLocalDate, startOfLocalDay } from "./dateUtils";
+
 export interface NextReviewResult {
   nextInterval: number;
   nextReviewDate: string;
@@ -46,19 +48,20 @@ export function calculateNextReview(
   }
 
   const today = new Date();
+  const todayMidnight = startOfLocalDay(today);
 
-  const nextReviewDateObj = new Date(today);
-  nextReviewDateObj.setDate(nextReviewDateObj.getDate() + nextInterval);
-  let nextReviewDate = nextReviewDateObj.toISOString().split("T")[0];
+  let nextReviewDate = localISODate(addDays(today, nextInterval));
 
   if (examDateStr) {
-    const examDate = new Date(examDateStr);
-    const timeUntilExam = examDate.getTime() - today.getTime();
-    const daysUntilExam = Math.ceil(timeUntilExam / (1000 * 60 * 60 * 24));
+    const examDate = parseLocalDate(examDateStr);
+    if (examDate) {
+      const timeUntilExam = examDate.getTime() - todayMidnight.getTime();
+      const daysUntilExam = Math.ceil(timeUntilExam / (1000 * 60 * 60 * 24));
 
-    if (daysUntilExam <= 0) {
-      nextInterval = 9999;
-      nextReviewDate = "9999-12-31";
+      if (daysUntilExam <= 0) {
+        nextInterval = 9999;
+        nextReviewDate = "9999-12-31";
+      }
     }
   }
 

@@ -1,11 +1,13 @@
 import { ItemView, Notice, Platform, TFile, WorkspaceLeaf, setIcon, moment } from "obsidian";
 import CortexPlugin from "../main";
-import { GoogleCalendarService, DisplayCalendarEvent } from "../services/googleCalendarService";
+import { DisplayCalendarEvent } from "../services/googleCalendarService";
+import type { FocusFaceState } from "../FaceDetector";
 import { CortexChatModal } from "../modals/CortexChatModal";
 import { CreateTestModal } from "../modals/CreateTestModal";
 import { ReviewFilterModal, ReviewFilters } from "../modals/ReviewFilterModal";
 import { TestService } from "../services/testService";
 import { CortexTest } from "../settings";
+import { localISODate, parseLocalDate, startOfLocalDay, isSameLocalDay, addDays, daysUntil } from "../utils/dateUtils";
 
 export const CORTEX_DASHBOARD_VIEW = "cortex-dashboard";
 
@@ -30,8 +32,10 @@ export class CortexDashboardView extends ItemView {
 	private bleContainer!: HTMLElement;
 	private faceContainer!: HTMLElement;
 	private testService!: TestService;
-	private calendarService!: GoogleCalendarService;
 	private focusUpdateInterval: ReturnType<typeof setInterval> | null = null;
+	private lastCalendarFetch: number = 0;
+	private lastFetchedEvents: DisplayCalendarEvent[] | null = null;
+	private lastFetchedCalendarDate: Date | null = null;
 
 	private currentCalendarDate: Date = new Date();
 	private currentReviewsDate: Date = new Date();
@@ -53,8 +57,7 @@ export class CortexDashboardView extends ItemView {
 		const container = this.containerEl.children[1];
 		container.empty();
 
-		this.testService = new TestService(this.plugin);
-		this.calendarService = new GoogleCalendarService(this.plugin.settings, () => this.plugin.saveData(this.plugin.settings));
+		this.testService = this.plugin.testService;
 
 		const wrapper = container.createDiv({ cls: "cortex-dashboard" });
 
@@ -75,7 +78,12 @@ export class CortexDashboardView extends ItemView {
 		const refreshBtn = headerRow.createEl("button", { cls: "cortex-refresh-btn clickable-icon" });
 		refreshBtn.setAttr("title", "Refresh");
 		setIcon(refreshBtn, "refresh-cw");
-		refreshBtn.addEventListener("click", () => this.render());
+		refreshBtn.addEventListener("click", () => {
+			this.lastCalendarFetch = 0;
+			this.lastFetchedEvents = null;
+			this.lastFetchedCalendarDate = null;
+			this.render();
+		});
 
 		this.reviewsContainer = wrapper.createDiv({ cls: "cortex-reviews-section" });
 		this.scheduleContainer = wrapper.createDiv({ cls: "cortex-schedule-section" });
@@ -95,7 +103,10 @@ export class CortexDashboardView extends ItemView {
 			this.app.metadataCache.on("changed", (file) => {
 				if (file instanceof TFile && file.extension === "md") {
 					if (renderTimer) clearTimeout(renderTimer);
-					renderTimer = setTimeout(() => this.render(), 2000);
+					renderTimer = setTimeout(() => {
+						this.renderReviews();
+						this.renderTests();
+					}, 2000);
 				}
 			}),
 		);
@@ -113,14 +124,25 @@ export class CortexDashboardView extends ItemView {
 
 	async onClose(): Promise<void> {
 		if (this.focusUpdateInterval) { clearInterval(this.focusUpdateInterval); this.focusUpdateInterval = null; }
-		this.calendarService.destroy();
 	}
 
 	private async render(): Promise<void> {
-		this.renderGoogleCalendarSection();
-		this.renderDueReviews();
-		this.renderUpcomingTests();
+		this.renderCalendar();
+		this.renderReviews();
+		this.renderTests();
 		this.renderFocusPanels();
+	}
+
+	private renderCalendar(): void {
+		this.renderGoogleCalendarSection();
+	}
+
+	private renderReviews(): void {
+		this.renderDueReviews();
+	}
+
+	private renderTests(): void {
+		this.renderUpcomingTests();
 	}
 
 	private renderGoogleCalendarSection(): void {
@@ -140,7 +162,8 @@ export class CortexDashboardView extends ItemView {
 	}
 
 	private async handleConnectGoogleCalendar(): Promise<void> {
-		window.open("https://cortex-proxy.vercel.app/api/auth");
+		const state = this.plugin.generateOAuthState();
+		window.open(`https://cortex-proxy.vercel.app/api/auth?state=${encodeURIComponent(state)}`);
 		this.authContainer.empty();
 		const el = this.authContainer.createDiv({ cls: "cortex-auth-status" });
 		el.createEl("h4", { text: "Waiting for authorization\u2026" });
@@ -148,22 +171,31 @@ export class CortexDashboardView extends ItemView {
 	}
 
 	private async renderTodaysSchedule(): Promise<void> {
-		const srv = this.calendarService;
-		const events = await srv.getEventsForDay(this.currentCalendarDate);
+		const srv = this.plugin.getCalendarService();
+		const now = Date.now();
+		const dateChanged = !this.lastFetchedCalendarDate || this.lastFetchedCalendarDate.getTime() !== this.currentCalendarDate.getTime();
+		const stale = now - this.lastCalendarFetch > 30000;
+		let events: DisplayCalendarEvent[];
+		if (!this.lastFetchedEvents || dateChanged || stale) {
+			events = await srv.getEventsForDay(this.currentCalendarDate);
+			this.lastCalendarFetch = now;
+			this.lastFetchedCalendarDate = new Date(this.currentCalendarDate);
+			this.lastFetchedEvents = events;
+		} else {
+			events = this.lastFetchedEvents;
+		}
 		this.scheduleContainer.empty();
 
 		const hr = this.scheduleContainer.createDiv({ cls: "cortex-dashboard-header-row" });
 		hr.style.display = "flex"; hr.style.justifyContent = "space-between"; hr.style.alignItems = "center"; hr.style.marginBottom = "10px";
-		const titleStr = this.isToday(this.currentCalendarDate) ? `Today's Schedule (${events.length})` : `${this.currentCalendarDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })} Schedule (${events.length})`;
+		const titleStr = isSameLocalDay(this.currentCalendarDate, new Date()) ? `Today's Schedule (${events.length})` : `${this.currentCalendarDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })} Schedule (${events.length})`;
 		const t = hr.createEl("h2", { text: titleStr }); t.style.margin = "0";
 
-		const nav = hr.createDiv({ cls: "cortex-date-nav" });
-		const pb = nav.createEl("button", { cls: "cortex-date-nav-btn", text: "\u2190" });
-		pb.addEventListener("click", () => { const d = new Date(this.currentCalendarDate); d.setDate(d.getDate() - 1); this.currentCalendarDate = d; this.renderTodaysSchedule(); });
-		const tb = nav.createEl("button", { cls: "cortex-date-nav-btn cortex-date-nav-today-btn", text: "Today" });
-		tb.addEventListener("click", () => { this.currentCalendarDate = this.getStartOfToday(); this.renderTodaysSchedule(); });
-		const nb = nav.createEl("button", { cls: "cortex-date-nav-btn", text: "\u2192" });
-		nb.addEventListener("click", () => { const d = new Date(this.currentCalendarDate); d.setDate(d.getDate() + 1); this.currentCalendarDate = d; this.renderTodaysSchedule(); });
+		const nav = this.createDateNav(hr,
+			() => { const d = new Date(this.currentCalendarDate); d.setDate(d.getDate() - 1); this.currentCalendarDate = d; this.renderTodaysSchedule(); },
+			() => { this.currentCalendarDate = startOfLocalDay(new Date()); this.renderTodaysSchedule(); },
+			() => { const d = new Date(this.currentCalendarDate); d.setDate(d.getDate() + 1); this.currentCalendarDate = d; this.renderTodaysSchedule(); },
+		);
 
 		if (events.length === 0) { this.scheduleContainer.createDiv({ cls: "cortex-schedule-placeholder", text: "No events scheduled for this day." }); return; }
 
@@ -185,13 +217,11 @@ export class CortexDashboardView extends ItemView {
 		hr.style.display = "flex"; hr.style.justifyContent = "space-between"; hr.style.alignItems = "center"; hr.style.marginBottom = "10px";
 		const header = hr.createEl("h2", { text: "" }); header.style.margin = "0";
 
-		const nav = hr.createDiv({ cls: "cortex-date-nav" });
-		const pb = nav.createEl("button", { cls: "cortex-date-nav-btn", text: "\u2190" });
-		pb.addEventListener("click", () => { const d = new Date(this.currentReviewsDate); d.setDate(d.getDate() - 1); this.currentReviewsDate = d; this.renderDueReviews(); });
-		const tb = nav.createEl("button", { cls: "cortex-date-nav-btn cortex-date-nav-today-btn", text: "Today" });
-		tb.addEventListener("click", () => { this.currentReviewsDate = this.getStartOfToday(); this.renderDueReviews(); });
-		const nb = nav.createEl("button", { cls: "cortex-date-nav-btn", text: "\u2192" });
-		nb.addEventListener("click", () => { const d = new Date(this.currentReviewsDate); d.setDate(d.getDate() + 1); this.currentReviewsDate = d; this.renderDueReviews(); });
+		const nav = this.createDateNav(hr,
+			() => { const d = new Date(this.currentReviewsDate); d.setDate(d.getDate() - 1); this.currentReviewsDate = d; this.renderDueReviews(); },
+			() => { this.currentReviewsDate = startOfLocalDay(new Date()); this.renderDueReviews(); },
+			() => { const d = new Date(this.currentReviewsDate); d.setDate(d.getDate() + 1); this.currentReviewsDate = d; this.renderDueReviews(); },
+		);
 
 		const fb = nav.createEl("button", { cls: "cortex-date-nav-btn cortex-filter-btn" });
 		setIcon(fb, "filter");
@@ -209,7 +239,7 @@ export class CortexDashboardView extends ItemView {
 			});
 		}
 
-		const titleStr = this.isToday(targetDate) ? `Due Reviews (${filtered.length})` : `${targetDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })} Reviews (${filtered.length})`;
+		const titleStr = isSameLocalDay(targetDate, new Date()) ? `Due Reviews (${filtered.length})` : `${targetDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })} Reviews (${filtered.length})`;
 		header.setText(titleStr);
 
 		if (filtered.length === 0) { this.reviewsContainer.createDiv({ cls: "cortex-reviews-placeholder", text: "No reviews due for this day." }); return; }
@@ -247,13 +277,13 @@ export class CortexDashboardView extends ItemView {
 		this.testsContainer.empty();
 		const tests = this.testService.getAllTests();
 		const active = tests.filter(t => !t.done);
-		const sorted = [...active].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+		const sorted = [...active].sort((a, b) => { const da = parseLocalDate(a.date); const db = parseLocalDate(b.date); if (!da || !db) return 0; return da.getTime() - db.getTime(); });
 
 		const hr = this.testsContainer.createDiv({ cls: "cortex-tests-header" });
 		hr.createEl("h2", { text: `Upcoming Tests (${sorted.length})` });
 		const cbtn = hr.createEl("button", { cls: "cortex-create-test-btn" });
 		setIcon(cbtn, "plus");
-		cbtn.addEventListener("click", () => { new CreateTestModal(this.app, this.plugin, () => this.render()).open(); });
+		cbtn.addEventListener("click", () => { new CreateTestModal(this.app, this.plugin, () => this.renderTests()).open(); });
 
 		if (sorted.length === 0) { this.testsContainer.createDiv({ cls: "cortex-tests-placeholder", text: "No upcoming tests. Click + to create one." }); return; }
 
@@ -270,9 +300,9 @@ export class CortexDashboardView extends ItemView {
 
 		const doneBtn = hr.createEl("button", { cls: "cortex-done-btn" + (test.done ? " is-done" : ""), attr: { title: test.done ? "Mark as not done" : "Mark as done" } });
 		setIcon(doneBtn, test.done ? "check-circle" : "circle");
-		doneBtn.addEventListener("click", async (e) => { e.stopPropagation(); await this.testService.toggleDone(test.id); this.render(); });
+		doneBtn.addEventListener("click", async (e) => { e.stopPropagation(); await this.testService.toggleDone(test.id); this.renderTests(); this.renderReviews(); });
 
-		const d = new Date(test.date);
+		const d = parseLocalDate(test.date) || startOfLocalDay(new Date());
 		const ds = d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 		const dif = moment(test.date).diff(moment().startOf("day"), "days");
 		const dl = dif < 0 ? " (past)" : dif === 0 ? " (today)" : dif === 1 ? " (tomorrow)" : ` (in ${dif} days)`;
@@ -303,13 +333,13 @@ export class CortexDashboardView extends ItemView {
 			else { ss.addClass("no-score"); ss.setText("No score"); }
 
 			const exb = li.createEl("button", { cls: "cortex-exclude-btn" + (excl ? " excluded" : ""), text: excl ? "Excluded" : "Exclude" });
-			exb.addEventListener("click", async (e) => { e.stopPropagation(); await this.toggleExcl(file, excl); this.render(); });
+			exb.addEventListener("click", async (e) => { e.stopPropagation(); await this.toggleExcl(file, excl); this.renderTests(); });
 			li.appendChild(link); li.appendChild(ss); li.appendChild(exb);
 		}
 
 		const dbtn = item.createEl("button", { cls: "cortex-test-delete-btn" });
 		setIcon(dbtn, "trash");
-		dbtn.addEventListener("click", async (e) => { e.stopPropagation(); if (confirm(`Delete "${test.name}"?`)) { await this.testService.removeTest(test.id); this.render(); } });
+		dbtn.addEventListener("click", async (e) => { e.stopPropagation(); if (confirm(`Delete "${test.name}"?`)) { await this.testService.removeTest(test.id); this.renderTests(); this.renderReviews(); } });
 
 		item.addEventListener("click", (e) => {
 			const el = e.target as HTMLElement;
@@ -396,28 +426,32 @@ export class CortexDashboardView extends ItemView {
 		if (Platform.isMobile) return;
 
 		const intendedOn = this.plugin.settings.faceEnabled;
+		// Starting can take a while on first use (model download) — show it
+		// instead of leaving the toggle visually OFF and unresponsive.
+		const starting = this.plugin.detection?.isFaceStarting() ?? false;
 		const isRunning = this.plugin.faceEvaluator?.isRunning() ?? false;
 		const errorMsg = this.plugin.faceEvaluator?.lastError ?? null;
 
 		this.faceContainer.createEl("h4", { text: "Face Tracking" });
 
 		const row = this.faceContainer.createDiv({ cls: "cortex-toggle-row" });
-		const tog = row.createDiv({ cls: "cortex-toggle" + (intendedOn ? " is-enabled" : "") });
+		const tog = row.createDiv({ cls: "cortex-toggle" + (intendedOn || starting ? " is-enabled" : "") });
 		const lbl = row.createDiv({ cls: "cortex-toggle-label" });
-		lbl.setText(intendedOn ? "ON" : "OFF");
+		lbl.setText(starting ? "STARTING" : intendedOn ? "ON" : "OFF");
 
 		tog.addEventListener("click", async () => {
 			await this.plugin.detection?.toggleFace();
 			this.renderFacePanel();
 		});
 
-		if (intendedOn) {
+		if (intendedOn || starting) {
 			const statsEl = this.faceContainer.createDiv({ cls: "cortex-face-stats", attr: { "data-face-stats": "" } });
 
 			if (errorMsg) {
 				statsEl.createSpan({ text: `Error: ${errorMsg}`, cls: "cortex-focus-state cortex-state-gray" });
 			} else if (!isRunning) {
-				statsEl.createSpan({ text: "Initializing...", cls: "cortex-focus-state cortex-state-gray" });
+				const progress = this.plugin.faceEvaluator?.initStatus ?? "Initializing...";
+				statsEl.createSpan({ text: progress, cls: "cortex-focus-state cortex-state-gray" });
 			} else {
 				const state = this.plugin.faceEvaluator!.getCurrentState();
 				const fs = this.plugin.faceEvaluator!.getLastFaceState();
@@ -428,7 +462,7 @@ export class CortexDashboardView extends ItemView {
 		}
 	}
 
-	private populateStats(el: HTMLElement, fs: any, state: string): void {
+	private populateStats(el: HTMLElement, fs: FocusFaceState | null, state: string): void {
 		el.empty();
 		el.createSpan({ text: state, cls: `cortex-focus-state ${this.stateClass(state)}` });
 		if (fs?.faceVisible) {
@@ -469,7 +503,8 @@ export class CortexDashboardView extends ItemView {
 	private updateFaceDisplay(): void {
 		if (Platform.isMobile) return;
 
-		const intendedOn = this.plugin.settings.faceEnabled;
+		const starting = this.plugin.detection?.isFaceStarting() ?? false;
+		const intendedOn = this.plugin.settings.faceEnabled || starting;
 		if (!intendedOn) return;
 
 		const isRunning = this.plugin.faceEvaluator?.isRunning() ?? false;
@@ -486,7 +521,8 @@ export class CortexDashboardView extends ItemView {
 		if (errorMsg) {
 			statsEl.createSpan({ text: `Error: ${errorMsg}`, cls: "cortex-focus-state cortex-state-gray" });
 		} else if (!isRunning) {
-			statsEl.createSpan({ text: "Initializing...", cls: "cortex-focus-state cortex-state-gray" });
+			const progress = this.plugin.faceEvaluator?.initStatus ?? "Initializing...";
+			statsEl.createSpan({ text: progress, cls: "cortex-focus-state cortex-state-gray" });
 		} else {
 			const fs = this.plugin.faceEvaluator!.getLastFaceState();
 			const state = this.plugin.faceEvaluator!.getCurrentState();
@@ -500,14 +536,26 @@ export class CortexDashboardView extends ItemView {
 
 	// ── Helpers ──────────────────────────────────────────────────────
 
-	private isToday(d: Date): boolean {
-		const n = new Date();
-		return d.getDate() === n.getDate() && d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+	private createDateNav(
+		parent: HTMLElement,
+		onPrev: () => void,
+		onToday: () => void,
+		onNext: () => void,
+	): HTMLElement {
+		const nav = parent.createDiv({ cls: "cortex-date-nav" });
+		const pb = nav.createEl("button", { cls: "cortex-date-nav-btn", text: "←" });
+		pb.addEventListener("click", onPrev);
+		const tb = nav.createEl("button", { cls: "cortex-date-nav-btn cortex-date-nav-today-btn", text: "Today" });
+		tb.addEventListener("click", onToday);
+		const nb = nav.createEl("button", { cls: "cortex-date-nav-btn", text: "→" });
+		nb.addEventListener("click", onNext);
+		return nav;
 	}
+
 	private formatTime(d: Date): string { return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }); }
 
 	private getDueNotes(target: Date): DueNote[] {
-		const ts = this.startOfDay(target);
+		const ts = startOfLocalDay(target);
 		const donePaths = new Set<string>();
 		for (const t of this.plugin.settings.tests) {
 			if (t.done) {
@@ -515,33 +563,25 @@ export class CortexDashboardView extends ItemView {
 			}
 		}
 		const r: DueNote[] = [];
-		const today = this.getStartOfToday();
+		const today = startOfLocalDay(new Date());
 		for (const f of this.app.vault.getMarkdownFiles()) {
 			if (donePaths.has(f.path)) continue;
 			const fm = this.app.metadataCache.getFileCache(f)?.frontmatter;
 			if (!fm) continue;
-			const examDate = this.parseDate(fm.exam_date);
+			const examDate = this.parseFrontmatterDate(fm.exam_date);
 			if (examDate && examDate < today) continue;
-			const pd = this.parseDate(fm.next_review);
+			const pd = this.parseFrontmatterDate(fm.next_review);
 			if (pd && pd <= ts) r.push({ file: f, nextReview: pd, isOverdue: pd < ts });
 		}
 		return r;
 	}
 
-	private parseDate(raw: unknown): Date | null {
-		if (raw instanceof Date) return this.startOfDay(raw);
-		if (typeof raw === "number") return this.startOfDay(new Date(raw));
-		if (typeof raw !== "string") return null;
-		const s = raw.trim(); if (!s) return null;
-		let m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-		if (m) { const d = new Date(+m[3], +m[2] - 1, +m[1]); if (d.getFullYear() === +m[3] && d.getMonth() === +m[2] - 1 && d.getDate() === +m[1]) return d; return null; }
-		m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-		if (m) { const d = new Date(+m[1], +m[2] - 1, +m[3]); if (d.getFullYear() === +m[1] && d.getMonth() === +m[2] - 1 && d.getDate() === +m[3]) return d; return null; }
-		const fb = new Date(s); if (!isNaN(fb.getTime())) return this.startOfDay(fb);
+	private parseFrontmatterDate(raw: unknown): Date | null {
+		if (raw instanceof Date) return startOfLocalDay(raw);
+		if (typeof raw === "number") return startOfLocalDay(new Date(raw));
+		if (typeof raw === "string") return parseLocalDate(raw);
 		return null;
 	}
-
-	private getStartOfToday(): Date { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
 
 	private getDueNoteScore(f: TFile): number | null {
 		const raw = this.app.metadataCache.getFileCache(f)?.frontmatter?.confidence;
@@ -550,5 +590,4 @@ export class CortexDashboardView extends ItemView {
 		return Math.max(1, Math.min(5, v));
 	}
 
-	private startOfDay(d: Date): Date { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
 }

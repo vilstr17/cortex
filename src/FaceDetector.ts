@@ -12,7 +12,7 @@
  * network after the first successful run.
  */
 
-import type { FaceLandmarker as FaceLandmarkerT } from "@mediapipe/tasks-vision";
+import type { FaceLandmarker as FaceLandmarkerT, FaceLandmarkerResult, NormalizedLandmark, Matrix } from "@mediapipe/tasks-vision";
 
 // Must match the version in package.json — keeps the CDN wasm ABI in sync
 // with the bundled JS API.
@@ -32,8 +32,6 @@ export interface FaceAssetStore {
   exists(name: string): Promise<boolean>;
   readBinary(name: string): Promise<ArrayBuffer>;
   writeBinary(name: string, data: ArrayBuffer): Promise<void>;
-  /** Resource URL (app://…) the renderer can load the cached file from. */
-  getResourcePath(name: string): string;
 }
 
 export type FocusFaceState = {
@@ -128,14 +126,40 @@ export class FaceDetector {
     this.config = { ...DEFAULT_FACE_CONFIG, ...config };
   }
 
-  static async requestCameraPermission(): Promise<boolean> {
+  /**
+   * Resolve macOS camera permission before touching getUserMedia.
+   * `systemPreferences` lives in the main process — in the renderer it is
+   * only reachable via @electron/remote (plain require("electron") returns
+   * undefined for it, which is why no permission prompt ever appeared and
+   * getUserMedia hung forever on "not determined" status).
+   * Throws with a clear message when access is denied.
+   */
+  static async requestCameraPermission(): Promise<void> {
+    if (process.platform !== "darwin") return;
+
+    let systemPreferences: any = null;
     try {
-      const { systemPreferences } = require("electron");
-      if (systemPreferences?.askForMediaAccess) {
-        return await systemPreferences.askForMediaAccess("camera");
-      }
+      systemPreferences = require("@electron/remote")?.systemPreferences;
     } catch {}
-    return true;
+    if (!systemPreferences) {
+      try {
+        systemPreferences = require("electron")?.systemPreferences;
+      } catch {}
+    }
+    if (!systemPreferences?.getMediaAccessStatus) return;
+
+    const status = systemPreferences.getMediaAccessStatus("camera");
+    if (status === "granted") return;
+    if (status === "denied" || status === "restricted") {
+      throw new Error("Camera access is denied for Obsidian. Enable it in System Settings → Privacy & Security → Camera, then restart Obsidian.");
+    }
+    // "not-determined" — trigger the macOS permission prompt
+    if (systemPreferences.askForMediaAccess) {
+      const granted = await systemPreferences.askForMediaAccess("camera");
+      if (!granted) {
+        throw new Error("Camera access was not granted. Enable it in System Settings → Privacy & Security → Camera, then try again.");
+      }
+    }
   }
 
   static async checkCameraAccess(): Promise<void> {
@@ -166,25 +190,36 @@ export class FaceDetector {
     }
   }
 
+  private reportProgress(msg: string): void {
+    this.config.onProgress?.(msg);
+  }
+
   /**
-   * Returns a local cached copy of `name`, downloading from `url` on first
-   * use. Falls back to null (caller uses the remote URL directly) when no
-   * asset store is configured.
+   * Returns the bytes of `name` from the on-disk cache, downloading from
+   * `url` on first use. Returns null on failure (caller falls back to
+   * loading directly from the CDN).
    */
-  private async ensureAsset(name: string, url: string): Promise<string | null> {
+  private async ensureAsset(name: string, url: string): Promise<ArrayBuffer | null> {
     const store = this.config.assetStore;
-    if (!store) return null;
     try {
-      if (!(await store.exists(name))) {
-        const res = await withTimeout(fetch(url), INIT_STEP_TIMEOUT_MS, `Downloading ${name}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-        const data = await res.arrayBuffer();
-        await store.writeBinary(name, data);
-        console.log(`[cortex] FaceDetector cached ${name} (${(data.byteLength / 1048576).toFixed(1)} MB)`);
+      if (store && (await store.exists(name))) {
+        return await store.readBinary(name);
       }
-      return store.getResourcePath(name);
+      this.reportProgress(`Downloading ${name} (one-time)…`);
+      const res = await withTimeout(fetch(url), INIT_STEP_TIMEOUT_MS, `Downloading ${name}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+      const data = await res.arrayBuffer();
+      if (store) {
+        try {
+          await store.writeBinary(name, data);
+          console.log(`[cortex] FaceDetector cached ${name} (${(data.byteLength / 1048576).toFixed(1)} MB)`);
+        } catch (e) {
+          console.warn(`[cortex] FaceDetector could not cache ${name}:`, e);
+        }
+      }
+      return data;
     } catch (err) {
-      console.warn(`[cortex] FaceDetector asset cache failed for ${name}, using remote URL:`, err);
+      console.warn(`[cortex] FaceDetector asset load failed for ${name}:`, err);
       return null;
     }
   }
@@ -192,6 +227,7 @@ export class FaceDetector {
   async init(): Promise<void> {
     this.aborted = false;
 
+    this.reportProgress("Requesting camera…");
     await FaceDetector.requestCameraPermission();
 
     this.video = document.createElement("video");
@@ -209,20 +245,30 @@ export class FaceDetector {
 
     let stream: MediaStream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          facingMode: "user",
-        },
-        audio: false,
-      });
+      this.reportProgress("Opening webcam…");
+      // Timeout: with unresolved OS-level permission, getUserMedia can hang
+      // indefinitely — that must surface as an error, not a stuck toggle.
+      stream = await withTimeout(
+        navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            facingMode: "user",
+          },
+          audio: false,
+        }),
+        20000,
+        "Opening the webcam"
+      );
       this.currentStream = stream;
     } catch (err) {
       this.video.remove();
       this.video = null;
       if (err instanceof DOMException && (err.name === "NotAllowedError" || err.name === "NotFoundError")) {
         throw new Error("Camera access denied. Grant access in System Settings → Privacy & Security → Camera, then try again.");
+      }
+      if (err instanceof Error && err.message.startsWith("Opening the webcam timed out")) {
+        throw new Error("Webcam did not respond within 20s. Check System Settings → Privacy & Security → Camera (Obsidian must be allowed), make sure no other app is blocking the camera, then try again.");
       }
       throw err;
     }
@@ -237,12 +283,20 @@ export class FaceDetector {
     const { FaceLandmarker, FilesetResolver } = await import("@mediapipe/tasks-vision");
 
     this.throwIfAborted();
-    const loaderPath = await this.ensureAsset(WASM_LOADER_FILE, `${WASM_BASE_URL}/${WASM_LOADER_FILE}`);
-    const binaryPath = await this.ensureAsset(WASM_BINARY_FILE, `${WASM_BASE_URL}/${WASM_BINARY_FILE}`);
+    this.reportProgress("Loading detection runtime…");
+    const loaderBytes = await this.ensureAsset(WASM_LOADER_FILE, `${WASM_BASE_URL}/${WASM_LOADER_FILE}`);
+    const binaryBytes = await this.ensureAsset(WASM_BINARY_FILE, `${WASM_BASE_URL}/${WASM_BINARY_FILE}`);
 
+    // Serve the cached runtime via blob: URLs — these work regardless of
+    // vault location/scheme quirks (iCloud paths with spaces, app://
+    // resource handling), unlike file-path-derived URLs.
+    const blobUrls: string[] = [];
     let fileset: { wasmLoaderPath: string; wasmBinaryPath: string };
-    if (loaderPath && binaryPath) {
-      fileset = { wasmLoaderPath: loaderPath, wasmBinaryPath: binaryPath };
+    if (loaderBytes && binaryBytes) {
+      const loaderUrl = URL.createObjectURL(new Blob([loaderBytes], { type: "text/javascript" }));
+      const wasmUrl = URL.createObjectURL(new Blob([binaryBytes], { type: "application/wasm" }));
+      blobUrls.push(loaderUrl, wasmUrl);
+      fileset = { wasmLoaderPath: loaderUrl, wasmBinaryPath: wasmUrl };
     } else {
       fileset = await withTimeout(
         FilesetResolver.forVisionTasks(WASM_BASE_URL),
@@ -251,52 +305,58 @@ export class FaceDetector {
       );
     }
 
-    this.throwIfAborted();
-    let modelSource: { modelAssetBuffer: Uint8Array } | { modelAssetPath: string };
-    const modelLocal = await this.ensureAsset(MODEL_FILE, this.config.modelPath ?? MODEL_URL);
-    if (modelLocal && this.config.assetStore) {
-      const bytes = await this.config.assetStore.readBinary(MODEL_FILE);
-      modelSource = { modelAssetBuffer: new Uint8Array(bytes) };
-    } else {
-      modelSource = { modelAssetPath: this.config.modelPath ?? MODEL_URL };
-    }
-
-    this.throwIfAborted();
-    const createWithDelegate = (fs: { wasmLoaderPath: string; wasmBinaryPath: string }, delegate: "GPU" | "CPU") =>
-      withTimeout(
-        FaceLandmarker.createFromOptions(fs as any, {
-          baseOptions: { ...modelSource, delegate },
-          runningMode: "VIDEO",
-          numFaces: 1,
-          outputFaceBlendshapes: false,
-          outputFacialTransformationMatrixes: true,
-        }),
-        INIT_STEP_TIMEOUT_MS,
-        "Initializing face landmark model"
-      );
-
     try {
-      this.faceLandmarker = await createWithDelegate(fileset, "GPU");
-    } catch (gpuErr) {
       this.throwIfAborted();
-      console.warn("[cortex] FaceDetector GPU delegate failed, falling back to CPU:", gpuErr);
+      let modelSource: { modelAssetBuffer: Uint8Array } | { modelAssetPath: string };
+      const modelBytes = await this.ensureAsset(MODEL_FILE, this.config.modelPath ?? MODEL_URL);
+      if (modelBytes) {
+        modelSource = { modelAssetBuffer: new Uint8Array(modelBytes) };
+      } else {
+        modelSource = { modelAssetPath: this.config.modelPath ?? MODEL_URL };
+      }
+
+      this.throwIfAborted();
+      this.reportProgress("Starting face model…");
+      const createWithDelegate = (fs: { wasmLoaderPath: string; wasmBinaryPath: string }, delegate: "GPU" | "CPU") =>
+        withTimeout(
+          FaceLandmarker.createFromOptions(fs, {
+            baseOptions: { ...modelSource, delegate },
+            runningMode: "VIDEO",
+            numFaces: 1,
+            outputFaceBlendshapes: false,
+            outputFacialTransformationMatrixes: true,
+          }),
+          INIT_STEP_TIMEOUT_MS,
+          "Initializing face landmark model"
+        );
+
       try {
-        this.faceLandmarker = await createWithDelegate(fileset, "CPU");
-      } catch (cpuErr) {
+        this.faceLandmarker = await createWithDelegate(fileset, "GPU");
+      } catch (gpuErr) {
         this.throwIfAborted();
-        if (loaderPath && binaryPath) {
-          // Local cache may be corrupt — last resort: pinned CDN runtime
-          console.warn("[cortex] FaceDetector local wasm failed, retrying from CDN:", cpuErr);
-          const cdnFileset = await withTimeout(
-            FilesetResolver.forVisionTasks(WASM_BASE_URL),
-            INIT_STEP_TIMEOUT_MS,
-            "Loading MediaPipe runtime"
-          );
-          this.faceLandmarker = await createWithDelegate(cdnFileset as any, "CPU");
-        } else {
-          throw cpuErr;
+        console.warn("[cortex] FaceDetector GPU delegate failed, falling back to CPU:", gpuErr);
+        try {
+          this.faceLandmarker = await createWithDelegate(fileset, "CPU");
+        } catch (cpuErr) {
+          this.throwIfAborted();
+          if (blobUrls.length > 0) {
+            // Local cache may be corrupt — last resort: pinned CDN runtime
+            console.warn("[cortex] FaceDetector local wasm failed, retrying from CDN:", cpuErr);
+            const cdnFileset = await withTimeout(
+              FilesetResolver.forVisionTasks(WASM_BASE_URL),
+              INIT_STEP_TIMEOUT_MS,
+              "Loading MediaPipe runtime"
+            );
+            this.faceLandmarker = await createWithDelegate(cdnFileset, "CPU");
+          } else {
+            throw cpuErr;
+          }
         }
       }
+    } finally {
+      // The runtime is fully instantiated (or failed) — blobs are no longer
+      // referenced and ~11 MB can be released.
+      for (const u of blobUrls) URL.revokeObjectURL(u);
     }
 
     console.log("[cortex] FaceDetector initialized — webcam active, face+iris tracking enabled");
@@ -391,7 +451,7 @@ export class FaceDetector {
     const ts = Math.max(performance.now(), this.lastVideoTimestamp + 1);
     this.lastVideoTimestamp = ts;
 
-    let results: any;
+    let results: FaceLandmarkerResult;
     try {
       results = this.faceLandmarker.detectForVideo(this.video, ts);
     } catch (err) {
@@ -488,7 +548,7 @@ export class FaceDetector {
 
   // ── EULER ANGLE EXTRACTION FROM TRANSFORMATION MATRIX ──
 
-  private extractPitch(results: any): number | null {
+  private extractPitch(results: FaceLandmarkerResult): number | null {
     const m = results.facialTransformationMatrixes?.[0]?.data;
     if (!m || m.length < 16) return null;
     const r21 = m[9];
@@ -496,13 +556,13 @@ export class FaceDetector {
     return Math.asin(sinPitch);
   }
 
-  private extractYaw(results: any): number | null {
+  private extractYaw(results: FaceLandmarkerResult): number | null {
     const m = results.facialTransformationMatrixes?.[0]?.data;
     if (!m || m.length < 16) return null;
     return Math.atan2(m[8], m[10]);
   }
 
-  private extractRoll(results: any): number | null {
+  private extractRoll(results: FaceLandmarkerResult): number | null {
     const m = results.facialTransformationMatrixes?.[0]?.data;
     if (!m || m.length < 16) return null;
     return Math.atan2(m[1], m[0]);
@@ -510,7 +570,7 @@ export class FaceDetector {
 
   // ── FALLBACK: LANDMARK-BASED POSE (when transformation matrices unavailable) ──
 
-  private pitchFromLandmarks(landmarks: any[]): number {
+  private pitchFromLandmarks(landmarks: NormalizedLandmark[]): number {
     const noseTip = landmarks[1];
     const chin = landmarks[152];
     const forehead = landmarks[10];
@@ -518,7 +578,7 @@ export class FaceDetector {
     return (noseTip.y - faceMidY) * 12;
   }
 
-  private yawFromLandmarks(landmarks: any[]): number {
+  private yawFromLandmarks(landmarks: NormalizedLandmark[]): number {
     const noseTip = landmarks[1];
     const leftEye = landmarks[33];
     const rightEye = landmarks[263];
@@ -527,7 +587,7 @@ export class FaceDetector {
     return (leftDist - rightDist) * 15;
   }
 
-  private rollFromLandmarks(landmarks: any[]): number {
+  private rollFromLandmarks(landmarks: NormalizedLandmark[]): number {
     const leftEye = landmarks[33];
     const rightEye = landmarks[263];
     return Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x);
@@ -535,7 +595,7 @@ export class FaceDetector {
 
   // ── GAZE COMPUTATION ──
 
-  private computeGazeFromIris(landmarks: any[]): number | null {
+  private computeGazeFromIris(landmarks: NormalizedLandmark[]): number | null {
     if (landmarks.length < 478) return null;
 
     const leftIris = landmarks[468];
@@ -604,6 +664,8 @@ export interface FaceDetectorConfig {
   gracePeriodMs: number;
   /** Optional on-disk cache for wasm/model assets. */
   assetStore: FaceAssetStore | null;
+  /** Init progress reporting, e.g. for the dashboard panel. */
+  onProgress?: (message: string) => void;
 }
 
 const DEFAULT_FACE_CONFIG: FaceDetectorConfig = {

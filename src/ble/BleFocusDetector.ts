@@ -1,13 +1,27 @@
 import { requestUrl } from "obsidian";
+import type { ChildProcess } from "child_process";
 import type CortexPlugin from "../main";
 import type { BleStatus, BleFocusState, BleCalibration, BleDevice } from "./types";
 import { classifyRssi } from "./types";
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isBleDevice(value: unknown): value is BleDevice {
+	if (!isPlainObject(value)) return false;
+	return (
+		typeof value.uuid === "string" &&
+		typeof value.name === "string" &&
+		typeof value.rssi === "number"
+	);
+}
 
 const POLL_INTERVAL_MS = 1000;
 const CONFIRMATION_COUNT = 2;
 const STALE_THRESHOLD_MS = 5000;
 const RECONNECT_DELAY_MS = 3000;
-const MAX_RECONNECT_ATTEMPTS = 5;
+const MAX_TOTAL_RECONNECT_ATTEMPTS = 5;
 const API_TIMEOUT_MS = 5000;
 const NODE_BIN_CANDIDATES = [
 	"/opt/homebrew/bin/node",
@@ -23,7 +37,7 @@ export type BleStateChangeCallback = (state: BleFocusState, previousState: BleFo
 
 export class BleFocusDetector {
 	private plugin: CortexPlugin;
-	private child: any = null;
+	private child: ChildProcess | null = null;
 	private pollTimer: ReturnType<typeof setInterval> | null = null;
 	private currentState: BleFocusState = "DISABLED";
 	private stateChangeCallbacks: BleStateChangeCallback[] = [];
@@ -44,13 +58,20 @@ export class BleFocusDetector {
 	private reconnectAttempts = 0;
 	private stopped = false;
 	private intendedActive = false;
+	private isLaunching = false;
+	private launchPromise: Promise<boolean> | null = null;
+	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+	private reconnectGeneration = 0;
+	private manualKill = false;
+	lastError: string | null = null;
 
 	constructor(plugin: CortexPlugin) {
 		this.plugin = plugin;
 	}
 
 	private getScannerScriptPath(): string {
-		const vaultPath = (this.plugin.app.vault.adapter as any).getBasePath?.() ?? "";
+		const adapter = this.plugin.app.vault.adapter as unknown as Record<string, unknown>;
+		const vaultPath = typeof adapter.getBasePath === "function" ? (adapter.getBasePath as () => string)() : "";
 		if (!vaultPath) {
 			console.error("[ble-detector] Could not determine vault path");
 		}
@@ -60,8 +81,22 @@ export class BleFocusDetector {
 	private findNodeBinary(): string | null {
 		try {
 			const fs = require("fs");
-			for (const candidate of NODE_BIN_CANDIDATES) {
+			const path = require("path");
+			const candidates = [...NODE_BIN_CANDIDATES, process.execPath];
+			for (const candidate of candidates) {
+				if (!candidate) continue;
+				const base = path.basename(candidate).toLowerCase();
+				if (!base.includes("node")) continue;
 				if (fs.existsSync(candidate)) return candidate;
+			}
+		} catch {}
+		try {
+			const { execSync } = require("child_process");
+			const cmd = process.platform === "win32" ? "where node" : "which node";
+			const result = execSync(cmd, { encoding: "utf8", timeout: 5000 }).trim();
+			if (result) {
+				const first = result.split("\n")[0].trim();
+				if (first) return first;
 			}
 		} catch {}
 		return null;
@@ -73,42 +108,116 @@ export class BleFocusDetector {
 
 	/** Public entry point — resets the reconnect budget. */
 	async start(): Promise<boolean> {
-		this.reconnectAttempts = 0;
-		return this.launch();
+		if (this.child) return true;
+		if (this.isLaunching && this.launchPromise) return this.launchPromise;
+		const hadReconnectTimer = !!this.reconnectTimer;
+		this.clearReconnectTimer();
+		if (!hadReconnectTimer) {
+			this.reconnectAttempts = 0;
+		}
+		this.reconnectGeneration++;
+		const ok = await this.launch();
+		if (!ok && !hadReconnectTimer) {
+			this.lastError = this.lastError ?? "BLE detection failed to start";
+			this.stop();
+		}
+		return ok;
 	}
 
 	private async launch(): Promise<boolean> {
 		if (this.child) return true;
+		if (this.isLaunching && this.launchPromise) return this.launchPromise;
+		this.isLaunching = true;
 		this.stopped = false;
 		this.intendedActive = true;
+		this.launchPromise = this.doLaunch();
+		try {
+			return await this.launchPromise;
+		} finally {
+			this.isLaunching = false;
+			this.launchPromise = null;
+		}
+	}
 
+	/**
+	 * Kill any process still listening on the scanner port — e.g. an
+	 * orphaned scanner from a previous Obsidian session (crash/force-quit).
+	 * A stale listener makes every new scanner die with EADDRINUSE.
+	 */
+	private async cleanupStalePort(): Promise<void> {
+		if (process.platform !== "darwin" && process.platform !== "linux") return;
+		try {
+			const { execFile } = require("child_process");
+			const stdout: string = await new Promise((resolve) => {
+				execFile(
+					"/usr/sbin/lsof",
+					["-ti", "tcp:18888", "-sTCP:LISTEN"],
+					{ timeout: 4000 },
+					(_err: unknown, out: string) => resolve(String(out ?? ""))
+				);
+			});
+			const pids = stdout.split("\n").map((s) => s.trim()).filter(Boolean);
+			let killed = false;
+			for (const pidStr of pids) {
+				const pid = Number(pidStr);
+				if (!Number.isFinite(pid) || pid <= 1) continue;
+				if (this.child?.pid === pid) continue;
+				console.log(`[ble-detector] Killing stale scanner (pid ${pid}) holding port 18888`);
+				try {
+					process.kill(pid, "SIGKILL");
+					killed = true;
+				} catch {}
+			}
+			if (killed) await new Promise(r => setTimeout(r, 400));
+		} catch (e) {
+			console.warn("[ble-detector] Stale port cleanup failed:", e);
+		}
+	}
+
+	private async doLaunch(): Promise<boolean> {
 		const nodeBin = this.findNodeBinary();
 		if (!nodeBin) {
-			console.error("[ble-detector] No node binary found. Install Node.js (e.g. via Homebrew) to use BLE detection.");
+			this.lastError = "Node.js not found. Install Node.js (e.g. via Homebrew) to use BLE detection.";
+			console.error("[ble-detector] " + this.lastError);
 			return false;
 		}
 
+		await this.cleanupStalePort();
+
 		try {
 			const { spawn } = require("child_process");
+			const path = require("path");
+			// stdin is piped so the scanner can detect Obsidian's death (pipe
+			// closes) and exit instead of orphaning itself on the port.
 			this.child = spawn(nodeBin, [this.getScannerScriptPath()], {
-				stdio: ["ignore", "pipe", "pipe"],
-				env: { ...process.env, NODE_PATH: NODE_MODULE_PATHS.join(":") },
+				stdio: ["pipe", "pipe", "pipe"],
+				env: { ...process.env, NODE_PATH: NODE_MODULE_PATHS.join(path.delimiter) },
 			});
 
-			this.child.stdout?.on("data", (data: any) => {
+			const child = this.child;
+			if (!child) {
+				this.lastError = "Failed to spawn BLE scanner";
+				return false;
+			}
+
+			child.stdout?.on("data", (data: Buffer) => {
 				console.log("[ble-detector] scanner:", data.toString().trim());
 			});
-			this.child.stderr?.on("data", (data: any) => {
+			child.stderr?.on("data", (data: Buffer) => {
 				console.error("[ble-detector] scanner err:", data.toString().trim());
 			});
-			this.child.on("exit", (code: number | null) => {
+			child.on("exit", (code: number | null) => {
 				console.log(`[ble-detector] scanner exited with code ${code}`);
 				this.child = null;
 				this.latestStatus.phoneFound = false;
 				this.latestStatus.scanning = false;
+				if (this.manualKill) {
+					this.manualKill = false;
+					return;
+				}
 				this.attemptReconnect();
 			});
-			this.child.on("error", (err: Error) => {
+			child.on("error", (err: Error) => {
 				console.error("[ble-detector] scanner spawn error:", err.message);
 				this.child = null;
 			});
@@ -117,8 +226,15 @@ export class BleFocusDetector {
 
 			const health = await this.waitForBleReady();
 			if (!health) {
-				console.error("[ble-detector] Bluetooth not available after waiting");
-				this.stop();
+				this.lastError = "Bluetooth not available. Make sure Bluetooth is on and Obsidian has access in System Settings → Privacy & Security → Bluetooth.";
+				console.error("[ble-detector] " + this.lastError);
+				if (this.child) {
+					try {
+						this.manualKill = true;
+						this.child.kill("SIGTERM");
+					} catch (_) {}
+					this.child = null;
+				}
 				return false;
 			}
 
@@ -130,33 +246,39 @@ export class BleFocusDetector {
 
 			this.startPolling();
 			this.transitionTo("NO_PHONE");
+			this.lastError = null;
 			return true;
 		} catch (e) {
-			console.error("[ble-detector] Failed to start scanner:", e);
+			this.lastError = "Failed to start BLE scanner: " + (e instanceof Error ? e.message : String(e));
+			console.error("[ble-detector] " + this.lastError);
 			return false;
 		}
 	}
 
 	private async attemptReconnect(): Promise<void> {
 		if (this.stopped) return;
-		if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-			console.error("[ble-detector] Max reconnect attempts reached, giving up");
+		if (this.reconnectAttempts >= MAX_TOTAL_RECONNECT_ATTEMPTS) {
+			this.lastError = "Max reconnect attempts reached. BLE detection has stopped.";
+			console.error("[ble-detector] " + this.lastError);
 			this.transitionTo("NO_PHONE");
 			return;
 		}
 
 		this.reconnectAttempts++;
+		const generation = this.reconnectGeneration;
 		const delay = RECONNECT_DELAY_MS * this.reconnectAttempts;
-		console.log(`[ble-detector] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
-		await new Promise(r => setTimeout(r, delay));
+		console.log(`[ble-detector] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${MAX_TOTAL_RECONNECT_ATTEMPTS})`);
 
-		if (this.stopped) return;
-
-		// launch() (not start()) so the reconnect budget isn't reset each attempt
-		const ok = await this.launch();
-		if (!ok && !this.stopped) {
-			this.attemptReconnect();
-		}
+		this.reconnectTimer = setTimeout(() => {
+			this.reconnectTimer = null;
+			if (this.stopped) return;
+			if (generation !== this.reconnectGeneration) return;
+			this.launch().then((ok) => {
+				if (!ok && !this.stopped) {
+					this.attemptReconnect();
+				}
+			});
+		}, delay);
 	}
 
 	async startScanningByName(name: string): Promise<void> {
@@ -170,6 +292,10 @@ export class BleFocusDetector {
 		this.stopped = true;
 		this.intendedActive = false;
 		this.reconnectAttempts = 0;
+		this.reconnectGeneration++;
+		this.clearReconnectTimer();
+		this.isLaunching = false;
+		this.launchPromise = null;
 		this.stopPolling();
 		this.cancelCalibration();
 
@@ -183,6 +309,17 @@ export class BleFocusDetector {
 		this.latestStatus.scanning = false;
 		this.transitionTo("DISABLED");
 		this.dismissWarning();
+	}
+
+	getLastError(): string | null {
+		return this.lastError;
+	}
+
+	private clearReconnectTimer(): void {
+		if (this.reconnectTimer) {
+			clearTimeout(this.reconnectTimer);
+			this.reconnectTimer = null;
+		}
 	}
 
 	getLatestRSSI(): number | null {
@@ -227,7 +364,7 @@ export class BleFocusDetector {
 				setTimeout(() => reject(new Error("BLE API timeout")), timeoutMs)
 			);
 			const res = await Promise.race([request, timeout]);
-			return res ? (res.json as Record<string, unknown>) : null;
+			return res && isPlainObject(res.json) ? res.json : null;
 		} catch {
 			return null;
 		}
@@ -251,12 +388,12 @@ export class BleFocusDetector {
 		if (!status) return;
 
 		this.latestStatus = {
-			rawRssi: status.rawRssi as number | null,
-			smoothedRssi: status.smoothedRssi as number | null,
-			phoneFound: status.phoneFound as boolean,
-			lastSeen: status.lastSeen as number,
-			scanning: status.scanning as boolean,
-			deviceName: status.deviceName as string | null,
+			rawRssi: typeof status.rawRssi === "number" ? status.rawRssi : null,
+			smoothedRssi: typeof status.smoothedRssi === "number" ? status.smoothedRssi : null,
+			phoneFound: typeof status.phoneFound === "boolean" ? status.phoneFound : false,
+			lastSeen: typeof status.lastSeen === "number" ? status.lastSeen : 0,
+			scanning: typeof status.scanning === "boolean" ? status.scanning : false,
+			deviceName: typeof status.deviceName === "string" ? status.deviceName : null,
 		};
 
 		if (this.collectingCalibration) {
@@ -377,20 +514,28 @@ export class BleFocusDetector {
 	}
 
 	async discoverDevices(): Promise<BleDevice[]> {
-		await this.ensureRunning();
+		const running = await this.ensureRunning();
+		if (!running) {
+			this.lastError = this.lastError ?? "BLE scanner is not running";
+			return [];
+		}
 		const duration = 8;
 		const result = await this.fetchApi("/discover", { duration }, duration * 1000 + 5000);
-		if (result?.devices) {
-			return result.devices as BleDevice[];
+		if (result && Array.isArray(result.devices)) {
+			return result.devices.filter(isBleDevice);
 		}
 		return [];
 	}
 
 	async ensureRunning(): Promise<boolean> {
-		if (!this.child) {
-			return await this.start();
+		if (this.child) return true;
+		if (this.isLaunching && this.launchPromise) {
+			return await this.launchPromise;
 		}
-		return true;
+		if (this.reconnectTimer) {
+			return false;
+		}
+		return await this.start();
 	}
 
 	private async waitForBleReady(): Promise<Record<string, unknown> | null> {

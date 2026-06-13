@@ -83,21 +83,7 @@ export class CreateTestModal extends Modal {
               return;
             }
 
-            // Initialize this.plugin.settings.tests if it's undefined
-            if (!this.plugin.settings.tests) {
-              this.plugin.settings.tests = [];
-            }
-
-            // Push the new test
-            this.plugin.settings.tests.push({
-              id: Date.now().toString(),
-              name: nameVal,
-              date: dateVal,
-              filePaths: [],
-            });
-
-            // Call await this.plugin.saveSettings()
-            await this.plugin.saveData(this.plugin.settings);
+            await this.plugin.testService.addTest(nameVal, dateVal);
 
             // Call the onSubmit callback
             this.onSubmit();

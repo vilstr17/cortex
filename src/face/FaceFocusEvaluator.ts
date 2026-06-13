@@ -22,6 +22,8 @@ export class FaceFocusEvaluator {
 	private onStateChange: OnStateChange | null = null;
 	private running = false;
 	lastError: string | null = null;
+	/** Human-readable init progress ("Downloading model…") while starting. */
+	initStatus: string | null = null;
 
 	private sampleIntervalMs: number;
 	private blinkThreshold: number;
@@ -64,9 +66,11 @@ export class FaceFocusEvaluator {
 				pitchDownThreshold: this.pitchDownThreshold,
 				gracePeriodMs: this.gracePeriodMs,
 				assetStore: this.assetStore,
+				onProgress: (msg) => { this.initStatus = msg; },
 			});
 
 			await this.detector.init();
+			this.initStatus = null;
 
 			this.currentState = "UNKNOWN";
 			this.confirmCounter = 0;
@@ -83,6 +87,7 @@ export class FaceFocusEvaluator {
 			console.log("[cortex] FaceFocusEvaluator started");
 			return true;
 		} catch (err) {
+			this.initStatus = null;
 			if (err instanceof FaceDetectorCancelledError) {
 				this.running = false;
 				if (this.detector) {
@@ -111,6 +116,7 @@ export class FaceFocusEvaluator {
 	async stop(): Promise<void> {
 		this.running = false;
 		this.lastError = null;
+		this.initStatus = null;
 		if (this.detector) {
 			await this.detector.destroy();
 			this.detector = null;
