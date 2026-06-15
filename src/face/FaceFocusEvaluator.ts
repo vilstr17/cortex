@@ -98,7 +98,10 @@ export class FaceFocusEvaluator {
 			}
 			console.error("[cortex] FaceFocusEvaluator start failed:", err);
 			if (err instanceof DOMException && (err.name === "NotAllowedError" || err.name === "NotFoundError")) {
-				this.lastError = "Camera access denied. Grant access in System Settings \u2192 Privacy & Security \u2192 Camera, then try again.";
+				this.lastError =
+					"Camera access denied. Open System Settings \u2192 Privacy & Security \u2192 Camera " +
+					"and enable Obsidian, then click Try again below. " +
+					"(The macOS dialog only appears the first time \u2014 once denied, grant it manually.)";
 			} else if (err instanceof Error && err.message.includes("Camera permission denied")) {
 				this.lastError = err.message;
 			} else {

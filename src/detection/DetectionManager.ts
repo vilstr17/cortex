@@ -1,9 +1,10 @@
-import { Notice, Platform } from "obsidian";
+import { Modal, Notice, Platform } from "obsidian";
 import type CortexPlugin from "../main";
 import { BleFocusDetector } from "../ble/BleFocusDetector";
 import type { BleFocusState } from "../ble/types";
 import { FaceFocusEvaluator } from "../face/FaceFocusEvaluator";
 import type { FaceFocusState } from "../face/FaceFocusEvaluator";
+import { FaceDetector } from "../FaceDetector";
 import type { FaceAssetStore } from "../FaceDetector";
 
 export type DetectionSource = "ble" | "face";
@@ -45,7 +46,10 @@ export class DetectionManager {
 	constructor(plugin: CortexPlugin) {
 		this.plugin = plugin;
 
-		if (!Platform.isMobile) {
+		// INCLUDE_BLE is a build-time constant; when false, esbuild drops this
+		// branch and tree-shakes the BleFocusDetector module (and its
+		// child_process usage) out of the catalog bundle entirely.
+		if (INCLUDE_BLE && !Platform.isMobile) {
 			this.ble = new BleFocusDetector(plugin);
 			this.ble.onStateChange((state) => this.onBleStateChange(state));
 		}
@@ -78,7 +82,7 @@ export class DetectionManager {
 		if (!this.isAvailable) return;
 		const tasks: Promise<unknown>[] = [];
 
-		if (this.plugin.settings.bleEnabled && this.ble) {
+		if (INCLUDE_BLE && this.plugin.settings.bleEnabled && this.ble) {
 			tasks.push(
 				this.startBle().catch((e) => console.error("[cortex] BLE auto-start failed:", e))
 			);
@@ -109,6 +113,7 @@ export class DetectionManager {
 	// ── BLE ──────────────────────────────────────────────────────────
 
 	private async startBle(): Promise<boolean> {
+		if (!INCLUDE_BLE) return false;
 		if (!this.ble) return false;
 		const ok = await this.ble.start();
 		if (ok) {
@@ -119,10 +124,12 @@ export class DetectionManager {
 	}
 
 	isBleOn(): boolean {
+		if (!INCLUDE_BLE) return false;
 		return this.plugin.settings.bleEnabled || (this.ble?.isIntendedActive() ?? false);
 	}
 
 	async toggleBle(notify = true): Promise<void> {
+		if (!INCLUDE_BLE) return;
 		if (this.toggling.ble) return;
 		this.toggling.ble = true;
 		try {
@@ -197,6 +204,18 @@ export class DetectionManager {
 				await this.face?.stop();
 				// Recreate so settings changes (interval, thresholds) apply
 				this.face = null;
+
+				// First use: ask before downloading the ~26 MB detection assets.
+				const store = this.createAssetStore();
+				const assetsReady = await FaceDetector.areAssetsReady(store);
+				if (!assetsReady) {
+					const consented = await this.showFaceSetupConsent();
+					if (!consented) {
+						if (notify) new Notice("Cortex: Face detection setup cancelled.");
+						return;
+					}
+				}
+
 				const ok = await this.startFace();
 				if (ok) {
 					this.plugin.settings.faceEnabled = true;
@@ -221,6 +240,53 @@ export class DetectionManager {
 		} else if (this.warningSource === "face") {
 			this.destroyWarning();
 		}
+	}
+
+	/**
+	 * Shown on first enable: explains what gets downloaded (~26 MB) and from
+	 * where before any network request is made.
+	 */
+	private showFaceSetupConsent(): Promise<boolean> {
+		return new Promise<boolean>((resolve) => {
+			const modal = new Modal(this.plugin.app);
+			modal.titleEl.setText("Face Detection: First-Time Setup");
+
+			const { contentEl } = modal;
+			contentEl.createEl("p", {
+				text: "Enabling face detection requires downloading two files (~26 MB total). This is a one-time setup — files are cached locally and no download happens on subsequent starts.",
+			});
+
+			const dl = contentEl.createEl("dl", { cls: "cortex-setup-dl" });
+			dl.createEl("dt", { text: "WASM runtime (~11 MB)" });
+			dl.createEl("dd", { text: "cdn.jsdelivr.net — MediaPipe WebAssembly binary (version-pinned)" });
+			dl.createEl("dt", { text: "Face landmark model (~15 MB)" });
+			dl.createEl("dd", { text: "storage.googleapis.com — Google MediaPipe model weights" });
+
+			contentEl.createEl("p", {
+				text: "No data from your camera is ever sent to any server. Detection runs entirely on your device.",
+				cls: "cortex-setup-note",
+			});
+
+			const btnRow = contentEl.createDiv({ cls: "cortex-setup-buttons" });
+			const downloadBtn = btnRow.createEl("button", {
+				text: "Download & Enable",
+				cls: "mod-cta",
+			});
+			const cancelBtn = btnRow.createEl("button", { text: "Cancel" });
+
+			let settled = false;
+			const settle = (value: boolean) => {
+				if (settled) return;
+				settled = true;
+				modal.close();
+				resolve(value);
+			};
+
+			downloadBtn.addEventListener("click", () => settle(true));
+			cancelBtn.addEventListener("click", () => settle(false));
+			modal.onClose = () => settle(false);
+			modal.open();
+		});
 	}
 
 	// ── Shared warning overlay ───────────────────────────────────────

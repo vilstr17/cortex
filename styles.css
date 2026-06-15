@@ -381,6 +381,44 @@
   font-size: 0.85em;
 }
 
+/* Live "what the agent is doing" panel inside the loading indicator. */
+.chat-activity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.4rem;
+}
+
+.chat-activity-step {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.82em;
+  color: var(--text-muted);
+}
+
+.chat-activity-icon {
+  flex: 0 0 auto;
+  width: 1em;
+  text-align: center;
+}
+
+.chat-activity-step.is-running {
+  color: var(--text-normal);
+}
+
+.chat-activity-step.is-done .chat-activity-icon {
+  color: var(--text-success, var(--interactive-success));
+}
+
+.chat-activity-step.is-error {
+  color: var(--text-error);
+}
+
+.chat-activity-step.is-note {
+  font-style: italic;
+}
+
 .chat-input-area {
   display: flex;
   gap: 0.5rem;
@@ -1624,4 +1662,567 @@
 
 .cortex-face-stat {
   color: var(--text-muted);
+}
+
+/* Camera-permission error actions. Rendered under the error message in
+   the Face Tracking panel — gives the user a one-click way to open
+   System Settings → Privacy & Security → Camera and to retry. */
+.cortex-face-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.cortex-face-error-btn {
+  font-size: 0.8em;
+  padding: 0.25rem 0.6rem;
+}
+
+/* Settings-tab inline warning. Shown above the Face Tracking section on
+   macOS to explain why the toggle is disabled. */
+.cortex-settings-warning {
+  border: 1px solid var(--background-modifier-border);
+  border-left: 3px solid var(--text-warning, #c08020);
+  padding: 0.6rem 0.8rem;
+  margin: 0.5rem 0 1rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+
+/* Dashboard Face Tracking panel — macOS-only notice that replaces the
+   toggle's purpose with a pointer to the BLE alternative. */
+.cortex-face-mac-notice {
+  border-left: 3px solid var(--text-warning, #c08020);
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.8em;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.cortex-toggle.is-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Flashcard proposals in chat ─────────────────────────────────── */
+
+.chat-flashcard-area {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.chat-flashcard-group {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.chat-flashcard-group-label {
+  font-size: 0.78em;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.chat-flashcard-card {
+  border-top: 1px solid var(--background-modifier-border);
+  padding-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.88em;
+}
+
+.chat-flashcard-card:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.chat-flashcard-front,
+.chat-flashcard-answer {
+  line-height: 1.4;
+}
+
+.chat-flashcard-source {
+  font-size: 0.82em;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 0.2rem;
+}
+
+.chat-flashcard-reveal-btn {
+  align-self: flex-start;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.78em;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.chat-flashcard-reveal-btn:hover {
+  background: var(--background-modifier-hover);
+}
+
+/* ── Interactive flashcard deck ─────────────────────────────────── */
+
+.cortex-flashcard-deck {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cortex-flashcard-deck.is-saved {
+  opacity: 0.7;
+}
+
+.cortex-flashcard-deck-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cortex-flashcard-deck-title {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cortex-flashcard-deck-progress {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cortex-flashcard-stage {
+  perspective: 800px;
+  cursor: pointer;
+}
+
+.cortex-flashcard-inner {
+  position: relative;
+  min-height: 120px;
+  transition: transform 0.35s ease;
+  transform-style: preserve-3d;
+}
+
+.cortex-flashcard-inner.flipped {
+  transform: rotateY(180deg);
+}
+
+.cortex-flashcard-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  background: var(--background-secondary);
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.cortex-flashcard-front {
+  z-index: 2;
+}
+
+.cortex-flashcard-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  z-index: 1;
+}
+
+.cortex-flashcard-question {
+  font-weight: 600;
+  font-size: 0.95em;
+  line-height: 1.45;
+}
+
+.cortex-flashcard-answer {
+  font-size: 0.95em;
+  line-height: 1.45;
+  color: var(--text-normal);
+}
+
+.cortex-flashcard-source {
+  margin-top: 0.6rem;
+  font-size: 0.8em;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.cortex-flashcard-controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.cortex-flashcard-control-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85em;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.cortex-flashcard-control-btn:hover:not(:disabled) {
+  background: var(--background-modifier-hover);
+}
+
+.cortex-flashcard-control-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cortex-flashcard-flip-btn {
+  min-width: 110px;
+}
+
+.cortex-flashcard-footer {
+  display: flex;
+  justify-content: center;
+}
+
+.cortex-flashcard-save-btn {
+  padding: 0.45rem 1rem;
+  font-size: 0.85em;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* ── Chat toolbar + rendered markdown ───────────────────────────── */
+
+.chat-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 0.4rem;
+}
+
+.chat-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 4px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.chat-clear-btn:hover {
+  background: rgba(200, 0, 0, 0.1);
+  color: var(--color-red);
+}
+
+.chat-clear-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.chat-message-text-rendered {
+  white-space: normal;
+}
+
+.chat-message-text-rendered h1,
+.chat-message-text-rendered h2,
+.chat-message-text-rendered h3,
+.chat-message-text-rendered h4,
+.chat-message-text-rendered h5,
+.chat-message-text-rendered h6 {
+  margin: 0.6rem 0 0.35rem;
+  font-size: 1em;
+  color: var(--text-normal);
+}
+
+.chat-message-text-rendered p {
+  margin: 0.35rem 0;
+}
+
+.chat-message-text-rendered ul,
+.chat-message-text-rendered ol {
+  margin: 0.35rem 0;
+  padding-left: 1.25rem;
+}
+
+.chat-message-text-rendered li {
+  margin: 0.15rem 0;
+}
+
+.chat-message-text-rendered code {
+  font-family: monospace;
+  background: var(--background-modifier-form-field);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  font-size: 0.92em;
+}
+
+.chat-message-text-rendered pre {
+  background: var(--background-primary-alt);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  overflow-x: auto;
+  margin: 0.4rem 0;
+}
+
+.chat-message-text-rendered pre code {
+  background: transparent;
+  padding: 0;
+  font-size: 0.85em;
+}
+
+.chat-message-text-rendered table {
+  border-collapse: collapse;
+  margin: 0.4rem 0;
+  font-size: 0.95em;
+}
+
+.chat-message-text-rendered th,
+.chat-message-text-rendered td {
+  border: 1px solid var(--background-modifier-border);
+  padding: 0.35rem 0.6rem;
+  text-align: left;
+}
+
+.chat-message-text-rendered th {
+  background: var(--background-secondary);
+  font-weight: 600;
+}
+
+.chat-message-text-rendered a {
+  color: var(--text-accent);
+  text-decoration: none;
+}
+
+.chat-message-text-rendered a:hover {
+  text-decoration: underline;
+}
+
+/* ── Interactive quiz ───────────────────────────────────────────── */
+
+.cortex-quiz {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.cortex-quiz-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.cortex-quiz-title {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cortex-quiz-score,
+.cortex-quiz-progress {
+  font-size: 0.85em;
+  color: var(--text-normal);
+  font-variant-numeric: tabular-nums;
+}
+
+.cortex-quiz-progress-bar {
+  height: 6px;
+  background: var(--background-modifier-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.cortex-quiz-progress-fill {
+  height: 100%;
+  background: var(--interactive-accent);
+  border-radius: 3px;
+  transition: width 0.25s ease;
+}
+
+.cortex-quiz-question-area {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cortex-quiz-prompt {
+  font-weight: 600;
+  font-size: 0.95em;
+  line-height: 1.45;
+}
+
+.cortex-quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cortex-quiz-option {
+  text-align: left;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.cortex-quiz-option:hover:not(:disabled) {
+  background: var(--background-modifier-hover);
+}
+
+.cortex-quiz-option:disabled {
+  cursor: default;
+}
+
+.cortex-quiz-option.is-correct {
+  border-color: var(--color-green);
+  background: rgba(0, 180, 0, 0.1);
+  color: var(--color-green);
+}
+
+.cortex-quiz-option.is-incorrect {
+  border-color: var(--color-red);
+  background: rgba(200, 0, 0, 0.08);
+  color: var(--color-red);
+}
+
+.cortex-quiz-feedback {
+  display: none;
+  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.9em;
+}
+
+.cortex-quiz-feedback.is-correct {
+  display: block;
+  background: rgba(0, 180, 0, 0.1);
+  color: var(--color-green);
+}
+
+.cortex-quiz-feedback.is-incorrect {
+  display: block;
+  background: rgba(200, 0, 0, 0.08);
+  color: var(--color-red);
+}
+
+.cortex-quiz-feedback p {
+  margin: 0.35rem 0 0;
+  color: var(--text-normal);
+}
+
+.cortex-quiz-controls {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cortex-quiz-next-btn {
+  padding: 0.45rem 1rem;
+  font-size: 0.85em;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+}
+
+.cortex-quiz-next-btn:hover:not(:disabled) {
+  background: var(--background-modifier-hover);
+}
+
+.cortex-quiz-next-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cortex-quiz-summary {
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+.cortex-quiz-summary h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05em;
+}
+
+.cortex-provider-warning {
+  margin: 0.75rem 0;
+  padding: 0.65rem 0.85rem;
+  border-left: 3px solid var(--color-orange);
+  background: var(--background-secondary);
+  font-size: 0.88em;
+  line-height: 1.45;
+  color: var(--text-normal);
+  border-radius: 0 6px 6px 0;
+}
+
+/* ── Save flashcards modal ─────────────────────────────────────── */
+.cortex-save-flashcards-modal .cortex-save-fc-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.cortex-save-fc-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Study flashcards button (post-processor) ─────────────────── */
+.cortex-flashcard-study-wrapper {
+  margin: 0 0 12px 0;
+}
+
+.cortex-flashcard-study-btn {
+  width: 100%;
+  text-align: center;
+  font-size: 1em;
+  padding: 0.6rem 0.75rem;
+}
+
+/* ── Study flashcards modal ────────────────────────────────────── */
+.cortex-study-flashcards-modal {
+  /* The deck component already has its own card layout. We just
+     give the modal a sensible min-height so the card isn't
+     squashed on small viewports. */
+  min-height: 360px;
 }

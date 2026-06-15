@@ -13,15 +13,15 @@
  */
 
 import type { FaceLandmarker as FaceLandmarkerT, FaceLandmarkerResult, NormalizedLandmark, Matrix } from "@mediapipe/tasks-vision";
+import WASM_LOADER_JS from "mediapipe:wasm-loader";
 
-// Must match the version in package.json — keeps the CDN wasm ABI in sync
-// with the bundled JS API.
+// Version must stay in sync with the installed @mediapipe/tasks-vision package.
 const MEDIAPIPE_VERSION = "0.10.35";
-const WASM_BASE_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}/wasm`;
+// Version-pinned WASM binary (data asset, not JS). Downloaded once, cached to vault.
+const WASM_BINARY_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}/wasm/vision_wasm_internal.wasm`;
 const MODEL_URL =
   "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
 
-const WASM_LOADER_FILE = "vision_wasm_internal.js";
 const WASM_BINARY_FILE = "vision_wasm_internal.wasm";
 const MODEL_FILE = "face_landmarker.task";
 
@@ -127,48 +127,32 @@ export class FaceDetector {
   }
 
   /**
-   * Resolve macOS camera permission before touching getUserMedia.
-   * `systemPreferences` lives in the main process — in the renderer it is
-   * only reachable via @electron/remote (plain require("electron") returns
-   * undefined for it, which is why no permission prompt ever appeared and
-   * getUserMedia hung forever on "not determined" status).
-   * Throws with a clear message when access is denied.
+   * Returns true when the cached WASM binary and model are present on disk.
+   * Used to decide whether the first init will need to download.
    */
-  static async requestCameraPermission(): Promise<void> {
-    if (process.platform !== "darwin") return;
-
-    let systemPreferences: any = null;
-    try {
-      systemPreferences = require("@electron/remote")?.systemPreferences;
-    } catch {}
-    if (!systemPreferences) {
-      try {
-        systemPreferences = require("electron")?.systemPreferences;
-      } catch {}
-    }
-    if (!systemPreferences?.getMediaAccessStatus) return;
-
-    const status = systemPreferences.getMediaAccessStatus("camera");
-    if (status === "granted") return;
-    if (status === "denied" || status === "restricted") {
-      throw new Error("Camera access is denied for Obsidian. Enable it in System Settings → Privacy & Security → Camera, then restart Obsidian.");
-    }
-    // "not-determined" — trigger the macOS permission prompt
-    if (systemPreferences.askForMediaAccess) {
-      const granted = await systemPreferences.askForMediaAccess("camera");
-      if (!granted) {
-        throw new Error("Camera access was not granted. Enable it in System Settings → Privacy & Security → Camera, then try again.");
-      }
-    }
+  static async areAssetsReady(store: FaceAssetStore): Promise<boolean> {
+    const [wasm, model] = await Promise.all([
+      store.exists(WASM_BINARY_FILE),
+      store.exists(MODEL_FILE),
+    ]);
+    return wasm && model;
   }
 
-  static async checkCameraAccess(): Promise<void> {
-    if (navigator.permissions) {
-      const result = await navigator.permissions.query({ name: "camera" as PermissionName });
-      if (result.state === "denied") {
-        throw new Error("Camera permission denied. Grant access in System Settings → Privacy & Security → Camera, then try again.");
-      }
-    }
+  /**
+   * Whether the host runtime is even allowed to use the camera. On macOS
+   * this is gated by an entitlement on the Obsidian app binary — without
+   * `com.apple.security.device.camera`, the OS will not show a permission
+   * dialog and getUserMedia will hang or reject with NotAllowedError. There
+   * is no plugin-level workaround; users on macOS must rely on the BLE
+   * focus detector until Obsidian adds the entitlement. See:
+   * https://forum.obsidian.md/t/add-camera-permissions-for-obsidian-mac-so-the-obsidian-camera-plugin-works/76265
+   */
+  static isCameraSupported(): boolean {
+    // The actual entitlement lives on the Obsidian binary, which we cannot
+    // inspect from a renderer. We assume macOS may be blocked; the
+    // practical check happens when getUserMedia is attempted. This helper
+    // exists so callers can disable face tracking UI on macOS if desired.
+    return process.platform !== "darwin";
   }
 
   private cleanupStream(): void {
@@ -227,9 +211,6 @@ export class FaceDetector {
   async init(): Promise<void> {
     this.aborted = false;
 
-    this.reportProgress("Requesting camera…");
-    await FaceDetector.requestCameraPermission();
-
     this.video = document.createElement("video");
     this.video.setAttribute("autoplay", "");
     this.video.setAttribute("playsinline", "");
@@ -246,8 +227,12 @@ export class FaceDetector {
     let stream: MediaStream;
     try {
       this.reportProgress("Opening webcam…");
-      // Timeout: with unresolved OS-level permission, getUserMedia can hang
-      // indefinitely — that must surface as an error, not a stuck toggle.
+      // The first getUserMedia on macOS (with OS-level status "not-determined")
+      // surfaces the system camera-permission dialog automatically. If the
+      // user previously dismissed it, the OS will not show it again and
+      // getUserMedia rejects with NotAllowedError — the catch block below
+      // tells them how to grant it manually. The 20s timeout is a safety
+      // net for any hangs in the underlying media stack.
       stream = await withTimeout(
         navigator.mediaDevices.getUserMedia({
           video: {
@@ -265,10 +250,33 @@ export class FaceDetector {
       this.video.remove();
       this.video = null;
       if (err instanceof DOMException && (err.name === "NotAllowedError" || err.name === "NotFoundError")) {
-        throw new Error("Camera access denied. Grant access in System Settings → Privacy & Security → Camera, then try again.");
+        if (process.platform === "darwin") {
+          throw new Error(
+            "Camera access is unavailable in Obsidian on macOS: the Obsidian app binary is " +
+            "missing the com.apple.security.device.camera entitlement, so macOS will not show " +
+            "the camera permission dialog. There is no plugin-level workaround. " +
+            "Use the BLE Focus Detector instead, or track this open feature request: " +
+            "https://forum.obsidian.md/t/add-camera-permissions-for-obsidian-mac-so-the-obsidian-camera-plugin-works/76265"
+          );
+        }
+        throw new Error(
+          "Camera access denied. Open System Settings → Privacy & Security → Camera " +
+          "and enable Obsidian, then click the Face Detection toggle again."
+        );
       }
       if (err instanceof Error && err.message.startsWith("Opening the webcam timed out")) {
-        throw new Error("Webcam did not respond within 20s. Check System Settings → Privacy & Security → Camera (Obsidian must be allowed), make sure no other app is blocking the camera, then try again.");
+        if (process.platform === "darwin") {
+          throw new Error(
+            "Webcam request timed out. On macOS this almost always means Obsidian is missing " +
+            "the camera entitlement (no permission dialog will appear). Use the BLE Focus " +
+            "Detector instead."
+          );
+        }
+        throw new Error(
+          "Webcam did not respond within 20s. Check System Settings → Privacy & Security → " +
+          "Camera (Obsidian must be allowed), make sure no other app is blocking the " +
+          "camera, then try again."
+        );
       }
       throw err;
     }
@@ -278,32 +286,27 @@ export class FaceDetector {
     await this.video.play();
 
     this.throwIfAborted();
-    // Lazy import — keeps the ~134KB MediaPipe module from executing at
-    // plugin load. It is only evaluated the first time face detection starts.
-    const { FaceLandmarker, FilesetResolver } = await import("@mediapipe/tasks-vision");
+    // Lazy import — keeps the MediaPipe module from executing at plugin load.
+    const { FaceLandmarker } = await import("@mediapipe/tasks-vision");
 
     this.throwIfAborted();
     this.reportProgress("Loading detection runtime…");
-    const loaderBytes = await this.ensureAsset(WASM_LOADER_FILE, `${WASM_BASE_URL}/${WASM_LOADER_FILE}`);
-    const binaryBytes = await this.ensureAsset(WASM_BINARY_FILE, `${WASM_BASE_URL}/${WASM_BINARY_FILE}`);
 
-    // Serve the cached runtime via blob: URLs — these work regardless of
-    // vault location/scheme quirks (iCloud paths with spaces, app://
-    // resource handling), unlike file-path-derived URLs.
-    const blobUrls: string[] = [];
-    let fileset: { wasmLoaderPath: string; wasmBinaryPath: string };
-    if (loaderBytes && binaryBytes) {
-      const loaderUrl = URL.createObjectURL(new Blob([loaderBytes], { type: "text/javascript" }));
-      const wasmUrl = URL.createObjectURL(new Blob([binaryBytes], { type: "application/wasm" }));
-      blobUrls.push(loaderUrl, wasmUrl);
-      fileset = { wasmLoaderPath: loaderUrl, wasmBinaryPath: wasmUrl };
-    } else {
-      fileset = await withTimeout(
-        FilesetResolver.forVisionTasks(WASM_BASE_URL),
-        INIT_STEP_TIMEOUT_MS,
-        "Loading MediaPipe runtime"
+    // JS loader is bundled into main.js at build time — no network request.
+    // WASM binary is a version-pinned data asset; downloaded once and cached.
+    const binaryBytes = await this.ensureAsset(WASM_BINARY_FILE, WASM_BINARY_URL);
+    if (!binaryBytes) {
+      throw new Error(
+        "Face detection runtime could not be downloaded. Check your network connection and try again.",
       );
     }
+
+    // Serve assets via blob: URLs — work regardless of vault location/scheme.
+    const blobUrls: string[] = [];
+    const loaderUrl = URL.createObjectURL(new Blob([WASM_LOADER_JS], { type: "text/javascript" }));
+    const wasmUrl = URL.createObjectURL(new Blob([binaryBytes], { type: "application/wasm" }));
+    blobUrls.push(loaderUrl, wasmUrl);
+    const fileset = { wasmLoaderPath: loaderUrl, wasmBinaryPath: wasmUrl };
 
     try {
       this.throwIfAborted();
@@ -335,23 +338,7 @@ export class FaceDetector {
       } catch (gpuErr) {
         this.throwIfAborted();
         console.warn("[cortex] FaceDetector GPU delegate failed, falling back to CPU:", gpuErr);
-        try {
-          this.faceLandmarker = await createWithDelegate(fileset, "CPU");
-        } catch (cpuErr) {
-          this.throwIfAborted();
-          if (blobUrls.length > 0) {
-            // Local cache may be corrupt — last resort: pinned CDN runtime
-            console.warn("[cortex] FaceDetector local wasm failed, retrying from CDN:", cpuErr);
-            const cdnFileset = await withTimeout(
-              FilesetResolver.forVisionTasks(WASM_BASE_URL),
-              INIT_STEP_TIMEOUT_MS,
-              "Loading MediaPipe runtime"
-            );
-            this.faceLandmarker = await createWithDelegate(cdnFileset, "CPU");
-          } else {
-            throw cpuErr;
-          }
-        }
+        this.faceLandmarker = await createWithDelegate(fileset, "CPU");
       }
     } finally {
       // The runtime is fully instantiated (or failed) — blobs are no longer

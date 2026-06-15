@@ -1,13 +1,14 @@
 import { ItemView, Notice, Platform, TFile, WorkspaceLeaf, setIcon, moment } from "obsidian";
 import CortexPlugin from "../main";
 import { DisplayCalendarEvent } from "../services/googleCalendarService";
-import type { FocusFaceState } from "../FaceDetector";
 import { CortexChatModal } from "../modals/CortexChatModal";
 import { CreateTestModal } from "../modals/CreateTestModal";
 import { ReviewFilterModal, ReviewFilters } from "../modals/ReviewFilterModal";
 import { TestService } from "../services/testService";
 import { CortexTest } from "../settings";
 import { localISODate, parseLocalDate, startOfLocalDay, isSameLocalDay, addDays, daysUntil } from "../utils/dateUtils";
+import { providerMissingFields, PROVIDER_LABELS } from "../services/ai/catalog";
+import type { FocusFaceState } from "../FaceDetector";
 
 export const CORTEX_DASHBOARD_VIEW = "cortex-dashboard";
 
@@ -65,11 +66,25 @@ export class CortexDashboardView extends ItemView {
 		headerRow.createEl("h1", { text: "Cortex Command Center" });
 
 		const chatBtn = headerRow.createEl("button", { cls: "cortex-chat-icon-btn" });
-		chatBtn.setAttr("title", "Open Gemini Planner");
+		chatBtn.setAttr("title", "Open Cortex AI Chat");
 		setIcon(chatBtn, "message-square");
 		chatBtn.addEventListener("click", () => {
-			if (!this.plugin.settings.geminiApiKey) {
-				new Notice("Cortex: Please set your Gemini API key in Settings → Cortex first.");
+			// Provider-aware credentials check — same logic as the chat
+			// modal's sendMessage. Surface the missing field name so the
+			// user knows exactly what to set.
+			const ai = this.plugin.settings.ai;
+			const missing = providerMissingFields(ai.provider, {
+				cortexAccountId: ai.cortexAccountId,
+				geminiApiKey: ai.geminiApiKey,
+				geminiModel: ai.geminiModel,
+				apiKey: ai.apiKey,
+				model: ai.model,
+				baseUrl: ai.baseUrl,
+			});
+			if (missing.length > 0) {
+				new Notice(
+					`Cortex: ${PROVIDER_LABELS[ai.provider]} is not configured. Missing: ${missing.join(", ")}. Set them in Settings → Cortex.`,
+				);
 				return;
 			}
 			new CortexChatModal(this.app, this.plugin).open();
@@ -90,10 +105,14 @@ export class CortexDashboardView extends ItemView {
 		this.testsContainer = wrapper.createDiv({ cls: "cortex-tests-section" });
 		this.authContainer = wrapper.createDiv({ cls: "cortex-auth-section" });
 
-		// Side-by-side focus panels
-		this.focusContainer = wrapper.createDiv({ cls: "cortex-focus-row" });
-		this.bleContainer = this.focusContainer.createDiv({ cls: "cortex-focus-panel" });
-		this.faceContainer = this.focusContainer.createDiv({ cls: "cortex-focus-panel" });
+		// Focus panels (BLE + face). Only allocated in the full / sideloaded
+		// build — esbuild's stub plugin + the INCLUDE_FOCUS guard keep the
+		// catalog build free of focus divs, focus state, and the 1s ticker.
+		if (INCLUDE_FOCUS) {
+			this.focusContainer = wrapper.createDiv({ cls: "cortex-focus-row" });
+			this.bleContainer = this.focusContainer.createDiv({ cls: "cortex-focus-panel" });
+			this.faceContainer = this.focusContainer.createDiv({ cls: "cortex-focus-panel" });
+		}
 
 		// Debounced: while editing, metadata changes fire on every save —
 		// re-rendering the whole dashboard (incl. a calendar fetch) each
@@ -113,13 +132,15 @@ export class CortexDashboardView extends ItemView {
 
 		this.render();
 
-		// One shared ticker for both focus panels; updates are skipped
-		// entirely while the window is hidden.
-		this.focusUpdateInterval = setInterval(() => {
-			if (document.hidden) return;
-			this.updateBleStatusDisplay();
-			this.updateFaceDisplay();
-		}, 1000);
+		if (INCLUDE_FOCUS) {
+			// One shared ticker for both focus panels; updates are skipped
+			// entirely while the window is hidden.
+			this.focusUpdateInterval = setInterval(() => {
+				if (document.hidden) return;
+				this.updateBleStatusDisplay();
+				this.updateFaceDisplay();
+			}, 1000);
+		}
 	}
 
 	async onClose(): Promise<void> {
@@ -371,6 +392,7 @@ export class CortexDashboardView extends ItemView {
 	// ── Focus panels (side-by-side) ──────────────────────────────────
 
 	private renderFocusPanels(): void {
+		if (!INCLUDE_FOCUS) return;
 		this.renderBlePanel();
 		this.renderFacePanel();
 	}
@@ -378,7 +400,7 @@ export class CortexDashboardView extends ItemView {
 	private renderBlePanel(): void {
 		this.bleContainer.empty();
 
-		if (Platform.isMobile || !this.plugin.bleDetector) {
+		if (!INCLUDE_FOCUS || Platform.isMobile || !this.plugin.bleDetector) {
 			return;
 		}
 
@@ -434,21 +456,40 @@ export class CortexDashboardView extends ItemView {
 
 		this.faceContainer.createEl("h4", { text: "Face Tracking" });
 
+		// Up-front notice on macOS — Obsidian is not entitled to use the
+		// camera, so toggling this will never trigger the permission
+		// dialog. Point users at the working BLE alternative instead.
+		if (process.platform === "darwin") {
+			const notice = this.faceContainer.createDiv({ cls: "cortex-face-mac-notice" });
+			notice.createEl("strong", { text: "Not available on macOS: " });
+			notice.appendText(
+				"Obsidian is not currently entitled to use the camera, so face tracking " +
+				"cannot be enabled. Use the BLE Focus Detector above to detect phone usage instead."
+			);
+		}
+
 		const row = this.faceContainer.createDiv({ cls: "cortex-toggle-row" });
 		const tog = row.createDiv({ cls: "cortex-toggle" + (intendedOn || starting ? " is-enabled" : "") });
 		const lbl = row.createDiv({ cls: "cortex-toggle-label" });
 		lbl.setText(starting ? "STARTING" : intendedOn ? "ON" : "OFF");
 
-		tog.addEventListener("click", async () => {
-			await this.plugin.detection?.toggleFace();
-			this.renderFacePanel();
-		});
+		// Hard-disable the toggle on macOS — the click handler would
+		// just produce an error.
+		if (process.platform === "darwin") {
+			tog.addClass("is-disabled");
+		} else {
+			tog.addEventListener("click", async () => {
+				await this.plugin.detection?.toggleFace();
+				this.renderFacePanel();
+			});
+		}
 
 		if (intendedOn || starting) {
 			const statsEl = this.faceContainer.createDiv({ cls: "cortex-face-stats", attr: { "data-face-stats": "" } });
 
 			if (errorMsg) {
 				statsEl.createSpan({ text: `Error: ${errorMsg}`, cls: "cortex-focus-state cortex-state-gray" });
+				this.renderFaceErrorActions(statsEl);
 			} else if (!isRunning) {
 				const progress = this.plugin.faceEvaluator?.initStatus ?? "Initializing...";
 				statsEl.createSpan({ text: progress, cls: "cortex-focus-state cortex-state-gray" });
@@ -458,8 +499,30 @@ export class CortexDashboardView extends ItemView {
 				this.populateStats(statsEl, fs, state);
 			}
 		} else if (errorMsg) {
-			this.faceContainer.createDiv({ text: `Last error: ${errorMsg}`, cls: "cortex-face-error-hint" });
+			const errEl = this.faceContainer.createDiv({ cls: "cortex-face-error-hint" });
+			errEl.createDiv({ text: `Last error: ${errorMsg}` });
+			this.renderFaceErrorActions(errEl);
 		}
+	}
+
+	/**
+	 * Render "Try again" under a face detection error. We do NOT link to
+	 * System Settings → Camera on macOS: that screen will not help because
+	 * Obsidian's app binary is not entitled to use the camera at all. The
+	 * face detector's error message already explains this and points at
+	 * the BLE Focus Detector as the working alternative.
+	 */
+	private renderFaceErrorActions(parent: HTMLElement): void {
+		const actions = parent.createDiv({ cls: "cortex-face-error-actions" });
+
+		const retryBtn = actions.createEl("button", {
+			text: "Try again",
+			cls: "cortex-face-error-btn mod-cta",
+		});
+		retryBtn.addEventListener("click", async () => {
+			await this.plugin.detection?.toggleFace();
+			this.renderFacePanel();
+		});
 	}
 
 	private populateStats(el: HTMLElement, fs: FocusFaceState | null, state: string): void {
@@ -473,6 +536,7 @@ export class CortexDashboardView extends ItemView {
 	}
 
 	private updateBleStatusDisplay(): void {
+		if (!INCLUDE_FOCUS) return;
 		if (!this.plugin.bleDetector) return;
 		if (Platform.isMobile) return;
 
@@ -501,6 +565,7 @@ export class CortexDashboardView extends ItemView {
 	}
 
 	private updateFaceDisplay(): void {
+		if (!INCLUDE_FOCUS) return;
 		if (Platform.isMobile) return;
 
 		const starting = this.plugin.detection?.isFaceStarting() ?? false;

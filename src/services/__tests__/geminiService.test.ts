@@ -27,8 +27,31 @@ vi.mock("obsidian", () => ({
 import { GeminiService } from "../geminiService";
 import { DEFAULT_SETTINGS, CortexSettings } from "../../settingsTypes";
 
+/**
+ * Build a settings object with the given Gemini API key, mirroring
+ * what `migrateSettings()` produces: the legacy flat fields are set
+ * (the regression test exists to protect that path) AND the new
+ * `ai.*` fields are populated (the runtime reads from there). This
+ * way the test isolates the URL/header contract from the
+ * deprecation transition.
+ *
+ * The active provider is pinned to "gemini" — the chat service
+ * now dispatches on `settings.ai.provider`, so a default
+ * `cortex_cloud` would route to the OpenAI-compat adapter and the
+ * Gemini-specific URL/header assertions wouldn't hold. Setting
+ * provider explicitly keeps the test focused on the Gemini key
+ * transport contract.
+ */
 function settingsWithKey(key: string): CortexSettings {
-  return { ...DEFAULT_SETTINGS, geminiApiKey: key };
+  return {
+    ...DEFAULT_SETTINGS,
+    geminiApiKey: key,
+    ai: {
+      ...DEFAULT_SETTINGS.ai,
+      provider: "gemini",
+      geminiApiKey: key,
+    },
+  };
 }
 
 describe("GeminiService — API key transport", () => {
@@ -36,6 +59,7 @@ describe("GeminiService — API key transport", () => {
     requestUrlMock.mockReset();
     // First response: a text-only candidate. Stops the function-call loop.
     requestUrlMock.mockResolvedValue({
+      status: 200,
       json: {
         candidates: [
           {
@@ -76,7 +100,15 @@ describe("GeminiService — API key transport", () => {
   });
 
   it("targets the configured Gemini model in the URL", async () => {
-    const svc = new GeminiService({ ...settingsWithKey("k"), geminiModel: "gemini-2.5-pro" });
+    const svc = new GeminiService({
+      ...settingsWithKey("k"),
+      geminiModel: "gemini-2.5-pro",
+      ai: {
+        ...DEFAULT_SETTINGS.ai,
+        provider: "gemini",
+        geminiModel: "gemini-2.5-pro",
+      },
+    });
     await svc.chat([{ role: "user", text: "hi" }]);
 
     const call = requestUrlMock.mock.calls[0][0] as { url: string };

@@ -23,6 +23,9 @@ data.json
 
 dist/
 
+# Catalog edition build output (released as zip, not committed)
+dist-catalog/
+
 # Test coverage output
 coverage/
 

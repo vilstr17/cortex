@@ -1,0 +1,96 @@
+/**
+ * Flashcard study post-processor.
+ *
+ * A `MarkdownPostProcessor` that watches the rendered markdown of
+ * notes whose YAML frontmatter has `flashcards: true` and injects
+ * a "▶ Study flashcards" button at the top of the rendered view.
+ *
+ * The actual click handling is a workspace-level delegate
+ * registered in `main.ts:onload()` so the same handler works
+ * for cards the user opens with the workspace, the command
+ * palette, or a `[[link]]` from another note.
+ */
+
+import { MarkdownPostProcessorContext, TFile } from "obsidian";
+import type CortexPlugin from "../main";
+import { StudyFlashcardsModal } from "../modals/StudyFlashcardsModal";
+import { parseSavedCardsFromMarkdown } from "./flashcardSaveService";
+
+/**
+ * `ctx.sourcePath` is the vault-relative path of the markdown
+ * file being rendered. Returns the corresponding `TFile`, or
+ * null if the file cannot be resolved.
+ */
+function resolveFile(plugin: CortexPlugin, ctx: MarkdownPostProcessorContext): TFile | null {
+  const path = ctx.sourcePath;
+  if (!path) return null;
+  const file = plugin.app.vault.getAbstractFileByPath(path);
+  return file instanceof TFile ? file : null;
+}
+
+/**
+ * The post-processor callback. Obsidian invokes this once per
+ * rendered markdown block. We check the frontmatter and, if
+ * this is a flashcard note, prepend a Study button to the
+ * `el` element.
+ */
+export const cortexStudyPostProcessor =
+  (plugin: CortexPlugin) =>
+  async (el: HTMLElement, ctx: MarkdownPostProcessorContext): Promise<void> => {
+    // Frontmatter lives in the metadata cache, not the rendered
+    // element. We can read it from the source file directly.
+    const file = resolveFile(plugin, ctx);
+    if (!file) return;
+    const cache = plugin.app.metadataCache.getFileCache(file);
+    const fm = cache?.frontmatter;
+    if (!fm || (fm as Record<string, unknown>).flashcards !== true) return;
+
+    // Make sure the post-processor only runs on the rendered
+    // markdown view, not on every section heading — Obsidian
+    // calls us per block, so `el` is the section root.
+    // Skip if this is a sub-block (e.g. inside a callout/embed).
+    if (!el.parentElement) return;
+
+    // Build the Study button. We attach it as a sibling of the
+    // first rendered child by inserting at the very top of `el`.
+    const wrapper = document.createElement("div");
+    wrapper.className = "cortex-flashcard-study-wrapper";
+
+    const button = document.createElement("button");
+    button.className = "mod-cta cortex-flashcard-study-btn";
+    button.textContent = "▶ Study flashcards";
+    button.setAttribute("data-cortex-study", file.path);
+
+    wrapper.appendChild(button);
+    el.prepend(wrapper);
+  };
+
+/**
+ * Open the Study modal for a given file. Reads the file's
+ * markdown, parses it back into proposals, and shows the deck.
+ *
+ * Called from the workspace click delegate in `main.ts`.
+ */
+export async function openStudyForFile(
+  plugin: CortexPlugin,
+  file: TFile,
+): Promise<void> {
+  const content = await plugin.app.vault.cachedRead(file);
+  const fallbackName = file.basename.replace(/^Flashcards\s*-\s*/, "");
+  const cards = parseSavedCardsFromMarkdown(content, fallbackName);
+
+  if (cards.length === 0) {
+    new (await import("obsidian")).Notice(
+      "Cortex: no flashcards found in this note.",
+    );
+    return;
+  }
+
+  const fm = plugin.app.metadataCache.getFileCache(file)?.frontmatter;
+  const testName =
+    (fm && typeof (fm as Record<string, unknown>).test === "string"
+      ? ((fm as Record<string, unknown>).test as string)
+      : null) ?? fallbackName;
+
+  new StudyFlashcardsModal(plugin.app, plugin, cards, testName).open();
+}
