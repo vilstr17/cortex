@@ -1,4 +1,4 @@
-import { localISODate, addDays, parseLocalDate, startOfLocalDay } from "./dateUtils";
+import { localISODate, addDays, parseLocalDate, startOfLocalDay } from "./dateUtils.js";
 
 export interface NextReviewResult {
   nextInterval: number;

@@ -6,7 +6,7 @@ import {
   daysUntil,
   startOfLocalDay,
   isSameLocalDay,
-} from "../dateUtils";
+} from "../dateUtils.js";
 
 /**
  * Regression suite for the local-date utilities.

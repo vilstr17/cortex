@@ -12,9 +12,9 @@
  */
 
 import { MarkdownPostProcessorContext, TFile } from "obsidian";
-import type CortexPlugin from "../main";
-import { StudyFlashcardsModal } from "../modals/StudyFlashcardsModal";
-import { parseSavedCardsFromMarkdown } from "./flashcardSaveService";
+import type CortexPlugin from "../main.js";
+import { StudyFlashcardsModal } from "../modals/StudyFlashcardsModal.js";
+import { parseSavedCardsFromMarkdown } from "./flashcardSaveService.js";
 
 /**
  * `ctx.sourcePath` is the vault-relative path of the markdown

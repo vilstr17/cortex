@@ -1,5 +1,5 @@
 import { App, Modal, Setting } from "obsidian";
-import { CortexTest } from "../settings";
+import { CortexTest } from "../settings.js";
 
 export interface ReviewFilters {
 	sortOrder: "low-to-high" | "high-to-low";

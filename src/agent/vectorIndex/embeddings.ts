@@ -35,8 +35,8 @@
  *     LM Studio via the existing `ai.baseUrl` field.
  */
 
-import type { CortexSettings } from "../../settingsTypes";
-import { createAdapter } from "../../services/ai";
+import type { CortexSettings } from "../../settingsTypes.js";
+import { createAdapter } from "../../services/ai/index.js";
 
 /** Default embedding dimension. Used as a fallback for index construction only;
  *  the live dim is autodetected from the first embed response. */

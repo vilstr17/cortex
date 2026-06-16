@@ -19,16 +19,16 @@
  * keys are often allow-listed only for the 2.5 family.
  */
 import { requestUrl } from "obsidian";
-import type { CortexSettings } from "../../settingsTypes";
+import type { CortexSettings } from "../../settingsTypes.js";
 import type {
   AIProviderAdapter,
   ChatRequest,
   ChatResponse,
   ToolCall,
   ToolDeclaration,
-} from "./types";
-import { buildTimeContext } from "./types";
-import { resolveEmbeddingModel } from "./catalog";
+} from "./types.js";
+import { buildTimeContext } from "./types.js";
+import { resolveEmbeddingModel } from "./catalog.js";
 
 // ── Gemini native types (mirrors the wire format) ──────────────────
 

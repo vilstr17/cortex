@@ -12,8 +12,8 @@ import {
   saveProposalsToTarget,
   SaveTarget,
   SaveResult,
-} from "../flashcardSaveService";
-import { FlashcardProposal } from "../../agent/tools/flashcards";
+} from "../flashcardSaveService.js";
+import { FlashcardProposal } from "../../agent/tools/flashcards.js";
 
 // ── Minimal Obsidian mocks ─────────────────────────────────────────
 

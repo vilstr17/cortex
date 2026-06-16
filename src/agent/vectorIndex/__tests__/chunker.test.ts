@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { chunkMarkdown } from "../chunker";
+import { chunkMarkdown } from "../chunker.js";
 
 /**
  * Tests for the markdown chunker.

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculateNextReview } from "../srsLogic";
+import { calculateNextReview } from "../srsLogic.js";
 
 /**
  * Tests for the SM-2 inspired SRS algorithm.

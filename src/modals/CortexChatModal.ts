@@ -1,28 +1,28 @@
 import { App, Modal, Notice, setIcon } from "obsidian";
-import CortexPlugin from "../main";
-import { GeminiService } from "../services/geminiService";
-import type { ScheduledEvent } from "../services/geminiService";
-import type { PersistedChatMessage, PersistedChatAttachments } from "../settingsTypes";
-import { providerMissingFields } from "../services/ai/catalog";
-import { PROVIDER_LABELS } from "../services/ai/catalog";
-import { createNoteTools } from "../agent/tools/notes";
-import { createTestTools } from "../agent/tools/tests";
+import CortexPlugin from "../main.js";
+import { GeminiService } from "../services/geminiService.js";
+import type { ScheduledEvent } from "../services/geminiService.js";
+import type { PersistedChatMessage, PersistedChatAttachments } from "../settingsTypes.js";
+import { providerMissingFields } from "../services/ai/catalog.js";
+import { PROVIDER_LABELS } from "../services/ai/catalog.js";
+import { createNoteTools } from "../agent/tools/notes.js";
+import { createTestTools } from "../agent/tools/tests.js";
 import {
   createFlashcardTools,
   FlashcardProposal,
   pendingProposals,
-} from "../agent/tools/flashcards";
+} from "../agent/tools/flashcards.js";
 import {
   createQuizTools,
   pendingQuizzes,
   QuizProposal,
-} from "../agent/tools/quizzes";
-import { saveProposalsToTarget } from "../services/flashcardSaveService";
-import { promptForSaveLocation } from "./SaveFlashcardsModal";
-import type { ToolProgressEvent } from "../services/ai/runWithTools";
-import { renderChatMarkdown } from "../ui/chatMarkdown";
-import { renderFlashcardDeck } from "../ui/FlashcardDeck";
-import { renderQuizComponent } from "../ui/QuizComponent";
+} from "../agent/tools/quizzes.js";
+import { saveProposalsToTarget } from "../services/flashcardSaveService.js";
+import { promptForSaveLocation } from "./SaveFlashcardsModal.js";
+import type { ToolProgressEvent } from "../services/ai/runWithTools.js";
+import { renderChatMarkdown } from "../ui/chatMarkdown.js";
+import { renderFlashcardDeck } from "../ui/FlashcardDeck.js";
+import { renderQuizComponent } from "../ui/QuizComponent.js";
 
 interface AIResponseWithEvents {
   text: string;

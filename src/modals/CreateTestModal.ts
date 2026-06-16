@@ -1,5 +1,5 @@
 import { App, Modal, Setting, moment, ButtonComponent } from "obsidian";
-import CortexPlugin from "../main";
+import CortexPlugin from "../main.js";
 
 export class CreateTestModal extends Modal {
   private plugin: CortexPlugin;
@@ -21,7 +21,7 @@ export class CreateTestModal extends Modal {
     contentEl.createEl("h2", { text: "Create New Test" });
 
     // Default date: 7 days from now
-    const defaultDate = moment().add(7, "days").format("YYYY-MM-DD");
+    const defaultDate = (moment as unknown as (input?: unknown) => { add(n: number, unit: string): { format(fmt: string): string } })().add(7, "days").format("YYYY-MM-DD");
     this.testDate = defaultDate;
 
     let dateInput: HTMLInputElement | null = null;

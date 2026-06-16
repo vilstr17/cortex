@@ -28,8 +28,8 @@ vi.mock("../ai/catalog", () => ({
   embeddingMissingFields: (...args: unknown[]) => embeddingMissingFieldsMock(...args),
 }));
 
-import { runIndex } from "../indexRunner";
-import { DEFAULT_SETTINGS, CortexSettings } from "../../settingsTypes";
+import { runIndex } from "../indexRunner.js";
+import { DEFAULT_SETTINGS, CortexSettings } from "../../settingsTypes.js";
 
 function settingsFor(overrides: Partial<CortexSettings["ai"]> = {}): CortexSettings {
   return {

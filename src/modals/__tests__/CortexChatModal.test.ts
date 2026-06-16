@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { App } from "obsidian";
-import { CortexChatModal } from "../CortexChatModal";
-import { pendingProposals } from "../../agent/tools/flashcards";
-import { pendingQuizzes } from "../../agent/tools/quizzes";
-import { DEFAULT_SETTINGS, CortexSettings } from "../../settingsTypes";
-import type CortexPlugin from "../../main";
+import { CortexChatModal } from "../CortexChatModal.js";
+import { pendingProposals } from "../../agent/tools/flashcards.js";
+import { pendingQuizzes } from "../../agent/tools/quizzes.js";
+import { DEFAULT_SETTINGS, CortexSettings } from "../../settingsTypes.js";
+import type CortexPlugin from "../../main.js";
 
 const { mockChat, mockRenderMarkdown, mockRenderDeck, mockRenderQuiz } = vi.hoisted(() => ({
   mockChat: vi.fn(),

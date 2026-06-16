@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { encodeSnapshot, decodeSnapshot, FormatError } from "../persistence";
-import { IndexSnapshot } from "../index";
+import { encodeSnapshot, decodeSnapshot, FormatError } from "../persistence.js";
+import { IndexSnapshot } from "../index.js";
 
 /**
  * Tests for the binary persistence format.

@@ -18,7 +18,7 @@
  * becomes a problem, a copy-on-write snapshot is a clean upgrade.
  */
 
-import { NoteChunk } from "./chunker";
+import { NoteChunk } from "./chunker.js";
 
 export interface SearchHit {
   chunk: NoteChunk;

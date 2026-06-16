@@ -1,5 +1,5 @@
-import CortexPlugin from "../main";
-import { CortexTest } from "../settings";
+import CortexPlugin from "../main.js";
+import { CortexTest } from "../settings.js";
 import { TFile } from "obsidian";
 
 export class TestService {

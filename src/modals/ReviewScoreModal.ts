@@ -1,5 +1,5 @@
 import { App, Modal, Setting, SliderComponent } from "obsidian";
-import { ReviewScoreInfoModal } from "./ReviewScoreInfoModal";
+import { ReviewScoreInfoModal } from "./ReviewScoreInfoModal.js";
 
 export class ReviewScoreModal extends Modal {
   private onSubmit: (score: number) => void;

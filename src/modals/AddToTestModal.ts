@@ -1,6 +1,6 @@
 import { App, Modal, Notice, Setting } from "obsidian";
-import CortexPlugin from "../main";
-import { TestService } from "../services/testService";
+import CortexPlugin from "../main.js";
+import { TestService } from "../services/testService.js";
 
 export class AddToTestModal extends Modal {
   private plugin: CortexPlugin;

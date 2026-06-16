@@ -1,11 +1,11 @@
 import { TFile } from "obsidian";
-import CortexPlugin from "./main";
-import { ReviewScoreModal } from "./modals/ReviewScoreModal";
-import { AddToTestModal } from "./modals/AddToTestModal";
-import { MarkTestDoneModal } from "./modals/MarkTestDoneModal";
-import { calculateNextReview } from "./utils/srsLogic";
-import { cortexNotice } from "./utils/notice";
-import { localISODate, parseLocalDate, startOfLocalDay, addDays } from "./utils/dateUtils";
+import CortexPlugin from "./main.js";
+import { ReviewScoreModal } from "./modals/ReviewScoreModal.js";
+import { AddToTestModal } from "./modals/AddToTestModal.js";
+import { MarkTestDoneModal } from "./modals/MarkTestDoneModal.js";
+import { calculateNextReview } from "./utils/srsLogic.js";
+import { cortexNotice } from "./utils/notice.js";
+import { localISODate, parseLocalDate, startOfLocalDay, addDays } from "./utils/dateUtils.js";
 
 export default class Commands {
   plugin: CortexPlugin;

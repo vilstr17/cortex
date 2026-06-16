@@ -29,7 +29,7 @@ import type {
   ChatMessage,
   ChatRequest,
   ChatResponse,
-} from "./types";
+} from "./types.js";
 
 const DEFAULT_MAX_ROUNDS = 10;
 

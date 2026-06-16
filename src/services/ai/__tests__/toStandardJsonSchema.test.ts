@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toStandardJsonSchema } from "../types";
+import { toStandardJsonSchema } from "../types.js";
 
 /**
  * Unit tests for the schema normalizer that converts the agent

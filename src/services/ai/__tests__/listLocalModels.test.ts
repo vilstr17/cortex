@@ -17,7 +17,7 @@ vi.mock("obsidian", () => ({
   requestUrl: (...args: unknown[]) => requestUrlMock(...args),
 }));
 
-import { listLocalModels } from "../listLocalModels";
+import { listLocalModels } from "../listLocalModels.js";
 
 describe("listLocalModels — happy path", () => {
   beforeEach(() => {

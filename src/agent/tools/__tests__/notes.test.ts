@@ -5,9 +5,9 @@ vi.mock("obsidian", () => ({
   TFile: class {},
 }));
 
-import { createNoteTools } from "../notes";
-import type { NoteChunk } from "../../vectorIndex/chunker";
-import type { SearchHit, VectorIndex } from "../../vectorIndex/index";
+import { createNoteTools } from "../notes.js";
+import type { NoteChunk } from "../../vectorIndex/chunker.js";
+import type { SearchHit, VectorIndex } from "../../vectorIndex/index.js";
 
 function chunk(file: string, text: string): NoteChunk {
   return { file, heading: "", text, startLine: 1, endLine: 5 } as NoteChunk;

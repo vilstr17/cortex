@@ -7,7 +7,7 @@
  * unless the user explicitly saves them.
  */
 
-import { Tool } from "../toolRegistry";
+import { Tool } from "../toolRegistry.js";
 
 export interface QuizQuestion {
   type: "multiple_choice";

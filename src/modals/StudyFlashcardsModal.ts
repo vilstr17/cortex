@@ -13,9 +13,9 @@
  */
 
 import { App, Modal } from "obsidian";
-import { FlashcardProposal } from "../agent/tools/flashcards";
-import { renderFlashcardDeck } from "../ui/FlashcardDeck";
-import type CortexPlugin from "../main";
+import { FlashcardProposal } from "../agent/tools/flashcards.js";
+import { renderFlashcardDeck } from "../ui/FlashcardDeck.js";
+import type CortexPlugin from "../main.js";
 
 export class StudyFlashcardsModal extends Modal {
   private plugin: CortexPlugin;

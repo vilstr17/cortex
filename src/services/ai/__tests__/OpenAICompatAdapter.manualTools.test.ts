@@ -14,8 +14,8 @@ vi.mock("obsidian", () => ({
   requestUrl: (...args: unknown[]) => requestUrlMock(...args),
 }));
 
-import { OpenAICompatAdapter } from "../OpenAICompatAdapter";
-import { DEFAULT_SETTINGS, CortexSettings } from "../../../settingsTypes";
+import { OpenAICompatAdapter } from "../OpenAICompatAdapter.js";
+import { DEFAULT_SETTINGS, CortexSettings } from "../../../settingsTypes.js";
 
 function settingsFor(): CortexSettings {
   return {

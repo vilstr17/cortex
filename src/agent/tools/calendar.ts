@@ -8,9 +8,9 @@
  * operations later (move-to-date, recurring events, free/busy lookup).
  */
 
-import { Tool, ToolContext } from "../toolRegistry";
-import { GoogleCalendarService } from "../../services/googleCalendarService";
-import { localISODate, parseLocalDate, startOfLocalDay } from "../../utils/dateUtils";
+import { Tool, ToolContext } from "../toolRegistry.js";
+import { GoogleCalendarService } from "../../services/googleCalendarService.js";
+import { localISODate, parseLocalDate, startOfLocalDay } from "../../utils/dateUtils.js";
 
 /**
  * The four calendar tools the agent can call. We declare them as

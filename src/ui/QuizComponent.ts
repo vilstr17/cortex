@@ -5,7 +5,7 @@
  * feedback, explanations, score tracking, and a final summary.
  */
 
-import { QuizProposal } from "../agent/tools/quizzes";
+import { QuizProposal } from "../agent/tools/quizzes.js";
 
 export function renderQuizComponent(
   parent: HTMLElement,

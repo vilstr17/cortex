@@ -23,8 +23,8 @@ import {
   Setting,
   TFile,
 } from "obsidian";
-import type CortexPlugin from "../main";
-import { SaveTarget } from "../services/flashcardSaveService";
+import type CortexPlugin from "../main.js";
+import { SaveTarget } from "../services/flashcardSaveService.js";
 
 /**
  * One entry in the unified vault browser — either a folder (cards

@@ -14,10 +14,10 @@ vi.mock("obsidian", () => ({
   requestUrl: (...args: unknown[]) => requestUrlMock(...args),
 }));
 
-import { OpenAICompatAdapter, normalizeBaseUrl } from "../OpenAICompatAdapter";
-import { createAdapter } from "../index";
-import { DEFAULT_SETTINGS, CortexSettings } from "../../../settingsTypes";
-import { CORTEX_CLOUD_BASE_URL } from "../catalog";
+import { OpenAICompatAdapter, normalizeBaseUrl } from "../OpenAICompatAdapter.js";
+import { createAdapter } from "../index.js";
+import { DEFAULT_SETTINGS, CortexSettings } from "../../../settingsTypes.js";
+import { CORTEX_CLOUD_BASE_URL } from "../catalog.js";
 
 function settingsFor(
   provider: "openai" | "ollama" | "lmstudio" | "custom",

@@ -31,8 +31,8 @@
  */
 
 import { App, Notice, TFile } from "obsidian";
-import { localISODate } from "../utils/dateUtils";
-import { FlashcardProposal, mintId } from "../agent/tools/flashcards";
+import { localISODate } from "../utils/dateUtils.js";
+import { FlashcardProposal, mintId } from "../agent/tools/flashcards.js";
 
 export interface SaveResult {
   file: TFile;

@@ -4,7 +4,7 @@ import {
   embeddingMissingFields,
   resolveEmbeddingModel,
   CORTEX_CLOUD_BASE_URL,
-} from "../catalog";
+} from "../catalog.js";
 
 /**
  * Tests for the per-provider "what's still missing?" helper used by

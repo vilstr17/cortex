@@ -31,15 +31,15 @@
  *     of a generic "unexpected response structure".
  */
 import { requestUrl } from "obsidian";
-import type { AIProvider, CortexSettings } from "../../settingsTypes";
+import type { AIProvider, CortexSettings } from "../../settingsTypes.js";
 import type {
   AIProviderAdapter,
   ChatRequest,
   ChatResponse,
   ToolCall,
-} from "./types";
-import { toStandardJsonSchema } from "./types";
-import { PROVIDER_LABELS, resolveEmbeddingModel } from "./catalog";
+} from "./types.js";
+import { toStandardJsonSchema } from "./types.js";
+import { PROVIDER_LABELS, resolveEmbeddingModel } from "./catalog.js";
 
 interface OpenAIToolFunction {
   name: string;

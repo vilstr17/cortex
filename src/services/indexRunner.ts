@@ -20,8 +20,8 @@
  * the user needs the verbatim text to fix the configuration.
  */
 import { Notice } from "obsidian";
-import type CortexPlugin from "../main";
-import { providerMissingFields, embeddingMissingFields } from "./ai/catalog";
+import type CortexPlugin from "../main.js";
+import { providerMissingFields, embeddingMissingFields } from "./ai/catalog.js";
 
 export interface RunIndexOptions {
   /** Re-render the caller's UI on progress (button label / status line). */

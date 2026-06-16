@@ -14,10 +14,10 @@
  */
 
 import { App, TFile } from "obsidian";
-import { Tool } from "../toolRegistry";
-import { NoteChunk } from "../vectorIndex/chunker";
-import { SearchHit, VectorIndex } from "../vectorIndex/index";
-import { EmbeddingProvider } from "../vectorIndex/embeddings";
+import { Tool } from "../toolRegistry.js";
+import { NoteChunk } from "../vectorIndex/chunker.js";
+import { SearchHit, VectorIndex } from "../vectorIndex/index.js";
+import { EmbeddingProvider } from "../vectorIndex/embeddings.js";
 
 /**
  * The minimum surface a tool needs to search the vault. Defined

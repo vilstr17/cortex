@@ -24,8 +24,8 @@ vi.mock("obsidian", () => ({
   requestUrl: (...args: unknown[]) => requestUrlMock(...args),
 }));
 
-import { GeminiService } from "../geminiService";
-import { DEFAULT_SETTINGS, CortexSettings } from "../../settingsTypes";
+import { GeminiService } from "../geminiService.js";
+import { DEFAULT_SETTINGS, CortexSettings } from "../../settingsTypes.js";
 
 /**
  * Build a settings object with the given Gemini API key, mirroring

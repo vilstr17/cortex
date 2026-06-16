@@ -1,55 +1,25 @@
-import { Plugin, Notice, Platform, TFile } from "obsidian";
-import Commands from "./commands";
+import { Plugin, Notice, TFile } from "obsidian";
+import Commands from "./commands.js";
 import {
   CortexDashboardView,
   CORTEX_DASHBOARD_VIEW,
-} from "./views/CortexDashboardView";
-import { CortexSettings, DEFAULT_SETTINGS, CortexSettingTab } from "./settings";
-import { GoogleCalendarService } from "./services/googleCalendarService";
-import { TestService } from "./services/testService";
+} from "./views/CortexDashboardView.js";
+import { CortexSettings, DEFAULT_SETTINGS, CortexSettingTab } from "./settings.js";
+import { GoogleCalendarService } from "./services/googleCalendarService.js";
+import { TestService } from "./services/testService.js";
 import {
   migrateSettings,
   seedEmbeddingDimFromDisk,
-} from "./utils/settingsMigration";
-import { KnowledgeBase } from "./agent/vectorIndex/knowledgeBase";
+} from "./utils/settingsMigration.js";
+import { KnowledgeBase } from "./agent/vectorIndex/knowledgeBase.js";
 import {
   providerMissingFields,
   embeddingMissingFields,
-} from "./services/ai/catalog";
-import type { BleFocusDetector } from "./ble/BleFocusDetector";
-import type { FocusFaceState } from "./FaceDetector";
+} from "./services/ai/catalog.js";
 import {
   cortexStudyPostProcessor,
   openStudyForFile,
-} from "./services/flashcardStudyPostProcessor";
-
-/**
- * Structural types for the focus feature handles. Defined here in
- * main.ts (instead of imported from the focus module) so the core
- * code can describe the surface it consumes without depending on the
- * focus module being present at compile time. The esbuild stub plugin
- * replaces the focus module tree with empty CommonJS modules when
- * INCLUDE_FOCUS is false, so tree-shaking eliminates the entire chunk
- * (and the dynamic imports below are dead-code-eliminated before
- * resolution is attempted).
- */
-export interface FaceEvaluatorHandle {
-	isRunning(): boolean;
-	getCurrentState(): string;
-	getLastFaceState(): FocusFaceState | null;
-	lastError: string | null;
-	initStatus: string | null;
-}
-export interface DetectionManagerHandle {
-	ble: BleFocusDetector | null;
-	face: FaceEvaluatorHandle | null;
-	toggleFace(): Promise<void>;
-	toggleBle(): Promise<void>;
-	isFaceStarting(): boolean;
-	isBleOn(): boolean;
-	startEnabled(): void;
-	destroy(): Promise<void>;
-}
+} from "./services/flashcardStudyPostProcessor.js";
 
 export type { CortexSettings };
 export { DEFAULT_SETTINGS };
@@ -57,27 +27,7 @@ export { DEFAULT_SETTINGS };
 export default class CortexPlugin extends Plugin {
   settings: CortexSettings = DEFAULT_SETTINGS;
   commands!: Commands;
-  /**
-   * Focus module handle. In the full (sideloaded) build this is a real
-   * DetectionManager; in the catalog (official directory) build it stays
-   * null because INCLUDE_FOCUS is false. All call sites use optional
-   * chaining so a null handle is harmless.
-   *
-   * Typed via the structural `DetectionManagerHandle` interface so core
-   * code describes the surface it consumes without importing the focus
-   * module at the top level. The dynamic `import()` below brings in the
-   * real class only when focus is included.
-   */
-  detection: DetectionManagerHandle | null = null;
   private oauthState: string | null = null;
-
-  /** Convenience accessors for views/modals. */
-  get bleDetector(): BleFocusDetector | null {
-    return this.detection?.ble ?? null;
-  }
-  get faceEvaluator(): FaceEvaluatorHandle | null {
-    return this.detection?.face ?? null;
-  }
 
   calendarService: GoogleCalendarService | null = null;
   testService!: TestService;
@@ -201,7 +151,7 @@ export default class CortexPlugin extends Plugin {
     if (missing.length > 0) return;
     if (embeddingMissingFields(ai.provider, ai.embeddingModel).length > 0) return;
 
-    const { runIndex } = await import("./services/indexRunner");
+    const { runIndex } = await import("./services/indexRunner.js");
     await runIndex(this);
   }
 
@@ -278,15 +228,6 @@ export default class CortexPlugin extends Plugin {
     // which leaf is focused, and survives Obsidian re-rendering
     // the markdown view.
     this.registerDomEvent(document, "click", studyClickHandler);
-
-    // Focus feature (BLE + face). Only loaded in the full / sideloaded
-    // build — esbuild's stub plugin replaces these modules with empty
-    // classes in the catalog build, and the INCLUDE_FOCUS guard here
-    // keeps `detection` null in that case.
-    if (INCLUDE_FOCUS && !Platform.isMobile) {
-      const { DetectionManager } = await import("./detection/DetectionManager");
-      this.detection = new DetectionManager(this);
-    }
 
     this.testService = new TestService(this);
 
@@ -380,43 +321,13 @@ export default class CortexPlugin extends Plugin {
       // settings-tab button all funnel through `runIndex()` so
       // validation, the in-flight guard, the progress Notice, and
       // the success / failure Notice are identical across surfaces.
-      callback: () => import("./services/indexRunner").then(({ runIndex }) => runIndex(this)),
+      callback: () => import("./services/indexRunner.js").then(({ runIndex }) => runIndex(this)),
     });
-
-    if (INCLUDE_FOCUS && this.detection) {
-      this.addCommand({
-        id: "toggle-face-detection",
-        name: "Toggle Face Detection",
-        callback: () => { void this.detection?.toggleFace(); },
-      });
-
-      this.addCommand({
-        id: "toggle-ble-detection",
-        name: "Toggle BLE Focus Detection",
-        callback: () => { void this.detection?.toggleBle(); },
-      });
-
-      this.addCommand({
-        id: "select-ble-device",
-        name: "Select Bluetooth device",
-        callback: () => { void this.openBleDevicePicker(); },
-      });
-    }
 
     this.commands = new Commands(this);
     this.commands.addCommands();
 
     this.addSettingTab(new CortexSettingTab(this.app, this));
-
-    // Focus detectors start only after the workspace is ready so they
-    // never compete with vault indexing / layout restore at startup.
-    if (INCLUDE_FOCUS && this.detection) {
-      this.app.workspace.onLayoutReady(() => {
-        window.setTimeout(() => {
-          this.detection?.startEnabled();
-        }, 1000);
-      });
-    }
 
     // Start the background auto-index scheduler. The first check is
     // delayed by the interval timer, so vault restore isn't delayed.
@@ -429,7 +340,6 @@ export default class CortexPlugin extends Plugin {
       window.clearInterval(this.autoIndexIntervalId);
       this.autoIndexIntervalId = null;
     }
-    await this.detection?.destroy();
     this.calendarService?.destroy();
     this.calendarService = null;
   }
@@ -448,21 +358,5 @@ export default class CortexPlugin extends Plugin {
       await leaf.setViewState({ type: CORTEX_DASHBOARD_VIEW });
       workspace.revealLeaf(leaf);
     }
-  }
-
-  async openBleCalibration(): Promise<void> {
-    if (!INCLUDE_FOCUS) return;
-    const detector = this.bleDetector;
-    if (!detector) return;
-    const { CalibrationModal } = await import("./ble/CalibrationModal");
-    new CalibrationModal(this.app, this, detector).open();
-  }
-
-  async openBleDevicePicker(): Promise<void> {
-    if (!INCLUDE_FOCUS) return;
-    const detector = this.bleDetector;
-    if (!detector) return;
-    const { BleDevicePickerModal } = await import("./ble/BleDevicePickerModal");
-    new BleDevicePickerModal(this.app, this, detector).open();
   }
 }

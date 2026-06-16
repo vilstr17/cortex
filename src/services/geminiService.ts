@@ -21,17 +21,17 @@
  * model calls the `list_tests` tool to discover them on demand.
  */
 import { requestUrl } from "obsidian";
-import { CortexSettings } from "../settings";
-import { GoogleCalendarService } from "./googleCalendarService";
-import { localISODate } from "../utils/dateUtils";
-import { ToolRegistry, Tool, ToolContext } from "../agent/toolRegistry";
-import { createCalendarTools } from "../agent/tools/calendar";
-import { createAdapter } from "./ai";
-import type { AIProviderAdapter } from "./ai/types";
-import { getResponseStyle } from "./ai";
-import { buildTimeContext } from "./ai/types";
-import { runWithTools } from "./ai/runWithTools";
-import type { ToolProgressEvent } from "./ai/runWithTools";
+import { CortexSettings } from "../settings.js";
+import { GoogleCalendarService } from "./googleCalendarService.js";
+import { localISODate } from "../utils/dateUtils.js";
+import { ToolRegistry, Tool, ToolContext } from "../agent/toolRegistry.js";
+import { createCalendarTools } from "../agent/tools/calendar.js";
+import { createAdapter } from "./ai/index.js";
+import type { AIProviderAdapter } from "./ai/types.js";
+import { getResponseStyle } from "./ai/index.js";
+import { buildTimeContext } from "./ai/types.js";
+import { runWithTools } from "./ai/runWithTools.js";
+import type { ToolProgressEvent } from "./ai/runWithTools.js";
 
 export interface ChatMessage {
   role: "user" | "assistant";

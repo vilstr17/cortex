@@ -15,8 +15,8 @@ vi.mock("obsidian", () => ({
   requestUrl: (...args: unknown[]) => requestUrlMock(...args),
 }));
 
-import { GeminiAdapter } from "../GeminiAdapter";
-import { DEFAULT_SETTINGS, CortexSettings } from "../../../settingsTypes";
+import { GeminiAdapter } from "../GeminiAdapter.js";
+import { DEFAULT_SETTINGS, CortexSettings } from "../../../settingsTypes.js";
 
 function settingsFor(model = "gemini-2.5-flash", apiKey = "AIzaLEAKED"): CortexSettings {
   return {

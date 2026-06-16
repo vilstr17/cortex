@@ -3,8 +3,8 @@ import {
   migrateSettings,
   detectObsoleteKeys,
   correctEmbeddingBaseUrl,
-} from "../settingsMigration";
-import { DEFAULT_SETTINGS } from "../../settingsTypes";
+} from "../settingsMigration.js";
+import { DEFAULT_SETTINGS } from "../../settingsTypes.js";
 
 /**
  * Settings migration regression tests.
@@ -80,7 +80,6 @@ describe("migrateSettings", () => {
     const out = migrateSettings({});
     expect(out.ai.geminiApiKey).toBe("");
     expect(out.timeZone).toBe(DEFAULT_SETTINGS.timeZone);
-    expect(out.faceEnabled).toBe(false);
   });
 
   it("fills the response-style default for an older vault", () => {
@@ -339,20 +338,6 @@ describe("migrateSettings", () => {
     expect(out.dailyLimitMax).toBeNull();
   });
 
-  it("falls back to defaults if a slider value is missing", () => {
-    const out = migrateSettings({});
-    expect(out.faceSampleIntervalSec).toBe(DEFAULT_SETTINGS.faceSampleIntervalSec);
-    expect(out.faceBlinkThreshold).toBe(DEFAULT_SETTINGS.faceBlinkThreshold);
-    expect(out.facePitchThreshold).toBe(DEFAULT_SETTINGS.facePitchThreshold);
-    expect(out.faceGracePeriodSec).toBe(DEFAULT_SETTINGS.faceGracePeriodSec);
-  });
-
-  it("falls back to defaults for non-finite slider values", () => {
-    const out = migrateSettings({ faceSampleIntervalSec: NaN, faceBlinkThreshold: Infinity });
-    expect(out.faceSampleIntervalSec).toBe(DEFAULT_SETTINGS.faceSampleIntervalSec);
-    expect(out.faceBlinkThreshold).toBe(DEFAULT_SETTINGS.faceBlinkThreshold);
-  });
-
   it("normalizes a non-array tests field to an empty array", () => {
     const out = migrateSettings({ tests: "not-an-array" });
     expect(out.tests).toEqual([]);
@@ -375,42 +360,6 @@ describe("migrateSettings", () => {
     expect(migrateSettings("nope").tests).toEqual([]);
     expect(migrateSettings(42).tests).toEqual([]);
     expect(migrateSettings([1, 2, 3]).tests).toEqual([]);
-  });
-
-  // The focus-stripping branch is only active in the catalog build, but
-  // the test asserts the source-of-truth contract: FOCUS_KEYS are scrubbed
-  // when the build is configured to exclude focus. The with-focus build
-  // keeps the keys (current behavior) — verified by the default-settings
-  // preservation tests above.
-  it("strips focus keys from the saved blob when INCLUDE_FOCUS is false", () => {
-    if (INCLUDE_FOCUS) return; // no-op in the with-focus build
-    const raw = {
-      ...DEFAULT_SETTINGS,
-      bleEnabled: true,
-      bleDeviceName: "Vilém's iPhone",
-      bleCalibrationData: { target_rssi: -55, tolerance: 0.1, device_name: "iPhone" },
-      faceEnabled: true,
-      faceSampleIntervalSec: 5,
-      faceBlinkThreshold: 0.3,
-      facePitchThreshold: -0.12,
-      faceGracePeriodSec: 3,
-    };
-    const out = migrateSettings(raw) as unknown as Record<string, unknown>;
-    expect(out.bleEnabled).toBeUndefined();
-    expect(out.bleDeviceName).toBeUndefined();
-    expect(out.bleCalibrationData).toBeUndefined();
-    expect(out.faceEnabled).toBeUndefined();
-    expect(out.faceSampleIntervalSec).toBeUndefined();
-    expect(out.faceBlinkThreshold).toBeUndefined();
-    expect(out.facePitchThreshold).toBeUndefined();
-    expect(out.faceGracePeriodSec).toBeUndefined();
-  });
-
-  it("preserves focus keys when INCLUDE_FOCUS is true", () => {
-    if (!INCLUDE_FOCUS) return; // no-op in the catalog build
-    const out = migrateSettings({ faceEnabled: true, bleDeviceName: "Phone" });
-    expect(out.faceEnabled).toBe(true);
-    expect(out.bleDeviceName).toBe("Phone");
   });
 });
 

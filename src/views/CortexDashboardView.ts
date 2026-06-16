@@ -1,14 +1,13 @@
-import { ItemView, Notice, Platform, TFile, WorkspaceLeaf, setIcon, moment } from "obsidian";
-import CortexPlugin from "../main";
-import { DisplayCalendarEvent } from "../services/googleCalendarService";
-import { CortexChatModal } from "../modals/CortexChatModal";
-import { CreateTestModal } from "../modals/CreateTestModal";
-import { ReviewFilterModal, ReviewFilters } from "../modals/ReviewFilterModal";
-import { TestService } from "../services/testService";
-import { CortexTest } from "../settings";
-import { localISODate, parseLocalDate, startOfLocalDay, isSameLocalDay, addDays, daysUntil } from "../utils/dateUtils";
-import { providerMissingFields, PROVIDER_LABELS } from "../services/ai/catalog";
-import type { FocusFaceState } from "../FaceDetector";
+import { ItemView, Notice, TFile, WorkspaceLeaf, setIcon, moment } from "obsidian";
+import CortexPlugin from "../main.js";
+import { DisplayCalendarEvent } from "../services/googleCalendarService.js";
+import { CortexChatModal } from "../modals/CortexChatModal.js";
+import { CreateTestModal } from "../modals/CreateTestModal.js";
+import { ReviewFilterModal, ReviewFilters } from "../modals/ReviewFilterModal.js";
+import { TestService } from "../services/testService.js";
+import { CortexTest } from "../settings.js";
+import { localISODate, parseLocalDate, startOfLocalDay, isSameLocalDay, addDays, daysUntil } from "../utils/dateUtils.js";
+import { providerMissingFields, PROVIDER_LABELS } from "../services/ai/catalog.js";
 
 export const CORTEX_DASHBOARD_VIEW = "cortex-dashboard";
 
@@ -29,11 +28,7 @@ export class CortexDashboardView extends ItemView {
 	private scheduleContainer!: HTMLElement;
 	private authContainer!: HTMLElement;
 	private testsContainer!: HTMLElement;
-	private focusContainer!: HTMLElement;
-	private bleContainer!: HTMLElement;
-	private faceContainer!: HTMLElement;
 	private testService!: TestService;
-	private focusUpdateInterval: ReturnType<typeof setInterval> | null = null;
 	private lastCalendarFetch = 0;
 	private lastFetchedEvents: DisplayCalendarEvent[] | null = null;
 	private lastFetchedCalendarDate: Date | null = null;
@@ -105,15 +100,6 @@ export class CortexDashboardView extends ItemView {
 		this.testsContainer = wrapper.createDiv({ cls: "cortex-tests-section" });
 		this.authContainer = wrapper.createDiv({ cls: "cortex-auth-section" });
 
-		// Focus panels (BLE + face). Only allocated in the full / sideloaded
-		// build — esbuild's stub plugin + the INCLUDE_FOCUS guard keep the
-		// catalog build free of focus divs, focus state, and the 1s ticker.
-		if (INCLUDE_FOCUS) {
-			this.focusContainer = wrapper.createDiv({ cls: "cortex-focus-row" });
-			this.bleContainer = this.focusContainer.createDiv({ cls: "cortex-focus-panel" });
-			this.faceContainer = this.focusContainer.createDiv({ cls: "cortex-focus-panel" });
-		}
-
 		// Debounced: while editing, metadata changes fire on every save —
 		// re-rendering the whole dashboard (incl. a calendar fetch) each
 		// time causes visible lag.
@@ -131,27 +117,15 @@ export class CortexDashboardView extends ItemView {
 		);
 
 		this.render();
-
-		if (INCLUDE_FOCUS) {
-			// One shared ticker for both focus panels; updates are skipped
-			// entirely while the window is hidden.
-			this.focusUpdateInterval = setInterval(() => {
-				if (document.hidden) return;
-				this.updateBleStatusDisplay();
-				this.updateFaceDisplay();
-			}, 1000);
-		}
 	}
 
 	async onClose(): Promise<void> {
-		if (this.focusUpdateInterval) { clearInterval(this.focusUpdateInterval); this.focusUpdateInterval = null; }
 	}
 
 	private async render(): Promise<void> {
 		this.renderCalendar();
 		this.renderReviews();
 		this.renderTests();
-		this.renderFocusPanels();
 	}
 
 	private renderCalendar(): void {
@@ -325,7 +299,7 @@ export class CortexDashboardView extends ItemView {
 
 		const d = parseLocalDate(test.date) || startOfLocalDay(new Date());
 		const ds = d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-		const dif = moment(test.date).diff(moment().startOf("day"), "days");
+		const dif = (moment as unknown as (input?: unknown) => { diff(other: unknown, unit: string): number })(test.date).diff((moment as unknown as (input?: unknown) => { startOf(unit: string): unknown })().startOf("day"), "days");
 		const dl = dif < 0 ? " (past)" : dif === 0 ? " (today)" : dif === 1 ? " (tomorrow)" : ` (in ${dif} days)`;
 		hr.createEl("span", { cls: "cortex-test-date", text: `${ds}${dl}` });
 
@@ -387,216 +361,6 @@ export class CortexDashboardView extends ItemView {
 		}
 		const max = count * MAX;
 		return max === 0 ? 0 : (sum / max) * 100;
-	}
-
-	// ── Focus panels (side-by-side) ──────────────────────────────────
-
-	private renderFocusPanels(): void {
-		if (!INCLUDE_FOCUS) return;
-		this.renderBlePanel();
-		this.renderFacePanel();
-	}
-
-	private renderBlePanel(): void {
-		this.bleContainer.empty();
-
-		if (!INCLUDE_FOCUS || Platform.isMobile || !this.plugin.bleDetector) {
-			return;
-		}
-
-		const intendedOn = this.plugin.settings.bleEnabled;
-		const isScanning = this.plugin.bleDetector.isScanning();
-		const intendedActive = this.plugin.bleDetector.isIntendedActive();
-		const calibrated = !!this.plugin.settings.bleCalibrationData;
-
-		const effectivelyOn = intendedOn || intendedActive;
-
-		this.bleContainer.createEl("h4", { text: "Focus Lock" });
-
-		const row = this.bleContainer.createDiv({ cls: "cortex-toggle-row" });
-		const tog = row.createDiv({ cls: "cortex-toggle" + (effectivelyOn ? " is-enabled" : "") });
-		const lbl = row.createDiv({ cls: "cortex-toggle-label" });
-		lbl.setText(effectivelyOn ? "ON" : "OFF");
-
-		tog.addEventListener("click", async () => {
-			if (!this.plugin.detection || (!calibrated && !effectivelyOn)) return;
-			await this.plugin.detection.toggleBle();
-			this.renderBlePanel();
-		});
-
-		const statusArea = this.bleContainer.createDiv({ cls: "cortex-ble-status", attr: { "data-ble-status-area": "" } });
-
-		if (effectivelyOn) {
-			if (!isScanning) {
-				statusArea.createSpan({ text: "Connecting...", cls: "cortex-focus-state cortex-state-gray", attr: { "data-ble-state": "" } });
-			} else {
-				const state = this.plugin.bleDetector.getCurrentState();
-				const st = this.plugin.bleDetector.getLatestStatus();
-				statusArea.createSpan({ text: state, cls: `cortex-focus-state ${this.stateClass(state)}`, attr: { "data-ble-state": "" } });
-				statusArea.createSpan({ text: st.phoneFound ? `${st.smoothedRssi} dBm` : "Searching...", cls: "cortex-focus-rssi", attr: { "data-ble-rssi": "" } });
-			}
-		}
-
-		if (this.plugin.settings.bleDeviceName) {
-			this.bleContainer.createDiv({ text: this.plugin.settings.bleDeviceName, cls: "cortex-focus-device" });
-		}
-	}
-
-	private renderFacePanel(): void {
-		this.faceContainer.empty();
-
-		if (Platform.isMobile) return;
-
-		const intendedOn = this.plugin.settings.faceEnabled;
-		// Starting can take a while on first use (model download) — show it
-		// instead of leaving the toggle visually OFF and unresponsive.
-		const starting = this.plugin.detection?.isFaceStarting() ?? false;
-		const isRunning = this.plugin.faceEvaluator?.isRunning() ?? false;
-		const errorMsg = this.plugin.faceEvaluator?.lastError ?? null;
-
-		this.faceContainer.createEl("h4", { text: "Face Tracking" });
-
-		// Up-front notice on macOS — Obsidian is not entitled to use the
-		// camera, so toggling this will never trigger the permission
-		// dialog. Point users at the working BLE alternative instead.
-		if (process.platform === "darwin") {
-			const notice = this.faceContainer.createDiv({ cls: "cortex-face-mac-notice" });
-			notice.createEl("strong", { text: "Not available on macOS: " });
-			notice.appendText(
-				"Obsidian is not currently entitled to use the camera, so face tracking " +
-				"cannot be enabled. Use the BLE Focus Detector above to detect phone usage instead."
-			);
-		}
-
-		const row = this.faceContainer.createDiv({ cls: "cortex-toggle-row" });
-		const tog = row.createDiv({ cls: "cortex-toggle" + (intendedOn || starting ? " is-enabled" : "") });
-		const lbl = row.createDiv({ cls: "cortex-toggle-label" });
-		lbl.setText(starting ? "STARTING" : intendedOn ? "ON" : "OFF");
-
-		// Hard-disable the toggle on macOS — the click handler would
-		// just produce an error.
-		if (process.platform === "darwin") {
-			tog.addClass("is-disabled");
-		} else {
-			tog.addEventListener("click", async () => {
-				await this.plugin.detection?.toggleFace();
-				this.renderFacePanel();
-			});
-		}
-
-		if (intendedOn || starting) {
-			const statsEl = this.faceContainer.createDiv({ cls: "cortex-face-stats", attr: { "data-face-stats": "" } });
-
-			if (errorMsg) {
-				statsEl.createSpan({ text: `Error: ${errorMsg}`, cls: "cortex-focus-state cortex-state-gray" });
-				this.renderFaceErrorActions(statsEl);
-			} else if (!isRunning) {
-				const progress = this.plugin.faceEvaluator?.initStatus ?? "Initializing...";
-				statsEl.createSpan({ text: progress, cls: "cortex-focus-state cortex-state-gray" });
-			} else {
-				const state = this.plugin.faceEvaluator!.getCurrentState();
-				const fs = this.plugin.faceEvaluator!.getLastFaceState();
-				this.populateStats(statsEl, fs, state);
-			}
-		} else if (errorMsg) {
-			const errEl = this.faceContainer.createDiv({ cls: "cortex-face-error-hint" });
-			errEl.createDiv({ text: `Last error: ${errorMsg}` });
-			this.renderFaceErrorActions(errEl);
-		}
-	}
-
-	/**
-	 * Render "Try again" under a face detection error. We do NOT link to
-	 * System Settings → Camera on macOS: that screen will not help because
-	 * Obsidian's app binary is not entitled to use the camera at all. The
-	 * face detector's error message already explains this and points at
-	 * the BLE Focus Detector as the working alternative.
-	 */
-	private renderFaceErrorActions(parent: HTMLElement): void {
-		const actions = parent.createDiv({ cls: "cortex-face-error-actions" });
-
-		const retryBtn = actions.createEl("button", {
-			text: "Try again",
-			cls: "cortex-face-error-btn mod-cta",
-		});
-		retryBtn.addEventListener("click", async () => {
-			await this.plugin.detection?.toggleFace();
-			this.renderFacePanel();
-		});
-	}
-
-	private populateStats(el: HTMLElement, fs: FocusFaceState | null, state: string): void {
-		el.empty();
-		el.createSpan({ text: state, cls: `cortex-focus-state ${this.stateClass(state)}` });
-		if (fs?.faceVisible) {
-			if (fs.gazeAtScreen !== null) el.createDiv({ text: `Gaze: ${Math.round(fs.gazeAtScreen * 100)}%`, cls: "cortex-face-stat" });
-			if (fs.blinkRate !== null) el.createDiv({ text: `Blinks: ${fs.blinkRate}/min`, cls: "cortex-face-stat" });
-			if (fs.headStability !== null) el.createDiv({ text: `Stability: ${Math.round(fs.headStability * 100)}%`, cls: "cortex-face-stat" });
-		} else { el.createDiv({ text: "No face detected", cls: "cortex-face-stat" }); }
-	}
-
-	private updateBleStatusDisplay(): void {
-		if (!INCLUDE_FOCUS) return;
-		if (!this.plugin.bleDetector) return;
-		if (Platform.isMobile) return;
-
-		const intendedOn = this.plugin.settings.bleEnabled || this.plugin.bleDetector.isIntendedActive();
-		if (!intendedOn) return;
-
-		const statusArea = this.bleContainer.querySelector('[data-ble-status-area]') as HTMLElement | null;
-		if (!statusArea) {
-			this.renderBlePanel();
-			return;
-		}
-
-		statusArea.empty();
-
-		const isScanning = this.plugin.bleDetector.isScanning();
-
-		if (!isScanning) {
-			statusArea.createSpan({ text: "Connecting...", cls: "cortex-focus-state cortex-state-gray", attr: { "data-ble-state": "" } });
-			return;
-		}
-
-		const state = this.plugin.bleDetector.getCurrentState();
-		const st = this.plugin.bleDetector.getLatestStatus();
-		statusArea.createSpan({ text: state, cls: `cortex-focus-state ${this.stateClass(state)}`, attr: { "data-ble-state": "" } });
-		statusArea.createSpan({ text: st.phoneFound ? `${st.smoothedRssi} dBm` : "Searching...", cls: "cortex-focus-rssi", attr: { "data-ble-rssi": "" } });
-	}
-
-	private updateFaceDisplay(): void {
-		if (!INCLUDE_FOCUS) return;
-		if (Platform.isMobile) return;
-
-		const starting = this.plugin.detection?.isFaceStarting() ?? false;
-		const intendedOn = this.plugin.settings.faceEnabled || starting;
-		if (!intendedOn) return;
-
-		const isRunning = this.plugin.faceEvaluator?.isRunning() ?? false;
-		const errorMsg = this.plugin.faceEvaluator?.lastError ?? null;
-
-		const statsEl = this.faceContainer.querySelector('[data-face-stats]') as HTMLElement | null;
-		if (!statsEl) {
-			this.renderFacePanel();
-			return;
-		}
-
-		statsEl.empty();
-
-		if (errorMsg) {
-			statsEl.createSpan({ text: `Error: ${errorMsg}`, cls: "cortex-focus-state cortex-state-gray" });
-		} else if (!isRunning) {
-			const progress = this.plugin.faceEvaluator?.initStatus ?? "Initializing...";
-			statsEl.createSpan({ text: progress, cls: "cortex-focus-state cortex-state-gray" });
-		} else {
-			const fs = this.plugin.faceEvaluator!.getLastFaceState();
-			const state = this.plugin.faceEvaluator!.getCurrentState();
-			this.populateStats(statsEl, fs, state);
-		}
-	}
-
-	private stateClass(s: string): string {
-		return s === "LOCKED_IN" ? "cortex-state-locked" : s === "DISTRACTED" ? "cortex-state-distracted" : "cortex-state-gray";
 	}
 
 	// ── Helpers ──────────────────────────────────────────────────────

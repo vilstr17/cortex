@@ -5,9 +5,8 @@
  * `settings.ts` re-exports these and adds the Obsidian-coupled setting
  * tab UI. Keep this file dependency-free.
  */
-import type { BleCalibration } from "./ble/types";
-import type { FlashcardProposal } from "./agent/tools/flashcards";
-import type { QuizProposal } from "./agent/tools/quizzes";
+import type { FlashcardProposal } from "./agent/tools/flashcards.js";
+import type { QuizProposal } from "./agent/tools/quizzes.js";
 
 export interface CortexTest {
   id: string;
@@ -175,14 +174,6 @@ export interface CortexSettings {
   bedTime: string;
   dailyLimitMax: number | null;
   maxReviewIntervalDays: number | null;
-  bleEnabled: boolean;
-  bleDeviceName: string;
-  bleCalibrationData: BleCalibration | null;
-  faceEnabled: boolean;
-  faceSampleIntervalSec: number;
-  faceBlinkThreshold: number;
-  facePitchThreshold: number;
-  faceGracePeriodSec: number;
 
   // ── Legacy / migration-only fields ──────────────────────────────
   // `migrateSettings()` reads these and copies them into `ai` on
@@ -244,14 +235,6 @@ export const DEFAULT_SETTINGS: CortexSettings = {
   bedTime: "23:00",
   dailyLimitMax: null,
   maxReviewIntervalDays: null,
-  bleEnabled: false,
-  bleDeviceName: "",
-  bleCalibrationData: null,
-  faceEnabled: false,
-  faceSampleIntervalSec: 10,
-  faceBlinkThreshold: 0.25,
-  facePitchThreshold: -0.08,
-  faceGracePeriodSec: 2,
   flashcardFolder: "",
   autoIndexInterval: "manual",
   chatHistory: [],

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { InMemoryCosineIndex } from "../index";
-import { NoteChunk } from "../chunker";
+import { InMemoryCosineIndex } from "../index.js";
+import { NoteChunk } from "../chunker.js";
 
 /**
  * Tests for the in-memory vector index.

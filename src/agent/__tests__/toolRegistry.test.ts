@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { ToolRegistry, Tool } from "../toolRegistry";
+import { ToolRegistry, Tool } from "../toolRegistry.js";
 
 /**
  * Tests for the ToolRegistry.

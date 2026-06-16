@@ -6,14 +6,14 @@ import { describe, it, expect, vi } from "vitest";
  * exhausted, and the progress-event stream the chat UI renders.
  */
 
-import { runWithTools } from "../runWithTools";
-import type { ToolProgressEvent } from "../runWithTools";
+import { runWithTools } from "../runWithTools.js";
+import type { ToolProgressEvent } from "../runWithTools.js";
 import type {
   AIProviderAdapter,
   ChatRequest,
   ChatResponse,
   ToolCall,
-} from "../types";
+} from "../types.js";
 
 /** A tool call shaped for the adapter response. */
 function call(name: string, id = "c1"): ToolCall {

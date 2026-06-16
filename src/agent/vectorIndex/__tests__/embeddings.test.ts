@@ -29,8 +29,8 @@ import {
   createEmbeddingProvider,
   DEFAULT_EMBEDDING_DIM,
   EMBED_BATCH_SIZE,
-} from "../embeddings";
-import { DEFAULT_SETTINGS, CortexSettings } from "../../../settingsTypes";
+} from "../embeddings.js";
+import { DEFAULT_SETTINGS, CortexSettings } from "../../../settingsTypes.js";
 
 function settingsFor(extras: Partial<CortexSettings> = {}): CortexSettings {
   return {
@@ -111,7 +111,7 @@ describe("createEmbeddingProvider — no-embed stub", () => {
         // intentionally no `embed`
       }),
     }));
-    const { createEmbeddingProvider: fresh } = await import("../embeddings");
+    const { createEmbeddingProvider: fresh } = await import("../embeddings.js");
     const p = fresh(settingsFor());
     expect(p.name).toBe("anthropic");
     await expect(p.embed(["a"])).rejects.toThrow(

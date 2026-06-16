@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { createQuizTools, pendingQuizzes } from "../quizzes";
+import { createQuizTools, pendingQuizzes } from "../quizzes.js";
 
 describe("createQuizTools", () => {
   beforeEach(() => {

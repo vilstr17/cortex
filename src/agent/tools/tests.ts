@@ -19,9 +19,9 @@
  * `create_event` to build a revision plan.
  */
 
-import { Tool } from "../toolRegistry";
-import { CortexTest } from "../../settingsTypes";
-import { localISODate, parseLocalDate, daysUntil, startOfLocalDay } from "../../utils/dateUtils";
+import { Tool } from "../toolRegistry.js";
+import { CortexTest } from "../../settingsTypes.js";
+import { localISODate, parseLocalDate, daysUntil, startOfLocalDay } from "../../utils/dateUtils.js";
 
 /**
  * Build the list_tests tool. The factory takes the live test list as

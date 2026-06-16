@@ -11,9 +11,9 @@ vi.mock("obsidian", () => ({
   requestUrl: (...args: unknown[]) => requestUrlMock(...args),
 }));
 
-import { AnthropicAdapter } from "../AnthropicAdapter";
-import { DEFAULT_SETTINGS, CortexSettings } from "../../../settingsTypes";
-import { runWithTools } from "../runWithTools";
+import { AnthropicAdapter } from "../AnthropicAdapter.js";
+import { DEFAULT_SETTINGS, CortexSettings } from "../../../settingsTypes.js";
+import { runWithTools } from "../runWithTools.js";
 
 function settingsWithKey(key: string, model = "claude-sonnet-4-6"): CortexSettings {
   return {

@@ -6,8 +6,8 @@
  * and a save-all action.
  */
 
-import { FlashcardProposal } from "../agent/tools/flashcards";
-import { SaveResult } from "../services/flashcardSaveService";
+import { FlashcardProposal } from "../agent/tools/flashcards.js";
+import { SaveResult } from "../services/flashcardSaveService.js";
 
 export interface FlashcardDeckOptions {
   testName: string;

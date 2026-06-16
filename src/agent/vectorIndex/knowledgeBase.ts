@@ -27,16 +27,16 @@
  */
 
 import { App, Notice, TFile } from "obsidian";
-import { chunkMarkdown, NoteChunk } from "./chunker";
-import { InMemoryCosineIndex, VectorIndex } from "./index";
+import { chunkMarkdown, NoteChunk } from "./chunker.js";
+import { InMemoryCosineIndex, VectorIndex } from "./index.js";
 import {
   createEmbeddingProvider,
   DEFAULT_EMBEDDING_DIM,
   EMBED_BATCH_SIZE,
   EmbeddingProvider,
-} from "./embeddings";
-import { decodeSnapshot, encodeSnapshot } from "./persistence";
-import { CortexSettings } from "../../settingsTypes";
+} from "./embeddings.js";
+import { decodeSnapshot, encodeSnapshot } from "./persistence.js";
+import { CortexSettings } from "../../settingsTypes.js";
 
 const INDEX_FILENAME = "knowledge-index.bin";
 const PROBE_TEXT = "cortex probe"; // single-word short text for the dim probe call

@@ -8,18 +8,8 @@
  * interface in the global module registry before any source file is
  * loaded. The vi.mock() calls inside individual test files then layer
  * behaviour on top of these stubs.
- *
- * The build-flag globals (INCLUDE_FOCUS / INCLUDE_BLE) are normally
- * injected by esbuild's `define` at bundle time. Tests run on raw
- * source via Vitest's transformer, so we declare them on `globalThis`
- * to match the build-time behaviour. The with-focus build is the
- * test default — the catalog build is verified end-to-end by the
- * build script, not the test suite.
  */
 import { vi } from "vitest";
-
-(globalThis as unknown as { INCLUDE_FOCUS: boolean }).INCLUDE_FOCUS = true;
-(globalThis as unknown as { INCLUDE_BLE: boolean }).INCLUDE_BLE = true;
 
 // Minimal DOM stub for tests that instantiate Obsidian UI classes.
 // Real browser APIs are unavailable in the default Node test environment,

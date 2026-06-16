@@ -13,18 +13,13 @@
  * migration source-of-truth. It also normalizes values that the type
  * checker / runtime rely on (e.g. arrays, nulls, enums).
  *
- * When INCLUDE_FOCUS is false (catalog build), the focus keys are
- * physically stripped from the saved blob so a user who upgrades from
- * the full build to the catalog build loses every focus-related
- * setting — and any future save keeps it that way.
- *
  * This is intentionally additive and idempotent — old keys are dropped,
  * but a future migration can read them by looking at the raw input before
  * sanitization.
  */
 import { App } from "obsidian";
-import { CortexSettings, DEFAULT_SETTINGS } from "../settingsTypes";
-import { DEFAULT_BASE_URL } from "../services/ai/catalog";
+import { CortexSettings, DEFAULT_SETTINGS } from "../settingsTypes.js";
+import { DEFAULT_BASE_URL } from "../services/ai/catalog.js";
 
 /**
  * Set of legacy / orphaned top-level keys that must NEVER appear in the
@@ -63,23 +58,6 @@ const OBSOLETE_TOP_LEVEL_KEYS: ReadonlySet<string> = new Set([
   "embeddingBaseUrl",
   "embeddingApiKey",
   "embeddingDim",
-]);
-
-/**
- * Focus-related keys stripped from the persisted blob when INCLUDE_FOCUS
- * is false. Kept in a separate set so the catalog build can scrub focus
- * settings from users who upgrade from the full build, while the full
- * build keeps behavior identical to before the pluggable-focus refactor.
- */
-const FOCUS_KEYS: ReadonlySet<string> = new Set([
-  "bleEnabled",
-  "bleDeviceName",
-  "bleCalibrationData",
-  "faceEnabled",
-  "faceSampleIntervalSec",
-  "faceBlinkThreshold",
-  "facePitchThreshold",
-  "faceGracePeriodSec",
 ]);
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -207,16 +185,6 @@ export function migrateSettings(raw: unknown): CortexSettings {
     }
   }
 
-  // Catalog build (INCLUDE_FOCUS off): physically strip focus keys so
-  // they don't linger in data.json. The schema fields above are still
-  // populated from defaults — we just refuse to round-trip the
-  // user-stored values.
-  if (!INCLUDE_FOCUS) {
-    for (const key of FOCUS_KEYS) {
-      delete migrated[key];
-    }
-  }
-
   // Apply defaults for any field the user has not yet populated.
   for (const [key, defaultValue] of Object.entries(DEFAULT_SETTINGS)) {
     if (!(key in migrated)) {
@@ -314,13 +282,6 @@ export function migrateSettings(raw: unknown): CortexSettings {
     migrated.maxReviewIntervalDays = Math.max(1, Math.min(365, Math.floor(migrated.maxReviewIntervalDays)));
   } else if (migrated.maxReviewIntervalDays !== null) {
     migrated.maxReviewIntervalDays = null;
-  }
-  if (INCLUDE_FOCUS) {
-    for (const slider of ["faceSampleIntervalSec", "faceBlinkThreshold", "facePitchThreshold", "faceGracePeriodSec"] as const) {
-      if (typeof migrated[slider] !== "number" || !Number.isFinite(migrated[slider] as number)) {
-        (migrated as Record<string, unknown>)[slider] = DEFAULT_SETTINGS[slider];
-      }
-    }
   }
 
   return migrated as unknown as CortexSettings;

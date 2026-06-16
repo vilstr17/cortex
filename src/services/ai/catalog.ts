@@ -13,7 +13,7 @@
  * settings UI uses free-text input — these lists are *suggestions*
  * shown as datalist hints only, not a hard dropdown.
  */
-import type { AIProvider, ResponseStyle } from "../../settingsTypes";
+import type { AIProvider, ResponseStyle } from "../../settingsTypes.js";
 
 export interface ModelOption {
   id: string;

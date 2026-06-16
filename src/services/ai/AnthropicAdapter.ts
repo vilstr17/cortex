@@ -19,15 +19,15 @@
  * instead of the generic "unexpected response structure" complaint.
  */
 import { requestUrl } from "obsidian";
-import type { CortexSettings } from "../../settingsTypes";
+import type { CortexSettings } from "../../settingsTypes.js";
 import type {
   AIProviderAdapter,
   ChatRequest,
   ChatResponse,
   ToolCall,
   ToolDeclaration,
-} from "./types";
-import { toStandardJsonSchema } from "./types";
+} from "./types.js";
+import { toStandardJsonSchema } from "./types.js";
 
 // ── Anthropic native types ─────────────────────────────────────────
 

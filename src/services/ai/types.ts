@@ -6,7 +6,7 @@
  * directly. Adapters in this directory translate between this shape
  * and each provider's wire format.
  */
-import type { CortexSettings } from "../../settingsTypes";
+import type { CortexSettings } from "../../settingsTypes.js";
 
 export interface ChatMessage {
   role: "user" | "assistant" | "tool";

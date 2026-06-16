@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 import {
   saveProposalsToNote,
   sanitizeForFilename,
-} from "../flashcardSaveService";
-import { FlashcardProposal } from "../../agent/tools/flashcards";
+} from "../flashcardSaveService.js";
+import { FlashcardProposal } from "../../agent/tools/flashcards.js";
 
 /**
  * Tests for the flashcard save service.

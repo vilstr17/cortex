@@ -9,8 +9,8 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { parseSavedCardsFromMarkdown } from "../flashcardSaveService";
-import type { FlashcardProposal } from "../../agent/tools/flashcards";
+import { parseSavedCardsFromMarkdown } from "../flashcardSaveService.js";
+import type { FlashcardProposal } from "../../agent/tools/flashcards.js";
 
 /**
  * Build a hand-crafted saved-note string. We don't have access to

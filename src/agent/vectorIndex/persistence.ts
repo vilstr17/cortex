@@ -23,7 +23,7 @@
  * triggers a rebuild rather than crashing.
  */
 
-import type { IndexSnapshot } from "./index";
+import type { IndexSnapshot } from "./index.js";
 
 const MAGIC = new Uint8Array([0x43, 0x54, 0x58, 0x31]); // "CTX1"
 const VERSION = 0x01;

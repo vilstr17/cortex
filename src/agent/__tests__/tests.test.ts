@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { createTestTools } from "../tools/tests";
-import { CortexTest } from "../../settingsTypes";
+import { createTestTools } from "../tools/tests.js";
+import { CortexTest } from "../../settingsTypes.js";
 
 /**
  * Tests for the list_tests tool.

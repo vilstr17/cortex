@@ -17,7 +17,7 @@
  * there when the user clicks Save.
  */
 
-import { Tool } from "../toolRegistry";
+import { Tool } from "../toolRegistry.js";
 
 export interface FlashcardProposal {
   /** Stable id, minted at proposal time. Used for de-duplication. */

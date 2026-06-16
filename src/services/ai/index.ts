@@ -6,12 +6,12 @@
  * both go through this — they never instantiate an adapter class
  * directly.
  */
-import type { CortexSettings } from "../../settingsTypes";
-import { GeminiAdapter } from "./GeminiAdapter";
-import { AnthropicAdapter } from "./AnthropicAdapter";
-import { OpenAICompatAdapter } from "./OpenAICompatAdapter";
-import { CORTEX_CLOUD_BASE_URL } from "./catalog";
-import type { AIProviderAdapter } from "./types";
+import type { CortexSettings } from "../../settingsTypes.js";
+import { GeminiAdapter } from "./GeminiAdapter.js";
+import { AnthropicAdapter } from "./AnthropicAdapter.js";
+import { OpenAICompatAdapter } from "./OpenAICompatAdapter.js";
+import { CORTEX_CLOUD_BASE_URL } from "./catalog.js";
+import type { AIProviderAdapter } from "./types.js";
 
 export function createAdapter(settings: CortexSettings): AIProviderAdapter {
   switch (settings.ai.provider) {
@@ -43,7 +43,7 @@ export function createAdapter(settings: CortexSettings): AIProviderAdapter {
   }
 }
 
-export type { AIProviderAdapter } from "./types";
+export type { AIProviderAdapter } from "./types.js";
 export {
   type ChatMessage,
   type ChatRequest,
@@ -51,10 +51,10 @@ export {
   type ToolCall,
   type ToolDeclaration,
   buildTimeContext,
-} from "./types";
-export { runWithTools, type ToolExecutor } from "./runWithTools";
+} from "./types.js";
+export { runWithTools, type ToolExecutor } from "./runWithTools.js";
 export {
   RESPONSE_STYLES,
   getResponseStyle,
   type ResponseStyleEntry,
-} from "./catalog";
+} from "./catalog.js";
