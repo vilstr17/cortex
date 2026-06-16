@@ -1,4 +1,4 @@
-import { Plugin, Notice, Platform } from "obsidian";
+import { Plugin, Notice, Platform, TFile } from "obsidian";
 import Commands from "./commands";
 import {
   CortexDashboardView,
@@ -261,10 +261,7 @@ export default class CortexPlugin extends Plugin {
     // checks the frontmatter (`flashcards: true`) and only adds the
     // button on notes the save service wrote — so other notes that
     // happen to mention flashcards aren't affected.
-    this.registerMarkdownPostProcessor(
-      "cortex-flashcard-study",
-      cortexStudyPostProcessor(this),
-    );
+    this.registerMarkdownPostProcessor(cortexStudyPostProcessor(this));
     const studyClickHandler = (evt: MouseEvent) => {
       const target = evt.target;
       if (!(target instanceof HTMLElement)) return;
@@ -273,7 +270,7 @@ export default class CortexPlugin extends Plugin {
       const path = btn.getAttribute("data-cortex-study");
       if (!path) return;
       const file = this.app.vault.getAbstractFileByPath(path);
-      if (!(file instanceof TFile)) return;
+      if (!file || !(file instanceof TFile)) return;
       evt.preventDefault();
       void openStudyForFile(this, file);
     };

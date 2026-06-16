@@ -119,6 +119,34 @@ export class Modal {
   setTitle(_t: string) {}
 }
 
+/**
+ * Minimal stub of Obsidian's `FuzzySuggestModal`. Tests don't
+ * exercise the actual fuzzy-search behaviour; they just need
+ * the class to be importable so `SaveFlashcardsModal` (and any
+ * other module that references it) can load under vitest.
+ *
+ * Subclasses override `getItems`, `getItemText`, and
+ * `onChooseItem` to plug in real behaviour. The shim's no-op
+ * defaults let the class be instantiated without throwing.
+ */
+export class FuzzySuggestModal<T> {
+  app: unknown;
+  constructor(app: unknown) {
+    this.app = app;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  setPlaceholder(_p: string) { return this; }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  setInstructions(_i: Array<{ command: string; purpose: string }>) { return this; }
+  getItems(): T[] { return []; }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getItemText(_item: T): string { return ""; }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onChooseItem(_item: T, _evt: MouseEvent | KeyboardEvent): void {}
+  open() {}
+  close() {}
+}
+
 export class ItemView {
   containerEl: { children: Array<HTMLElement> };
   constructor(_leaf: unknown) {

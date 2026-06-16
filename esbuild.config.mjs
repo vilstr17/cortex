@@ -130,6 +130,11 @@ if (prod) {
 		try {
 			const src = JSON.parse(readFileSync("manifest.json", "utf8"));
 			src.description = "Spaced-repetition study tool with Google Calendar scheduling and AI planning via Gemini.";
+			// The catalog edition strips all focus code (BLE child_process,
+			// camera/MediaPipe) at build time, leaving only web-standard +
+			// vault-adapter APIs — so it runs on mobile. The full edition's
+			// root manifest stays desktop-only because of the focus chain.
+			src.isDesktopOnly = false;
 			writeFileSync(`${outDir}/manifest.json`, JSON.stringify(src, null, 2) + "\n");
 		} catch (e) {
 			console.warn(`[build] could not write catalog manifest.json: ${e.message}`);

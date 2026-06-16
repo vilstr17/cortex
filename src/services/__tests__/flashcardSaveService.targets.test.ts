@@ -107,7 +107,12 @@ function makeApp(vault: FakeVault) {
 
 // ── Fixtures ───────────────────────────────────────────────────────
 
-import { TFile as MockTFile } from "obsidian";
+import { TFile as MockTFile, type TFile as TFileType } from "obsidian";
+// The mock `obsidian` module's TFile takes a `path` argument,
+// but the real one doesn't. Cast through `unknown` so the mock
+// is constructible in tests but the type-system sees a regular
+// `TFile` instance. `TFileType` is the real (unmocked) class
+// shape, used as the type in `as unknown as TFileType` casts.
 const TFile: new (path: string) => unknown = MockTFile as unknown as new (path: string) => unknown;
 
 function makeProposal(overrides: Partial<FlashcardProposal> = {}): FlashcardProposal {
@@ -201,7 +206,7 @@ describe("saveProposalsToTarget", () => {
     const beforeContent =
       "---\nflashcards: true\ntest: \"Math Final\"\n---\n\n# Flashcards — Math Final\n\n## Q: prior\n\n> answer\n";
     vault.existingFiles.set(existingPath, { content: beforeContent });
-    const existingFile = new MockTFile(existingPath) as unknown as TFile;
+    const existingFile = new TFile(existingPath) as unknown as TFileType;
 
     const result = await saveProposalsToTarget(
       app,
@@ -232,7 +237,7 @@ describe("saveProposalsToTarget", () => {
     vault.existingFiles.set(existingPath, {
       content: "## Q: prior\n\n> answer\n",
     });
-    const existingFile = new MockTFile(existingPath) as unknown as TFile;
+    const existingFile = new TFile(existingPath) as unknown as TFileType;
 
     await saveProposalsToTarget(
       app,
@@ -255,7 +260,7 @@ describe("saveProposalsToTarget", () => {
     vault.existingFiles.set(existingPath, {
       content: "## Q: prior\n\n> answer\n",
     });
-    const existingFile = new MockTFile(existingPath) as unknown as TFile;
+    const existingFile = new TFile(existingPath) as unknown as TFileType;
 
     const result = await saveProposalsToTarget(
       app,
@@ -275,7 +280,7 @@ describe("saveProposalsToTarget", () => {
     const existing = makeFakeVault(makeFakeAdapter());
     const defaultVault = makeFakeVault(makeFakeAdapter());
 
-    const existingFile = new MockTFile("x.md") as unknown as TFile;
+    const existingFile = new TFile("x.md") as unknown as TFileType;
     existing.existingFiles.set("x.md", { content: "## Q: a\n\n> b\n" });
 
     const r1 = await saveProposalsToTarget(makeApp(folder), [makeProposal()], "T", {

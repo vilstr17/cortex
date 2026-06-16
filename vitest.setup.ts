@@ -133,6 +133,29 @@ vi.mock("obsidian", () => {
       close() {}
       setTitle() {}
     },
+    /**
+     * Minimal stub of `FuzzySuggestModal`. Tests don't exercise
+     * the actual fuzzy-search behaviour — the only requirement
+     * is that the class exists so `SaveFlashcardsModal` and
+     * other modules that import it can load.
+     */
+    FuzzySuggestModal: class {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      app: any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      constructor(app: any) { this.app = app; }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setPlaceholder(_p: string) { return this; }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setInstructions(_i: Array<{ command: string; purpose: string }>) { return this; }
+      getItems(): unknown[] { return []; }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      getItemText(_item: unknown): string { return ""; }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onChooseItem(_item: unknown, _evt: MouseEvent | KeyboardEvent): void {}
+      open() {}
+      close() {}
+    },
     ItemView: class {
       containerEl: { children: Array<HTMLElement> };
       constructor(_leaf: unknown) { this.containerEl = { children: [document.createElement("div"), document.createElement("div")] }; }

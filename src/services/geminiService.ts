@@ -328,6 +328,8 @@ export class GeminiService {
       },
       {
         execute: (name, args) => this.dispatchTool(name, args),
+      },
+      {
         maxRounds: this.settings.ai.maxToolRounds,
         onEvent: onProgress,
       },

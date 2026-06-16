@@ -2,9 +2,13 @@
  * Save Flashcards Modal.
  *
  * Shown when the user clicks "Save" on a flashcard deck in chat.
- * Lets them override the default flashcard folder for this one
- * save — either by picking a different folder, or by appending
- * the new cards into an existing flashcard note.
+ *
+ * Two mutually-exclusive choices:
+ *   • Use default  — save to the configured flashcard folder.
+ *   • Custom       — browse the vault and pick a destination, which
+ *                    can be EITHER a folder (a new flashcard note is
+ *                    created inside it) OR an existing note (the cards
+ *                    are appended to the bottom of that note).
  *
  * The selection is session-only. The durable default
  * (`settings.flashcardFolder`) is unchanged when the user picks
@@ -23,54 +27,69 @@ import type CortexPlugin from "../main";
 import { SaveTarget } from "../services/flashcardSaveService";
 
 /**
- * A folder-picker modal that lists every folder in the vault.
- * Obsidian's `FuzzySuggestModal` works on any `T[]`; we just
- * materialise folders from the markdown file paths.
+ * One entry in the unified vault browser — either a folder (cards
+ * land in a new note inside it) or an existing note (cards are
+ * appended to it).
  */
-class FolderPickerModal extends FuzzySuggestModal<string> {
-  /** Resolves with the folder path the user picked, or null on cancel. */
-  private resolvePick: ((value: string | null) => void) | null = null;
-  /** Folders to offer in the picker. */
-  private folders: string[];
+type VaultLocation =
+  | { type: "folder"; path: string }
+  | { type: "note"; file: TFile };
+
+/**
+ * A single picker that lists every folder AND every note in the
+ * vault, so the user makes one choice instead of juggling separate
+ * "folder" and "existing note" toggles.
+ */
+class VaultLocationPickerModal extends FuzzySuggestModal<VaultLocation> {
+  /** Resolves with the location the user picked, or null on cancel. */
+  private resolvePick: ((value: VaultLocation | null) => void) | null = null;
+  private items: VaultLocation[];
 
   constructor(app: App) {
     super(app);
-    this.setPlaceholder("Type a folder path…");
+    this.setPlaceholder("Pick a folder or a note…");
     this.setInstructions([
       { command: "↑↓", purpose: "navigate" },
       { command: "↵", purpose: "select" },
       { command: "esc", purpose: "cancel" },
     ]);
-    this.folders = collectVaultFolders(app);
+
+    const folders: VaultLocation[] = ["", ...collectVaultFolders(app)].map(
+      (path) => ({ type: "folder", path }),
+    );
+    const notes: VaultLocation[] = app.vault
+      .getMarkdownFiles()
+      .sort((a, b) => a.path.localeCompare(b.path))
+      .map((file) => ({ type: "note", file }));
+    // Folders first, then notes — folders are the common case.
+    this.items = [...folders, ...notes];
   }
 
-  /** Resolves with the chosen folder, or null if dismissed. */
-  pick(): Promise<string | null> {
+  /** Resolves with the chosen location, or null if dismissed. */
+  pick(): Promise<VaultLocation | null> {
     return new Promise((resolve) => {
       this.resolvePick = resolve;
     });
   }
 
-  getItems(): string[] {
-    // Always include the vault root, even when no folders are present.
-    return ["/", ...this.folders];
+  getItems(): VaultLocation[] {
+    return this.items;
   }
 
-  getItemText(item: string): string {
-    return item === "/" ? "(vault root)" : item;
+  getItemText(item: VaultLocation): string {
+    if (item.type === "folder") {
+      return `📁 ${item.path === "" ? "(vault root)" : item.path}  — new note`;
+    }
+    return `📄 ${item.file.path}  — append to this note`;
   }
 
-  onChooseItem(item: string, _evt: MouseEvent | KeyboardEvent): void {
+  onChooseItem(item: VaultLocation, _evt: MouseEvent | KeyboardEvent): void {
     const resolver = this.resolvePick;
     this.resolvePick = null;
-    // `open()` returns void on close — we resolve via the field
-    // so this works regardless of how the user picked.
-    resolver?.(item === "/" ? "" : item);
+    resolver?.(item);
   }
 
   onClose(): void {
-    // If the modal closed without a pick, the resolver is still
-    // pending — resolve it as cancel.
     if (this.resolvePick) {
       const resolver = this.resolvePick;
       this.resolvePick = null;
@@ -98,26 +117,6 @@ function collectVaultFolders(app: App): string[] {
 }
 
 /**
- * Collect every flashcard-bearing note in the vault. We use the
- * `flashcards: true` frontmatter the save service already writes
- * as the marker, so the dropdown only shows notes the user has
- * actually used as a deck.
- */
-function collectFlashcardNotes(app: App): TFile[] {
-  const out: TFile[] = [];
-  for (const f of app.vault.getMarkdownFiles()) {
-    const cache = app.metadataCache.getFileCache(f);
-    const fm = cache?.frontmatter;
-    if (fm && (fm as Record<string, unknown>).flashcards === true) {
-      out.push(f);
-    }
-  }
-  // Sort by basename for predictable display.
-  out.sort((a, b) => a.basename.localeCompare(b.basename));
-  return out;
-}
-
-/**
  * Show the per-save location picker. Resolves with the user's
  * choice, or null if they cancel.
  */
@@ -134,12 +133,16 @@ export function promptForSaveLocation(
 class SaveFlashcardsModal extends Modal {
   private plugin: CortexPlugin;
   private resolve: (target: SaveTarget | null) => void;
-  private choice: "default" | "folder" | "existing" = "default";
-  private customFolder: string;
-  private existingFile: TFile | null = null;
-  /** DOM nodes for the conditional sub-forms, hidden until needed. */
-  private folderSection!: HTMLElement;
-  private existingSection!: HTMLElement;
+  private choice: "default" | "custom" = "default";
+  /** The custom destination, once the user has picked one. */
+  private custom: VaultLocation | null = null;
+
+  /** Toggle handles so the two options behave as a radio pair. */
+  private defaultToggle?: { setValue(v: boolean): void };
+  private customToggle?: { setValue(v: boolean): void };
+  /** Custom destination sub-form, hidden until "Custom" is on. */
+  private customSection!: HTMLElement;
+  private customReadout!: HTMLElement;
 
   constructor(
     app: App,
@@ -149,7 +152,6 @@ class SaveFlashcardsModal extends Modal {
     super(app);
     this.plugin = plugin;
     this.resolve = resolve;
-    this.customFolder = plugin.settings.flashcardFolder;
   }
 
   onOpen(): void {
@@ -163,87 +165,52 @@ class SaveFlashcardsModal extends Modal {
       ? "(vault root)"
       : this.plugin.settings.flashcardFolder;
 
-    // ── Radio 1: default ───────────────────────────────────────────
+    // ── Option 1: default ─────────────────────────────────────────
     new Setting(contentEl)
       .setName("Use default")
       .setDesc(`Save to: ${defaultLabel}`)
       .addToggle((toggle) => {
+        this.defaultToggle = toggle;
         toggle.setValue(this.choice === "default");
         toggle.onChange((on) => {
-          if (on) this.setChoice("default");
+          // Radio behaviour: turning this on selects default;
+          // turning it off falls back to custom.
+          this.setChoice(on ? "default" : "custom");
         });
       });
 
-    // ── Radio 2: pick a folder ────────────────────────────────────
+    // ── Option 2: custom (folder OR existing note) ────────────────
     new Setting(contentEl)
-      .setName("Pick a folder")
-      .setDesc("Save to a one-off folder for this batch only — the default setting is not changed.")
+      .setName("Custom location")
+      .setDesc(
+        "Browse the vault and pick a folder (creates a new note) or an existing note (appends the cards). The default setting is not changed.",
+      )
       .addToggle((toggle) => {
-        toggle.setValue(this.choice === "folder");
+        this.customToggle = toggle;
+        toggle.setValue(this.choice === "custom");
         toggle.onChange((on) => {
-          if (on) this.setChoice("folder");
+          this.setChoice(on ? "custom" : "default");
         });
       });
 
-    this.folderSection = contentEl.createDiv({ cls: "cortex-save-fc-folder-section" });
-    this.folderSection.style.display = "none";
-    this.folderSection.style.marginLeft = "24px";
-    this.folderSection.style.marginBottom = "12px";
+    this.customSection = contentEl.createDiv({
+      cls: "cortex-save-fc-custom-section",
+    });
+    this.customSection.style.display = "none";
+    this.customSection.style.marginLeft = "24px";
+    this.customSection.style.marginBottom = "12px";
 
-    new Setting(this.folderSection)
-      .setName("Folder")
-      .addText((text) => {
-        text
-          .setPlaceholder("(vault root)")
-          .setValue(this.customFolder)
-          .onChange((value) => {
-            this.customFolder = value;
-          });
-      })
+    this.customReadout = this.customSection.createEl("p", {
+      cls: "cortex-save-fc-readout",
+    });
+
+    new Setting(this.customSection)
+      .setName("Destination")
       .addButton((btn) => {
-        btn.setButtonText("Browse…").onClick(() => this.openFolderPicker());
+        btn.setButtonText("Browse vault…").onClick(() => this.openPicker());
       });
 
-    // ── Radio 3: save into existing note ─────────────────────────
-    const existing = collectFlashcardNotes(this.app);
-    const existingDesc = existing.length === 0
-      ? "No existing flashcard notes found in the vault yet."
-      : "Append these cards to an existing deck (any note with `flashcards: true` frontmatter).";
-
-    new Setting(contentEl)
-      .setName("Save into existing note")
-      .setDesc(existingDesc)
-      .addToggle((toggle) => {
-        toggle.setValue(this.choice === "existing");
-        toggle.onChange((on) => {
-          if (on) this.setChoice("existing");
-        });
-      });
-
-    this.existingSection = contentEl.createDiv({ cls: "cortex-save-fc-existing-section" });
-    this.existingSection.style.display = "none";
-    this.existingSection.style.marginLeft = "24px";
-    this.existingSection.style.marginBottom = "12px";
-
-    if (existing.length === 0) {
-      this.existingSection.createEl("p", {
-        text: "Save some cards first, then come back — your existing decks will appear here.",
-        cls: "cortex-save-fc-empty",
-      });
-    } else {
-      new Setting(this.existingSection)
-        .setName("Note")
-        .addDropdown((dropdown) => {
-          for (const f of existing) {
-            dropdown.addOption(f.path, `${f.basename} (${f.path})`);
-          }
-          this.existingFile = existing[0];
-          dropdown.setValue(existing[0].path).onChange((value) => {
-            const found = existing.find((f) => f.path === value);
-            if (found) this.existingFile = found;
-          });
-        });
-    }
+    this.renderReadout();
 
     // ── Footer buttons ────────────────────────────────────────────
     const footer = contentEl.createDiv({ cls: "cortex-save-fc-footer" });
@@ -263,29 +230,46 @@ class SaveFlashcardsModal extends Modal {
     this.resolve(null);
   }
 
-  private setChoice(choice: "default" | "folder" | "existing"): void {
+  private setChoice(choice: "default" | "custom"): void {
     this.choice = choice;
-    this.folderSection.style.display = choice === "folder" ? "" : "none";
-    this.existingSection.style.display = choice === "existing" ? "" : "none";
-  }
+    // Keep the two toggles in sync so only one ever reads as "on".
+    this.defaultToggle?.setValue(choice === "default");
+    this.customToggle?.setValue(choice === "custom");
+    this.customSection.style.display = choice === "custom" ? "" : "none";
 
-  private async openFolderPicker(): Promise<void> {
-    const picker = new FolderPickerModal(this.app);
-    const picked = await picker.pick();
-    if (picked !== null) {
-      this.customFolder = picked;
-      // Refresh the visible text in the folder input. We re-render
-      // the section's text setting so the new value shows up.
-      this.refreshFolderInput();
+    // First time switching to custom with nothing picked yet —
+    // open the browser straight away so the choice is obvious.
+    if (choice === "custom" && this.custom === null) {
+      void this.openPicker();
     }
   }
 
-  /** Find the text input under the folder section and update it. */
-  private refreshFolderInput(): void {
-    const input = this.folderSection.querySelector("input[type=text]") as
-      | HTMLInputElement
-      | null;
-    if (input) input.value = this.customFolder;
+  private async openPicker(): Promise<void> {
+    const picker = new VaultLocationPickerModal(this.app);
+    const picked = await picker.pick();
+    if (picked !== null) {
+      this.custom = picked;
+      this.renderReadout();
+    } else if (this.custom === null) {
+      // Cancelled with nothing chosen — revert to default so the
+      // user isn't stuck on an empty custom selection.
+      this.setChoice("default");
+    }
+  }
+
+  /** Show what the custom destination currently points at. */
+  private renderReadout(): void {
+    if (!this.customReadout) return;
+    if (this.custom === null) {
+      this.customReadout.setText("No destination picked yet.");
+      return;
+    }
+    if (this.custom.type === "folder") {
+      const where = this.custom.path === "" ? "(vault root)" : this.custom.path;
+      this.customReadout.setText(`New note in folder: ${where}`);
+    } else {
+      this.customReadout.setText(`Append to note: ${this.custom.file.path}`);
+    }
   }
 
   private cancel(): void {
@@ -295,14 +279,14 @@ class SaveFlashcardsModal extends Modal {
 
   private confirm(): void {
     let target: SaveTarget;
-    if (this.choice === "folder") {
-      target = { kind: "folder", folder: this.customFolder.trim() };
-    } else if (this.choice === "existing") {
-      if (!this.existingFile) {
-        new Notice("Cortex: pick an existing note first.");
+    if (this.choice === "custom") {
+      if (this.custom === null) {
+        new Notice("Cortex: pick a destination first.");
         return;
       }
-      target = { kind: "existing", file: this.existingFile };
+      target = this.custom.type === "folder"
+        ? { kind: "folder", folder: this.custom.path.trim() }
+        : { kind: "existing", file: this.custom.file };
     } else {
       // `default` carries the configured folder so the save
       // service doesn't have to know about plugin settings.
