@@ -7,6 +7,7 @@ import { providerMissingFields } from "../services/ai/catalog.js";
 import { PROVIDER_LABELS } from "../services/ai/catalog.js";
 import { createNoteTools } from "../agent/tools/notes.js";
 import { createTestTools } from "../agent/tools/tests.js";
+import { createReviewTools } from "../agent/tools/reviews.js";
 import {
   createFlashcardTools,
   FlashcardProposal,
@@ -68,6 +69,16 @@ export class CortexChatModal extends Modal {
     // closure pulls from the live settings.tests array, so dashboard
     // edits are picked up without re-mounting the modal.
     for (const t of createTestTools({
+      getTests: () => this.plugin.settings.tests,
+    })) {
+      this.geminiService.registerTool(t);
+    }
+    // Register the review tool. The model calls list_reviews whenever
+    // the user asks what to revise. The factory takes the app + test
+    // list as closures so the tool sees vault frontmatter edits and
+    // dashboard test edits without a re-mount.
+    for (const t of createReviewTools({
+      app: this.app,
       getTests: () => this.plugin.settings.tests,
     })) {
       this.geminiService.registerTool(t);
@@ -621,6 +632,8 @@ export class CortexChatModal extends Modal {
         return "Browsing the vault";
       case "list_tests":
         return "Checking upcoming tests";
+      case "list_reviews":
+        return "Checking due reviews";
       case "list_events":
         return "Checking your calendar";
       case "create_event":

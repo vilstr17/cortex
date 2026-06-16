@@ -223,7 +223,7 @@ export const DEFAULT_SETTINGS: CortexSettings = {
     embeddingDim: null,
     enableCalendarTools: true,
     responseStyle: "concise",
-    maxToolRounds: 10,
+    maxToolRounds: 20,
   },
   planningPreferences: "",
   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,

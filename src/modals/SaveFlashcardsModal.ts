@@ -69,6 +69,7 @@ class VaultLocationPickerModal extends FuzzySuggestModal<VaultLocation> {
   pick(): Promise<VaultLocation | null> {
     return new Promise((resolve) => {
       this.resolvePick = resolve;
+      this.open();
     });
   }
 

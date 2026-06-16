@@ -1,4 +1,4 @@
-import { App, Notice, Platform, PluginSettingTab, Setting } from "obsidian";
+import { App, FuzzySuggestModal, Notice, Platform, PluginSettingTab, Setting } from "obsidian";
 import { requestUrl } from "obsidian";
 import CortexPlugin from "./main.js";
 
@@ -202,7 +202,7 @@ export class CortexSettingTab extends PluginSettingTab {
       .addSlider((slider) =>
         slider
           .setLimits(3, 30, 1)
-          .setValue(ai.maxToolRounds ?? 10)
+          .setValue(ai.maxToolRounds ?? 20)
           .setDynamicTooltip()
           .onChange(async (value) => {
             this.plugin.settings.ai.maxToolRounds = value;
@@ -395,17 +395,20 @@ export class CortexSettingTab extends PluginSettingTab {
       .setName("Flashcard folder")
       .setDesc(
         "Vault-relative folder where the AI's proposed flashcards are saved " +
-          "as markdown. Leave empty to save in the vault root. The folder is " +
-          "created automatically if it doesn't exist.",
+          "as markdown. Pick a folder with the Browse button, or leave empty " +
+          "to save in the vault root. The folder is created automatically " +
+          "if it doesn't exist.",
       )
-      .addText((text) =>
+      .addText((text) => {
         text
           .setPlaceholder("(vault root)")
           .setValue(this.plugin.settings.flashcardFolder)
-          .onChange(async (value) => {
-            this.plugin.settings.flashcardFolder = value;
-            await this.plugin.saveData(this.plugin.settings);
-          })
+          // Read-only display — selection happens via the Browse button.
+          // Disabling keeps the chosen path visible without inviting typos.
+          text.inputEl.readOnly = true;
+      })
+      .addButton((btn) =>
+        btn.setButtonText("Browse…").onClick(() => this.pickFlashcardFolder())
       );
 
     new Setting(containerEl)
@@ -894,4 +897,99 @@ export class CortexSettingTab extends PluginSettingTab {
     }
   }
 
+  /**
+   * Open an interactive vault-folder browser so the user can choose
+   * the default flashcard folder without typing a path. Selected path
+   * (or "" for the vault root) is written straight into settings.
+   */
+  private async pickFlashcardFolder(): Promise<void> {
+    const picker = new FlashcardFolderPickerModal(
+      this.app,
+      this.plugin.settings.flashcardFolder,
+    );
+    const picked = await picker.pick();
+    if (picked === null) return; // user cancelled
+    this.plugin.settings.flashcardFolder = picked;
+    await this.plugin.saveData(this.plugin.settings);
+    // Re-render the tab so the read-only field reflects the new value.
+    this.display();
+  }
+
+}
+
+/**
+ * Fuzzy picker over every folder in the vault, with the vault root
+ * surfaced as a distinct entry. Resolves with the chosen folder path
+ * (empty string = vault root), or null if the user dismisses.
+ *
+ * Mirrors the folder-half of `VaultLocationPickerModal` in
+ * `modals/SaveFlashcardsModal.ts`. Kept separate to avoid coupling
+ * the settings tab to a modal that's only ever opened from chat.
+ */
+class FlashcardFolderPickerModal extends FuzzySuggestModal<string> {
+  private resolvePick: ((value: string | null) => void) | null = null;
+  private folders: string[];
+
+  constructor(app: App, current: string) {
+    super(app);
+    this.setPlaceholder("Pick a folder…");
+    this.setInstructions([
+      { command: "↑↓", purpose: "navigate" },
+      { command: "↵", purpose: "select" },
+      { command: "esc", purpose: "cancel" },
+    ]);
+
+    const fromVault = collectVaultFolders(app);
+    // Include the current setting even if it doesn't correspond to a
+    // folder that currently has markdown files in it — otherwise the
+    // user could be locked out of a saved value that became empty.
+    if (current.trim() !== "" && !fromVault.includes(current)) {
+      fromVault.push(current);
+    }
+    this.folders = ["", ...fromVault.sort((a, b) => a.localeCompare(b))];
+  }
+
+  pick(): Promise<string | null> {
+    return new Promise((resolve) => {
+      this.resolvePick = resolve;
+      this.open();
+    });
+  }
+
+  getItems(): string[] {
+    return this.folders;
+  }
+
+  getItemText(item: string): string {
+    return item === "" ? "📁 (vault root)" : `📁 ${item}`;
+  }
+
+  onChooseItem(item: string, _evt: MouseEvent | KeyboardEvent): void {
+    const resolver = this.resolvePick;
+    this.resolvePick = null;
+    resolver?.(item);
+  }
+
+  onClose(): void {
+    if (this.resolvePick) {
+      const resolver = this.resolvePick;
+      this.resolvePick = null;
+      resolver(null);
+    }
+    super.onClose();
+  }
+}
+
+/**
+ * Every folder mentioned by any markdown file in the vault. Paths are
+ * vault-relative, no trailing slash. Vault root is NOT included.
+ */
+function collectVaultFolders(app: App): string[] {
+  const set = new Set<string>();
+  for (const f of app.vault.getMarkdownFiles()) {
+    const idx = f.path.lastIndexOf("/");
+    if (idx <= 0) continue; // file is in the vault root
+    set.add(f.path.slice(0, idx));
+  }
+  return Array.from(set);
 }

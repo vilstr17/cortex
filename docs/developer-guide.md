@@ -3,14 +3,16 @@
 ## Development Setup
 
 ### Prerequisites
-- **Node.js** (LTS recommended; the BLE scanner requires a system Node binary at runtime)
+- **Node.js** (LTS recommended; the build pipeline targets modern Node)
 - **npm**
 - **Obsidian** desktop app for local testing
 
 ### Install
 ```bash
-npm install
+npm install --legacy-peer-deps
 ```
+
+(The `--legacy-peer-deps` flag matches the older `@types/node@^16` pin in `package.json` against newer vitest peer ranges. The CI workflow uses the same flag.)
 
 ### Build & Watch
 ```bash
@@ -33,45 +35,50 @@ These must be placed in `<Vault>/.obsidian/plugins/cortex/` for Obsidian to load
 2. Copy `main.js`, `manifest.json`, and `styles.css` into your vault's `.obsidian/plugins/cortex/` folder.
 3. Open Obsidian → **Settings → Community plugins** → enable **Cortex**.
 4. For dev iteration, keep `npm run dev` running and reload Obsidian after changes (**Command Palette → Reload app without saving**).
-5. Open the Developer Tools (`Cmd+Option+I` on macOS) to see console output from the plugin and the BLE scanner child process.
+5. Open the Developer Tools (`Cmd+Option+I` on macOS) to see console output from the plugin.
 
 ## Code Organization
 
 ```
 src/
-  main.ts                    # Plugin lifecycle (onload/onunload); keep minimal
-  settings.ts                # Settings interface, defaults, and Settings tab UI
-  commands.ts                # SRS review command + test commands
-  detection/
-    DetectionManager.ts        # Unified BLE + Face lifecycle and warning overlay
-  ble/
-    BleFocusDetector.ts      # Node child-process manager for BLE scanning
-    types.ts                 # BLE types + calibration logic
-    initBle.ts               # BLE initialization helpers
-    CalibrationModal.ts      # UI for calibration collection
-    BleDevicePickerModal.ts  # UI for selecting a BLE device
-  face/
-    FaceFocusEvaluator.ts    # State machine + evaluation logic
-    initFace.ts              # Face initialization helpers
-  FaceDetector.ts            # MediaPipe wrapper (burst sampling, asset caching)
+  main.ts                       # Plugin lifecycle (onload/onunload); keep minimal
+  settings.ts                   # Settings interface, defaults, and Settings tab UI
+  settingsTypes.ts              # Plain interfaces for the settings shape
+  commands.ts                   # SRS review command + test commands
   services/
-    googleCalendarService.ts # OAuth token refresh + Calendar CRUD
-    geminiService.ts         # Prompt building + function calling + REST client
-    testService.ts           # In-memory test registry (backed by settings)
+    googleCalendarService.ts    # OAuth token refresh + Calendar CRUD
+    geminiService.ts            # Prompt building + function calling + REST client
+    testService.ts              # In-memory test registry (backed by settings)
+    flashcardSaveService.ts     # Persisting AI-proposed flashcards to a deck
+    flashcardStudyPostProcessor.ts  # Post-processing of saved-card study sessions
+    indexRunner.ts              # Background runner for the local vector index
+    ai/                         # Adapters: Gemini, OpenAI-compat, Anthropic, listLocalModels
+  agent/
+    toolRegistry.ts             # Tool name → implementation registry
+    tools/                      # Notes, tests, flashcards, quizzes, calendar tools
+    vectorIndex/                # chunker, embeddings, in-memory index, persistence, knowledgeBase
   views/
-    CortexDashboardView.ts   # Custom ItemView: calendar, reviews, tests, focus
+    CortexDashboardView.ts      # Custom ItemView: calendar, reviews, tests
   modals/
-    CortexChatModal.ts       # AI chat UI with schedule approval
-    CreateTestModal.ts       # Test creation form
-    AddToTestModal.ts        # Add current note to an existing test
-    MarkTestDoneModal.ts     # Mark a test as completed
-    ReviewScoreModal.ts      # 1–5 score picker for SRS review
-    ReviewFilterModal.ts     # Filter/sort controls for due reviews
-    ReviewScoreInfoModal.ts  # Score explanation helper
-    TestCreationModal.ts     # Alternative test creation path
+    CortexChatModal.ts          # AI chat UI with schedule approval
+    CreateTestModal.ts          # Test creation form
+    AddToTestModal.ts           # Add current note to an existing test
+    MarkTestDoneModal.ts        # Mark a test as completed
+    ReviewScoreModal.ts         # 1–5 score picker for SRS review
+    ReviewFilterModal.ts        # Filter/sort controls for due reviews
+    ReviewScoreInfoModal.ts     # Score explanation helper
+    SaveFlashcardsModal.ts      # Save proposed flashcards to a deck
+    StudyFlashcardsModal.ts     # Re-open a saved deck as an interactive study session
+  ui/
+    chatMarkdown.ts             # Obsidian MarkdownRenderer wrapper
+    FlashcardDeck.ts            # Interactive flashcard UI inside chat
+    QuizComponent.ts            # Interactive quiz UI inside chat
   utils/
-    srsLogic.ts              # Interval calculation (SM-2 inspired)
-    notice.ts                # Styled Notice wrappers
+    srsLogic.ts                 # Interval calculation (SM-2 inspired)
+    dateUtils.ts                # Local-date helpers (start-of-day, formatting)
+    formatRelative.ts           # Human-friendly "in 3 days" rendering
+    notice.ts                   # Styled Notice wrappers
+    settingsMigration.ts        # Forward-compatibility for older data.json blobs
 ```
 
 ## Adding New Commands
@@ -105,6 +112,14 @@ Use `checkCallback` when the command should only appear in the palette under spe
 
 Keep modals self-contained; pass callbacks for actions that need to trigger a parent re-render.
 
+## Adding New AI Tools
+
+The agent layer (`src/agent/toolRegistry.ts`) maps a tool name to a typed implementation. To add a new tool:
+
+1. Create a new file under `src/agent/tools/` exporting a `Tool` object (name, description, JSON Schema, and `execute(args, ctx)`).
+2. Register it in `CortexChatModal` (or wherever the tool list lives) so it gets passed to the active AI adapter.
+3. Add a unit test in `src/agent/tools/__tests__/`.
+
 ## Key Conventions
 
 ### Date Handling
@@ -114,10 +129,10 @@ Keep modals self-contained; pass callbacks for actions that need to trigger a pa
   const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   ```
 - Avoid `new Date("2026-06-12")` — it parses as UTC midnight and shifts in non-UTC timezones.
-- The Gemini prompt explicitly anchors the model to local time and forbids UTC/Z-suffix outputs.
+- The chat prompt explicitly anchors the model to local time and forbids UTC/Z-suffix outputs.
 
 ### Service Ownership
-- **Single-owner services**: `TestService` owns the `tests` array in settings. `GoogleCalendarService` owns token refresh timers. `GeminiService` owns chat history for its instance.
+- **Single-owner services**: `TestService` owns the `tests` array in settings. `GoogleCalendarService` owns token refresh timers. The chat adapter owns chat history for its instance.
 - Services that need to write settings receive a `saveSettingsCallback` rather than holding a reference to the plugin.
 - The Dashboard creates short-lived service instances (`new GoogleCalendarService(...)`) but shares the same underlying settings object.
 
@@ -138,11 +153,6 @@ Keep modals self-contained; pass callbacks for actions that need to trigger a pa
 
 ### Service Lifecycle
 - `GoogleCalendarService` starts a `setInterval` for preemptive token refresh. Always call `.destroy()` when the consumer (Dashboard, Chat Modal) is torn down.
-- `DetectionManager.destroy()` must be awaited in `onunload` to kill the BLE child process and release the webcam.
-
-### BLE Scanner Coupling
-- The BLE scanner is an external Node process. It can crash, hang, or fail to find the Node binary. All HTTP calls to `127.0.0.1:18888` have a 5-second timeout and swallow errors gracefully.
-- On macOS the scanner needs Bluetooth permission for the **Obsidian** app, not just the terminal.
 
 ### Metadata Cache Events
 - Obsidian fires `metadataCache.on("changed", ...)` on every save while typing.
@@ -151,5 +161,5 @@ Keep modals self-contained; pass callbacks for actions that need to trigger a pa
 
 ### Bundle Size
 - The plugin is a single `main.js`. `esbuild` bundles everything.
-- `@mediapipe/tasks-vision` is lazy-imported inside `FaceDetector.ts` so it does not execute at plugin load.
+- Large AI-provider SDKs and embedding libraries are imported lazily inside the adapter that uses them so they do not run at plugin load.
 - Do not add large runtime dependencies without considering mobile impact.

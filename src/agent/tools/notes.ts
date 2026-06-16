@@ -105,7 +105,7 @@ export function createNoteTools(deps: {
     {
       name: "read_note",
       description:
-        "Read the full contents (or a single section) of a note by its file path. Use this when the user asks for a specific note, or after search_notes has identified a relevant note that you want to summarize in full. Pass the file path as it appears in the vault, including the .md extension. If the note is very long, the response may be truncated — in that case, call again with a `heading` argument to fetch just that section.",
+        "Read the full contents (or a single section) of a note by its file path. Use this when the user asks for a specific note, or after search_notes has identified a relevant note that you want to summarize in full. Pass the file path as it appears in the vault, including the .md extension. Very long notes are still truncated at a generous cap; if that happens, call again with a `heading` argument to fetch just that section.",
       parameters: {
         type: "OBJECT",
         description: "Read a note by path, optionally scoped to a heading",
@@ -154,11 +154,16 @@ export function createNoteTools(deps: {
           text = section;
         }
 
-        const MAX = 4000;
-        const truncated = text.length > MAX;
-        const body = truncated ? text.slice(0, MAX) : text;
+        // Modern hosted models (Kimi, Gemini, Claude, GPT-4 class) have
+        // context windows in the hundreds of thousands of tokens, so we
+        // return a large note in one shot rather than forcing the model to
+        // burn tool-call rounds reading it section by section. The heading
+        // argument is still available for genuinely huge files.
+        const MAX_CHARS = 100_000;
+        const truncated = text.length > MAX_CHARS;
+        const body = truncated ? text.slice(0, MAX_CHARS) : text;
         const footer = truncated
-          ? `\n\n[... truncated at ${MAX} chars. Call read_note again with a 'heading' argument to fetch a specific section.]`
+          ? `\n\n[... truncated at ${MAX_CHARS.toLocaleString()} chars. Call read_note again with a 'heading' argument to fetch a specific section.]`
           : "";
         return `Contents of ${path}:\n\n${body}${footer}`;
       },

@@ -147,6 +147,17 @@ export class CortexDashboardView extends ItemView {
 		this.renderTodaysSchedule();
 	}
 
+	/**
+	 * Public re-render hook called by the plugin after a `cortex-auth`
+	 * callback resolves. Clears any cached events so the freshly-saved
+	 * tokens are honored on the next render, then re-renders the section.
+	 */
+	refreshGoogleCalendarSection(): void {
+		this.lastFetchedEvents = null;
+		this.lastFetchedCalendarDate = null;
+		this.renderGoogleCalendarSection();
+	}
+
 	private renderConnectButton(): void {
 		this.authContainer.createEl("p", {
 			text: "Connect your Google Calendar to see today's schedule alongside your reviews.",

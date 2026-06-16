@@ -184,6 +184,7 @@ export class GeminiService {
       "3. Fill them with 25–60 minute blocks. Title each one like 'Review: Calculus limits'.",
       "4. Use the description field for context (the source note path, the topic, why this one).",
       "5. If a test is approaching, call list_tests for the target date to see which notes are in scope — don't guess from frontmatter.",
+      "6. If you need a fresh view of the review queue (the context above may be stale), call list_reviews(target date) to re-pull it before prioritizing.",
     );
 
     const prefs = this.settings.planningPreferences?.trim();
@@ -251,6 +252,7 @@ export class GeminiService {
       "\n- propose_quiz(test_name, questions) — draft an interactive multiple-choice quiz. The user answers inside the chat." +
       "\n- list_events / create_event / update_event / delete_event — Google Calendar. Only touch the calendar when the user asks." +
       "\n- list_tests(date?, include_done?) — find upcoming tests (exams) and the notes linked to each, for a given date. Use this whenever the user asks about an exam, revision, or what to study for a deadline. The test list is the only way to discover upcoming exams — they are not in this prompt." +
+      "\n- list_reviews(date?) — find notes due for spaced-repetition review on a given date (defaults to today), with how overdue each one is and its confidence. Use this whenever the user asks what to review, what's due for revision, or wants to plan a revision session. Notes linked to a finished exam are auto-retired. The review queue is not in this prompt — call the tool." +
 
       "\n\nTool-calling rules:" +
       "\n- For any request that can be answered by a tool, you MUST call the tool instead of answering from memory." +
@@ -263,6 +265,7 @@ export class GeminiService {
       "\n- 'Make flashcards for X' → search_notes('X') → read_note(path) → propose_flashcard(...) for each card." +
       "\n- 'Quiz me on X' → search_notes('X') → read_note(path) → propose_quiz(test_name='General', questions=[...])." +
       "\n- 'Plan my day' → list_tests() (for exam context) → list_events() → create_event(...) for each study block." +
+      "\n- 'What should I review today?' → list_reviews() → (for each) search_notes or read_note → schedule via create_event if asked." +
       "\n- For calendar work, don't ask for an event ID — find it via list_events and act on it the same turn." +
       "\n- If something is ambiguous in a way that matters (e.g. two events with the same name, or a card topic the notes don't actually cover), ask one short clarifying question. Otherwise, just do it." +
       ""

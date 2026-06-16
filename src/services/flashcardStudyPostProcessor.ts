@@ -29,6 +29,22 @@ function resolveFile(plugin: CortexPlugin, ctx: MarkdownPostProcessorContext): T
 }
 
 /**
+ * True iff the frontmatter marks this note as a saved flashcard deck.
+ *
+ * The save service writes `flashcards: true` (a YAML boolean), but
+ * Obsidian's metadata cache can surface the same value as the string
+ * `"true"` depending on the YAML parser version, file encoding, or
+ * any hand-edit. Treat both as a match so the Study button reliably
+ * shows up — otherwise the deck is silently unreachable on a saved
+ * file the user expected to be interactive.
+ */
+function isFlashcardNote(fm: unknown): boolean {
+  if (!fm || typeof fm !== "object") return false;
+  const flag = (fm as Record<string, unknown>).flashcards;
+  return flag === true || flag === "true";
+}
+
+/**
  * The post-processor callback. Obsidian invokes this once per
  * rendered markdown block. We check the frontmatter and, if
  * this is a flashcard note, prepend a Study button to the
@@ -43,13 +59,7 @@ export const cortexStudyPostProcessor =
     if (!file) return;
     const cache = plugin.app.metadataCache.getFileCache(file);
     const fm = cache?.frontmatter;
-    if (!fm || (fm as Record<string, unknown>).flashcards !== true) return;
-
-    // Make sure the post-processor only runs on the rendered
-    // markdown view, not on every section heading — Obsidian
-    // calls us per block, so `el` is the section root.
-    // Skip if this is a sub-block (e.g. inside a callout/embed).
-    if (!el.parentElement) return;
+    if (!isFlashcardNote(fm)) return;
 
     // Build the Study button. We attach it as a sibling of the
     // first rendered child by inserting at the very top of `el`.

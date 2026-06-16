@@ -1822,6 +1822,17 @@
   min-height: 120px;
   transition: transform 0.35s ease;
   transform-style: preserve-3d;
+  /* Stack both faces in the same cell so the card's height
+     adapts to whichever side has more content. Using grid here
+     (rather than positioning the back absolutely) means a long
+     answer no longer gets clipped — the parent grows to fit it
+     and the front then grows to match. */
+  display: grid;
+  grid-template-areas: "stack";
+}
+
+.cortex-flashcard-inner > * {
+  grid-area: stack;
 }
 
 .cortex-flashcard-inner.flipped {
@@ -1839,6 +1850,8 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  /* Allow long content to push the card taller. */
+  height: max-content;
 }
 
 .cortex-flashcard-front {
@@ -1846,8 +1859,6 @@
 }
 
 .cortex-flashcard-back {
-  position: absolute;
-  inset: 0;
   transform: rotateY(180deg);
   z-index: 1;
 }
