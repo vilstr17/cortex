@@ -1,19 +1,16 @@
 # Cortex
 
-Cortex is an Obsidian plugin that turns your notes into a **spaced repetition (SRS)** system, connects them to **Google Calendar**, and uses **AI** to build study plans and search your vault. It also includes local **focus detection** (Bluetooth phone proximity + webcam face tracking) to warn you when you get distracted.
+Cortex is an Obsidian plugin that turns your notes into a **spaced repetition (SRS)** system, connects them to **Google Calendar**, and uses **AI** to build study plans, propose flashcards and quizzes, and search your vault.
 
 ## Features
 
 - **Note-based SRS** — Review scores (1–5) are stored in each note's frontmatter (`confidence`, `interval`, `next_review`). Notes with upcoming or past `next_review` dates appear in the Dashboard.
 - **Test-aware studying** — Group notes into tests/exams. Cortex tracks per-test preparation progress and syncs `exam_date` to linked notes.
+- **Flashcards** — Propose cards from any note, save them into a per-test deck (default folder, custom folder, or append to an existing deck), and reopen the saved note later as an interactive Study deck. The study view re-uses the same chat deck so saved cards stay first-class study material, not just markdown.
 - **Google Calendar integration** — View today's schedule inside Obsidian, and let the AI planner create study events directly in your calendar.
 - **AI study planner** — Chat with your AI about your schedule, or ask it to plan your day. It reads your due reviews, existing calendar events, and tests to suggest optimal study blocks.
 - **Vault search (RAG)** — Every markdown note is embedded into a local index the AI can search. The Dashboard, chat, and flashcard suggestion tools all use the same index.
 - **Multi-provider AI** — Works with Cortex Cloud (default, no model picking), Google Gemini, OpenAI, Anthropic, Ollama, LM Studio, or any OpenAI-compatible endpoint (OpenRouter, Groq, Together, vLLM, llama.cpp server, …).
-- **Focus detection (desktop only)**
-  - *Phone detection*: Calibrate your phone's Bluetooth signal; Cortex warns you when you're holding it.
-  - *Face tracking*: MediaPipe-based gaze, blink, and head-pose tracking warns you when you look away.
-    - ⚠️ **Not available on macOS** — Obsidian's signed app binary is currently missing the `com.apple.security.device.camera` entitlement, so macOS will not show the camera permission dialog and `getUserMedia` cannot open the webcam. Use the BLE Focus Detector on macOS instead, or track [forum.obsidian.md/t/76265](https://forum.obsidian.md/t/add-camera-permissions-for-obsidian-mac-so-the-obsidian-camera-plugin-works/76265) for a fix.
 - **Daily review limits** — Cap the number of reviews per day; overflow automatically shifts to the next day.
 
 ## Quick Start
@@ -46,11 +43,9 @@ Cortex is an Obsidian plugin that turns your notes into a **spaced repetition (S
 - [`docs/architecture.md`](docs/architecture.md) — System design, data flow, and subsystem overview
 - [`docs/security.md`](docs/security.md) — OAuth, token storage, and privacy model
 - [`docs/developer-guide.md`](docs/developer-guide.md) — Setup, build commands, and conventions for contributors
-- [`PERFORMANCE.md`](PERFORMANCE.md) — Performance notes and recent focus-detection improvements
 
 ## Requirements
 
-- Obsidian desktop (focus detection features are desktop-only; core SRS works everywhere)
-- A system Node.js installation for BLE phone detection (used by the background scanner)
+- Obsidian desktop
 - An AI provider (Cortex Cloud account id, or an API key for Gemini / OpenAI / Anthropic / any OpenAI-compatible gateway, or a local Ollama / LM Studio server)
 - A Google account for calendar integration
