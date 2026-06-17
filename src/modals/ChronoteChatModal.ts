@@ -520,6 +520,7 @@ export class ChronoteChatModal extends Modal {
         });
         if (ok) successCount++;
       } catch (err) {
+        // per-event failures are tolerated; partial success is reported below
       }
     }
 

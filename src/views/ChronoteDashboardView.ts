@@ -119,9 +119,6 @@ export class ChronoteDashboardView extends ItemView {
 		this.render();
 	}
 
-	async onClose(): Promise<void> {
-	}
-
 	private async render(): Promise<void> {
 		this.renderCalendar();
 		this.renderReviews();
