@@ -161,9 +161,11 @@ export class ToolRegistry {
   private tools = new Map<string, Tool>();
 
   register(tool: Tool): void {
+    if (this.tools.has(tool.name)) {
+      console.warn(`Chronote: tool "${tool.name}" registered twice — overwriting.`);
+    }
     this.tools.set(tool.name, tool);
   }
-
 
   has(name: string): boolean {
     return this.tools.has(name);
@@ -211,9 +213,9 @@ export class ToolRegistry {
       return await tool.execute(call.args, ctx);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      console.error(`Chronote: tool "${call.name}" failed:`, err);
       return `Error executing ${call.name}: ${msg}`;
     }
-
   }
 }
 

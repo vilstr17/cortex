@@ -85,6 +85,7 @@ export function createTestTools(deps: {
             // Defensive: TestService writes ISO dates, but a hand-edited
             // data.json could break the parse. Skip with a warning rather
             // than throwing — the rest of the list is still useful.
+            console.warn(`Chronote: skipping test "${t.name}" with unparseable date "${t.date}"`);
             continue;
           }
 
