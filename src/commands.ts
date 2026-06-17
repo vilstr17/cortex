@@ -18,26 +18,27 @@ export default class Commands {
     const plugin = this.plugin;
 
     plugin.addCommand({
-      id: "log-chronote-review",
-      name: "Log Chronote Review",
+      id: "log-review",
+      name: "Log review",
       checkCallback: (checking: boolean) => {
         const activeFile = plugin.app.workspace.getActiveFile();
         if (checking) {
           return activeFile !== null && activeFile.extension === "md";
         }
         if (activeFile && activeFile.extension === "md") {
-          new ReviewScoreModal(plugin.app, async (score: number) => {
-            try {
-              const result = await applyReviewToFrontmatter(activeFile, score, plugin);
-              if (result.lastReviewBeforeExam) {
-                chronoteNotice(`Crush it! Last review done for ${activeFile.name} — good luck on the exam!`);
-              } else {
-                chronoteNotice(`Logged review score: ${score} for ${activeFile.name}`);
+          new ReviewScoreModal(plugin.app, (score: number) => {
+            void (async () => {
+              try {
+                const result = await applyReviewToFrontmatter(activeFile, score, plugin);
+                if (result.lastReviewBeforeExam) {
+                  chronoteNotice(`Crush it! Last review done for ${activeFile.name} — good luck on the exam!`);
+                } else {
+                  chronoteNotice(`Logged review score: ${score} for ${activeFile.name}`);
+                }
+              } catch (error) {
+                chronoteNotice(`Failed to log review for ${activeFile.name}`);
               }
-            } catch (error) {
-              chronoteNotice(`Failed to log review for ${activeFile.name}`);
-            }
-
+            })();
           }).open();
         }
       },
@@ -103,7 +104,7 @@ async function applyReviewToFrontmatter(
       ? Math.max(1, Math.min(365, Math.floor(rawMaxInterval)))
       : null;
 
-  await app.fileManager.processFrontMatter(file, (frontmatter) => {
+  await app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
     // Ensure exam_date exists in frontmatter so Obsidian Properties UI shows it.
     // Do NOT overwrite an existing value.
     if (frontmatter.exam_date === undefined || frontmatter.exam_date === null) {
@@ -174,7 +175,7 @@ async function applyReviewToFrontmatter(
   }
 
   // Final apply
-  await app.fileManager.processFrontMatter(file, (frontmatter) => {
+  await app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
     frontmatter.confidence = score;
     frontmatter.interval = nextInterval;
     frontmatter.next_review = nextReviewDate;

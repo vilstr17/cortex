@@ -2237,3 +2237,91 @@
      squashed on small viewports. */
   min-height: 360px;
 }
+
+/* ──────────────────────────────────────────────────────────────────
+   Migrated from inline element.style assignments so the plugin passes
+   the Obsidian "no static style assignment" review rule.
+   ────────────────────────────────────────────────────────────────── */
+
+/* Review filter & sort modal */
+.chronote-filter-sort-group,
+.chronote-filter-test-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  margin-bottom: 1.5em;
+}
+
+.chronote-filter-checkbox {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  gap: 0.5em;
+}
+
+.chronote-filter-checkbox.is-indented {
+  padding-left: 1.5em;
+}
+
+.chronote-filter-buttons {
+  display: flex;
+  gap: 0.5em;
+  margin-top: 1.5em;
+}
+
+.chronote-filter-apply-btn,
+.chronote-filter-cancel-btn {
+  flex: 1;
+  padding: 0.5em;
+}
+
+/* Review score modal */
+.chronote-review-score-setting {
+  display: block;
+}
+
+.chronote-score-label {
+  display: block;
+  font-weight: bold;
+  font-size: 1.4em;
+  text-align: center;
+  margin-bottom: 0.75em;
+}
+
+.chronote-review-score-setting .slider {
+  width: 100%;
+  padding: 12px 0;
+}
+
+.chronote-review-score-setting .setting-item-info {
+  margin-bottom: 0.5em;
+}
+
+/* Save flashcards modal — custom destination section */
+.chronote-save-fc-custom-section {
+  margin-left: 24px;
+  margin-bottom: 12px;
+}
+
+/* Create test modal — native date input */
+.chronote-create-test-date-input {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-modifier-form-field);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+
+/* Dashboard section header rows (schedule / reviews) */
+.chronote-dashboard-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.chronote-dashboard-header-row h2 {
+  margin: 0;
+}

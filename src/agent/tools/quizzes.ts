@@ -55,7 +55,7 @@ function validateQuestions(raw: unknown): { valid: boolean; error?: string; ques
   }
   const out: QuizQuestion[] = [];
   for (let i = 0; i < raw.length; i++) {
-    const q = raw[i];
+    const q: unknown = raw[i];
     if (!isPlainObject(q)) {
       return { valid: false, error: `Question ${i + 1} is not an object.` };
     }

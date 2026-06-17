@@ -197,9 +197,7 @@ class SaveFlashcardsModal extends Modal {
     this.customSection = contentEl.createDiv({
       cls: "chronote-save-fc-custom-section",
     });
-    this.customSection.style.display = "none";
-    this.customSection.style.marginLeft = "24px";
-    this.customSection.style.marginBottom = "12px";
+    this.customSection.hide();
 
     this.customReadout = this.customSection.createEl("p", {
       cls: "chronote-save-fc-readout",
@@ -236,7 +234,7 @@ class SaveFlashcardsModal extends Modal {
     // Keep the two toggles in sync so only one ever reads as "on".
     this.defaultToggle?.setValue(choice === "default");
     this.customToggle?.setValue(choice === "custom");
-    this.customSection.style.display = choice === "custom" ? "" : "none";
+    if (choice === "custom") this.customSection.show(); else this.customSection.hide();
 
     // First time switching to custom with nothing picked yet —
     // open the browser straight away so the choice is obvious.

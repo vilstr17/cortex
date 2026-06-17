@@ -54,6 +54,22 @@ class FakeElement {
   addClasses(classes: string[]) {
     for (const c of classes) this.classes.add(c);
   }
+  addClass(c: string) {
+    this.classes.add(c);
+  }
+  removeClass(c: string) {
+    this.classes.delete(c);
+  }
+  // Obsidian's HTMLElement helpers used by the UI code under test.
+  setCssStyles(styles: Record<string, string>) {
+    Object.assign(this.style, styles);
+  }
+  show() {
+    this.style.display = "";
+  }
+  hide() {
+    this.style.display = "none";
+  }
   setText(text: string) {
     this.text = text;
   }

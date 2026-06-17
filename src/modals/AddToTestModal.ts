@@ -37,7 +37,7 @@ export class AddToTestModal extends Modal {
       .setName("Select a test")
       .setDesc("Choose which test to add this file to.")
       .addDropdown((dropdown) => {
-        tests.forEach((test) => dropdown.addOption(test.id, test.name));
+        tests.forEach((test) => { dropdown.addOption(test.id, test.name); });
         dropdown.setValue(selectedTestId).onChange((value) => {
           selectedTestId = value;
         });

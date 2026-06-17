@@ -201,7 +201,7 @@ export function createNoteTools(deps: {
           if (folder && !file.path.startsWith(folder)) continue;
           if (tagFilter) {
             const cache = app.metadataCache.getFileCache(file);
-            const tags = cache?.frontmatter?.tags;
+            const tags: unknown = cache?.frontmatter?.tags;
             const tagList = Array.isArray(tags)
               ? tags.map(String)
               : typeof tags === "string"

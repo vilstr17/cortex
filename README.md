@@ -14,7 +14,7 @@
 ## Why people use Chronote
 
 - **You don't lose your notes** — Review state lives in each note's own frontmatter. Your data stays in your vault, in plain Markdown.
-- **You pick the AI** — Use a free local model, your own API key, or (coming soon) Chronote Cloud for users who'd rather not manage keys at all.
+- **You pick the AI** — Use a free local model or bring your own API key, whichever you prefer.
 - **It's keyboard-friendly** — Most of what you do is a one-line command: log a review, ask the planner, open the dashboard.
 
 *(Note: This plugin was originally called **Cortex**, but we renamed it to **Chronote** to avoid confusion with another existing plugin of the same name.)*
@@ -34,7 +34,6 @@
    - Open **Settings → Chronote** and choose a provider from the dropdown.
    - **Local, free, no API key:** Install [Ollama](https://ollama.com) or [LM Studio](https://lmstudio.ai) on your computer and pick one of those. Chronote fills in the local URL for you.
    - **Bring your own key:** Pick Google Gemini, OpenAI, Anthropic, or any OpenAI-compatible service (OpenRouter, Groq, Together, vLLM, llama.cpp, …) and paste your API key.
-   - **No key at all:** Chronote Cloud is **coming soon** — a managed option for users who don't want to manage API keys. The setting is already in place and will start working as soon as the cloud service is live. Until then, please use one of the other options.
    - When you're done, click **Test connection** to confirm everything is reachable.
 
 4. **Turn on vault search (optional but recommended).**
@@ -107,7 +106,6 @@ When an exam or deadline is approaching, create a **Test** from the Dashboard. A
 - An AI provider:
   - A free local server (Ollama, LM Studio) — recommended if you don't want to send your data anywhere
   - **Or** an API key for Google Gemini, OpenAI, Anthropic, or any OpenAI-compatible service
-  - **Or** Chronote Cloud (coming soon) — a managed option for users who don't want to manage API keys
 - A Google account, *only* if you want Calendar integration
 
 ## Privacy at a glance

@@ -63,10 +63,10 @@ export const chronoteStudyPostProcessor =
 
     // Build the Study button. We attach it as a sibling of the
     // first rendered child by inserting at the very top of `el`.
-    const wrapper = document.createElement("div");
+    const wrapper = activeDocument.createElement("div");
     wrapper.className = "chronote-flashcard-study-wrapper";
 
-    const button = document.createElement("button");
+    const button = activeDocument.createElement("button");
     button.className = "mod-cta chronote-flashcard-study-btn";
     button.textContent = "▶ Study flashcards";
     button.setAttribute("data-chronote-study", file.path);

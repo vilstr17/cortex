@@ -109,26 +109,27 @@ export function renderFlashcardDeck(
     }
   });
 
-  saveBtn.addEventListener("click", async () => {
-    saveBtn.disabled = true;
-    saveBtn.setText("Saving…");
-    try {
-      const result = await options.onSave();
-      if (result === null) {
-        // User cancelled the save dialog (or there was nothing
-        // to save). Reset the button so they can try again.
+  saveBtn.addEventListener("click", () => {
+    void (async () => {
+      saveBtn.disabled = true;
+      saveBtn.setText("Saving…");
+      try {
+        const result = await options.onSave();
+        if (result === null) {
+          // User cancelled the save dialog (or there was nothing
+          // to save). Reset the button so they can try again.
+          saveBtn.disabled = false;
+          saveBtn.setText(`💾 Save ${proposals.length} to “${options.testName}”`);
+          return;
+        }
+        saveBtn.setText("✓ Saved");
+        // Visually mark the deck as saved.
+        deck.addClass("is-saved");
+      } catch (err) {
         saveBtn.disabled = false;
         saveBtn.setText(`💾 Save ${proposals.length} to “${options.testName}”`);
-        return;
       }
-      saveBtn.setText("✓ Saved");
-      // Visually mark the deck as saved.
-      deck.addClass("is-saved");
-    } catch (err) {
-      saveBtn.disabled = false;
-      saveBtn.setText(`💾 Save ${proposals.length} to “${options.testName}”`);
-    }
-
+    })();
   });
 
   updateCard();

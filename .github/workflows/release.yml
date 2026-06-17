@@ -1,0 +1,56 @@
+name: Release Obsidian plugin
+
+# Tag a commit with the plugin version (e.g. `1.2.0`, matching
+# manifest.json) and push the tag to cut a release:
+#   git tag 1.2.0 && git push origin 1.2.0
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: write # create the GitHub release + upload assets
+  id-token: write # required by attest-build-provenance
+  attestations: write # write the artifact attestations
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        # Mirrors ci.yml — the host project pins @types/node ^16 while
+        # vitest wants >=18, so --legacy-peer-deps keeps the install
+        # identical to the local/dev workflow.
+        run: npm install --legacy-peer-deps
+
+      - name: Build
+        run: npm run build
+
+      - name: Generate artifact attestations
+        # Lets users cryptographically verify that the released
+        # main.js / styles.css were built from this repository.
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
+
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          gh release create "$tag" \
+            --title="$tag" \
+            --notes="Release $tag" \
+            main.js manifest.json styles.css

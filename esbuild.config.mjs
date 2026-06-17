@@ -1,6 +1,11 @@
 import esbuild from "esbuild";
 import process from "process";
-import builtins from "builtin-modules";
+import { builtinModules } from "node:module";
+
+// Node's built-in modules, with and without the `node:` protocol prefix,
+// so esbuild treats every form as external. Replaces the third-party
+// `builtin-modules` package (flagged by the Obsidian plugin review).
+const builtins = [...builtinModules, ...builtinModules.map((m) => `node:${m}`)];
 
 const banner =
 `/*

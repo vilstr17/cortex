@@ -19,7 +19,7 @@ interface ProxyRefreshResponse {
 
 function isValidProxyRefreshResponse(obj: unknown): obj is ProxyRefreshResponse {
   if (!isPlainObject(obj)) return false;
-  const rec = obj as Record<string, unknown>;
+  const rec = obj;
   if ("access_token" in rec && typeof rec.access_token !== "string") return false;
   if ("refresh_token" in rec && typeof rec.refresh_token !== "string") return false;
   if ("error" in rec && typeof rec.error !== "string") return false;
@@ -32,12 +32,12 @@ interface CalendarListResponse {
 }
 
 function isValidCalendarListResponse(obj: unknown): obj is CalendarListResponse {
-  return isPlainObject(obj) && (!("items" in obj) || Array.isArray((obj as Record<string, unknown>).items));
+  return isPlainObject(obj) && (!("items" in obj) || Array.isArray((obj).items));
 }
 
 function isCalendarEvent(value: unknown): value is CalendarEvent {
   if (!isPlainObject(value)) return false;
-  const rec = value as Record<string, unknown>;
+  const rec = value;
   return isPlainObject(rec.start) && isPlainObject(rec.end);
 }
 
@@ -69,7 +69,7 @@ export class GoogleCalendarService {
   private settings: ChronoteSettings;
   private saveSettingsCallback: () => Promise<void>;
   private refreshMutex: Promise<string> | null = null;
-  private preemptiveTimer: ReturnType<typeof setInterval> | null = null;
+  private preemptiveTimer: number | null = null;
 
   constructor(settings: ChronoteSettings, saveSettingsCallback: () => Promise<void>) {
     this.settings = settings;
@@ -79,7 +79,7 @@ export class GoogleCalendarService {
 
   destroy(): void {
     if (this.preemptiveTimer) {
-      clearInterval(this.preemptiveTimer);
+      window.clearInterval(this.preemptiveTimer);
       this.preemptiveTimer = null;
     }
   }
@@ -112,7 +112,7 @@ export class GoogleCalendarService {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ refresh_token: rt }),
           });
-          const data = response.json;
+          const data: unknown = response.json;
           if (!isValidProxyRefreshResponse(data) || !data.access_token) {
             throw new Error(isValidProxyRefreshResponse(data) && data.error ? data.error : "Proxy refresh failed");
           }
@@ -186,23 +186,25 @@ export class GoogleCalendarService {
   private startPreemptiveRefresh(): void {
     if (this.preemptiveTimer) return;
 
-    this.preemptiveTimer = setInterval(async () => {
-      if (!this.settings.googleAccessToken || !this.settings.googleRefreshToken) return;
+    this.preemptiveTimer = window.setInterval(() => {
+      void (async () => {
+        if (!this.settings.googleAccessToken || !this.settings.googleRefreshToken) return;
 
-      const msUntilExpiry = this.settings.googleTokenExpiry - Date.now();
-      if (msUntilExpiry < PREEMPTIVE_REFRESH_MS && msUntilExpiry > -60_000) {
-        try {
-          await this.serializedRefresh();
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          if (msg === "invalid_grant" || msg.includes("invalid_grant")) {
-            this.settings.googleAccessToken = "";
-            this.settings.googleRefreshToken = "";
-            this.settings.googleTokenExpiry = 0;
-            await this.saveSettingsCallback();
+        const msUntilExpiry = this.settings.googleTokenExpiry - Date.now();
+        if (msUntilExpiry < PREEMPTIVE_REFRESH_MS && msUntilExpiry > -60_000) {
+          try {
+            await this.serializedRefresh();
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            if (msg === "invalid_grant" || msg.includes("invalid_grant")) {
+              this.settings.googleAccessToken = "";
+              this.settings.googleRefreshToken = "";
+              this.settings.googleTokenExpiry = 0;
+              await this.saveSettingsCallback();
+            }
           }
         }
-      }
+      })();
     }, 60_000);
 
   }
@@ -272,7 +274,7 @@ export class GoogleCalendarService {
         },
       });
 
-      const data = response.json;
+      const data: unknown = response.json;
       const items: CalendarEvent[] = isValidCalendarListResponse(data)
         ? (data.items ?? []).filter(isCalendarEvent)
         : [];
@@ -358,6 +360,6 @@ export class GoogleCalendarService {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
   }
 }

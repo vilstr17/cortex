@@ -142,7 +142,7 @@ export function migrateSettings(raw: unknown): ChronoteSettings {
     typeof safeRaw.geminiModel === "string"
   ) {
     const aiRaw = isPlainObject(migrated.ai)
-      ? (migrated.ai as Record<string, unknown>)
+      ? (migrated.ai)
       : {};
     migrated.ai = {
       ...(DEFAULT_SETTINGS.ai as unknown as Record<string, unknown>),
@@ -151,12 +151,12 @@ export function migrateSettings(raw: unknown): ChronoteSettings {
         typeof safeRaw.geminiApiKey === "string"
           ? safeRaw.geminiApiKey
           : (aiRaw.geminiApiKey as string | undefined) ??
-            (DEFAULT_SETTINGS.ai.geminiApiKey as string),
+            (DEFAULT_SETTINGS.ai.geminiApiKey),
       geminiModel:
         typeof safeRaw.geminiModel === "string"
           ? safeRaw.geminiModel
           : (aiRaw.geminiModel as string | undefined) ??
-            (DEFAULT_SETTINGS.ai.geminiModel as string),
+            (DEFAULT_SETTINGS.ai.geminiModel),
     };
   }
 
@@ -170,7 +170,7 @@ export function migrateSettings(raw: unknown): ChronoteSettings {
     safeRaw.embeddingModel.length > 0
   ) {
     const aiRaw = isPlainObject(migrated.ai)
-      ? (migrated.ai as Record<string, unknown>)
+      ? (migrated.ai)
       : {};
     const existing = aiRaw.embeddingModel;
     if (typeof existing !== "string" || existing.length === 0) {
@@ -196,7 +196,7 @@ export function migrateSettings(raw: unknown): ChronoteSettings {
   // per-subkey normalization blocks below only rebuild `ai` for the
   // specific subkey they're handling.
   if (isPlainObject(migrated.ai)) {
-    const aiRaw = migrated.ai as Record<string, unknown>;
+    const aiRaw = migrated.ai;
     const aiDefaults = DEFAULT_SETTINGS.ai as unknown as Record<string, unknown>;
     for (const [key, defaultValue] of Object.entries(aiDefaults)) {
       if (!(key in aiRaw)) {
@@ -227,9 +227,9 @@ export function migrateSettings(raw: unknown): ChronoteSettings {
   // edit here would leak into the module-level `DEFAULT_SETTINGS`
   // constant and break subsequent tests.
   if (isPlainObject(migrated.ai)) {
-    const aiRaw = migrated.ai as Record<string, unknown>;
+    const aiRaw = migrated.ai;
     const existing = isPlainObject(aiRaw.baseUrls)
-      ? (aiRaw.baseUrls as Record<string, unknown>)
+      ? (aiRaw.baseUrls)
       : {};
     const map: Record<string, string> = {};
     for (const [provider, value] of Object.entries(existing)) {

@@ -165,7 +165,7 @@ export default class ChronotePlugin extends Plugin {
     // Build marker — lets us confirm which main.js Obsidian actually
     // loaded. If this line isn't in the console after a reload, the
     // new build didn't take (stale plugin in memory).
-    const raw = await this.loadData();
+    const raw: unknown = await this.loadData();
 
     this.settings = migrateSettings(raw);
 
@@ -227,7 +227,7 @@ export default class ChronotePlugin extends Plugin {
     // Listen on the document so the handler works regardless of
     // which leaf is focused, and survives Obsidian re-rendering
     // the markdown view.
-    this.registerDomEvent(document, "click", studyClickHandler);
+    this.registerDomEvent(activeDocument, "click", studyClickHandler);
 
     this.testService = new TestService(this);
 
@@ -285,12 +285,12 @@ export default class ChronotePlugin extends Plugin {
     );
 
     this.addRibbonIcon("brain", "Open Chronote Dashboard", () => {
-      this.openDashboard();
+      void this.openDashboard();
     });
 
     this.addCommand({
-      id: "open-chronote-dashboard",
-      name: "Open Chronote Dashboard",
+      id: "open-dashboard",
+      name: "Open dashboard",
       callback: () => this.openDashboard(),
     });
 
@@ -314,8 +314,7 @@ export default class ChronotePlugin extends Plugin {
     this.updateAutoIndexSchedule();
   }
 
-  async onunload(): Promise<void> {
-    this.app.workspace.detachLeavesOfType(CHRONOTE_DASHBOARD_VIEW);
+  onunload(): void {
     if (this.autoIndexIntervalId !== null) {
       window.clearInterval(this.autoIndexIntervalId);
       this.autoIndexIntervalId = null;
@@ -329,14 +328,14 @@ export default class ChronotePlugin extends Plugin {
     const existingLeaves = workspace.getLeavesOfType(CHRONOTE_DASHBOARD_VIEW);
 
     if (existingLeaves.length > 0) {
-      workspace.revealLeaf(existingLeaves[0]);
+      await workspace.revealLeaf(existingLeaves[0]);
       return;
     }
 
     const leaf = workspace.getLeftLeaf(false);
     if (leaf) {
       await leaf.setViewState({ type: CHRONOTE_DASHBOARD_VIEW });
-      workspace.revealLeaf(leaf);
+      await workspace.revealLeaf(leaf);
     }
   }
 

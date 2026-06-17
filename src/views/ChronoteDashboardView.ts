@@ -3,6 +3,7 @@ import ChronotePlugin from "../main.js";
 import { DisplayCalendarEvent } from "../services/googleCalendarService.js";
 import { ChronoteChatModal } from "../modals/ChronoteChatModal.js";
 import { CreateTestModal } from "../modals/CreateTestModal.js";
+import { ConfirmModal } from "../modals/ConfirmModal.js";
 import { ReviewFilterModal, ReviewFilters } from "../modals/ReviewFilterModal.js";
 import { TestService } from "../services/testService.js";
 import { ChronoteTest } from "../settings.js";
@@ -92,7 +93,7 @@ export class ChronoteDashboardView extends ItemView {
 			this.lastCalendarFetch = 0;
 			this.lastFetchedEvents = null;
 			this.lastFetchedCalendarDate = null;
-			this.render();
+			void this.render();
 		});
 
 		this.reviewsContainer = wrapper.createDiv({ cls: "chronote-reviews-section" });
@@ -103,12 +104,12 @@ export class ChronoteDashboardView extends ItemView {
 		// Debounced: while editing, metadata changes fire on every save —
 		// re-rendering the whole dashboard (incl. a calendar fetch) each
 		// time causes visible lag.
-		let renderTimer: ReturnType<typeof setTimeout> | null = null;
+		let renderTimer: number | null = null;
 		this.registerEvent(
 			this.app.metadataCache.on("changed", (file) => {
 				if (file instanceof TFile && file.extension === "md") {
-					if (renderTimer) clearTimeout(renderTimer);
-					renderTimer = setTimeout(() => {
+					if (renderTimer) window.clearTimeout(renderTimer);
+					renderTimer = window.setTimeout(() => {
 						this.renderReviews();
 						this.renderTests();
 					}, 2000);
@@ -116,7 +117,7 @@ export class ChronoteDashboardView extends ItemView {
 			}),
 		);
 
-		this.render();
+		void this.render();
 	}
 
 	private async render(): Promise<void> {
@@ -141,7 +142,7 @@ export class ChronoteDashboardView extends ItemView {
 		this.authContainer.empty();
 		this.scheduleContainer.empty();
 		if (!this.plugin.settings.googleAccessToken) { this.renderConnectButton(); return; }
-		this.renderTodaysSchedule();
+		void this.renderTodaysSchedule();
 	}
 
 	/**
@@ -161,7 +162,7 @@ export class ChronoteDashboardView extends ItemView {
 			cls: "chronote-calendar-connect-desc",
 		});
 		const btn = this.authContainer.createEl("button", { cls: "chronote-connect-google-btn", text: "Connect Google Calendar" });
-		btn.addEventListener("click", async () => { await this.handleConnectGoogleCalendar(); });
+		btn.addEventListener("click", () => { void this.handleConnectGoogleCalendar(); });
 	}
 
 	private async handleConnectGoogleCalendar(): Promise<void> {
@@ -190,14 +191,13 @@ export class ChronoteDashboardView extends ItemView {
 		this.scheduleContainer.empty();
 
 		const hr = this.scheduleContainer.createDiv({ cls: "chronote-dashboard-header-row" });
-		hr.style.display = "flex"; hr.style.justifyContent = "space-between"; hr.style.alignItems = "center"; hr.style.marginBottom = "10px";
 		const titleStr = isSameLocalDay(this.currentCalendarDate, new Date()) ? `Today's Schedule (${events.length})` : `${this.currentCalendarDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })} Schedule (${events.length})`;
-		const t = hr.createEl("h2", { text: titleStr }); t.style.margin = "0";
+		hr.createEl("h2", { text: titleStr });
 
-		const nav = this.createDateNav(hr,
-			() => { const d = new Date(this.currentCalendarDate); d.setDate(d.getDate() - 1); this.currentCalendarDate = d; this.renderTodaysSchedule(); },
-			() => { this.currentCalendarDate = startOfLocalDay(new Date()); this.renderTodaysSchedule(); },
-			() => { const d = new Date(this.currentCalendarDate); d.setDate(d.getDate() + 1); this.currentCalendarDate = d; this.renderTodaysSchedule(); },
+		this.createDateNav(hr,
+			() => { const d = new Date(this.currentCalendarDate); d.setDate(d.getDate() - 1); this.currentCalendarDate = d; void this.renderTodaysSchedule(); },
+			() => { this.currentCalendarDate = startOfLocalDay(new Date()); void this.renderTodaysSchedule(); },
+			() => { const d = new Date(this.currentCalendarDate); d.setDate(d.getDate() + 1); this.currentCalendarDate = d; void this.renderTodaysSchedule(); },
 		);
 
 		if (events.length === 0) { this.scheduleContainer.createDiv({ cls: "chronote-schedule-placeholder", text: "No events scheduled for this day." }); return; }
@@ -217,8 +217,7 @@ export class ChronoteDashboardView extends ItemView {
 		this.reviewsContainer.empty();
 
 		const hr = this.reviewsContainer.createDiv({ cls: "chronote-dashboard-header-row" });
-		hr.style.display = "flex"; hr.style.justifyContent = "space-between"; hr.style.alignItems = "center"; hr.style.marginBottom = "10px";
-		const header = hr.createEl("h2", { text: "" }); header.style.margin = "0";
+		const header = hr.createEl("h2", { text: "" });
 
 		const nav = this.createDateNav(hr,
 			() => { const d = new Date(this.currentReviewsDate); d.setDate(d.getDate() - 1); this.currentReviewsDate = d; this.renderDueReviews(); },
@@ -271,7 +270,7 @@ export class ChronoteDashboardView extends ItemView {
 			if (isOverdue) li.addClasses(["chronote-overdue"]);
 			if (isOverdue) li.createEl("span", { cls: "chronote-badge chronote-overdue-badge", text: "overdue" });
 			const link = li.createEl("a", { cls: "chronote-note-link", text: file.basename });
-			link.addEventListener("click", async (e) => { e.preventDefault(); await this.app.workspace.getLeaf("tab").openFile(file); });
+			link.addEventListener("click", (e) => { e.preventDefault(); void this.app.workspace.getLeaf("tab").openFile(file); });
 			li.createSpan({ cls: "chronote-note-date", text: nextReview.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) });
 		}
 	}
@@ -295,7 +294,7 @@ export class ChronoteDashboardView extends ItemView {
 	}
 
 	private renderTestItem(test: ChronoteTest): HTMLElement {
-		const item = document.createElement("div"); item.className = "chronote-test-item";
+		const item = activeDocument.createElement("div"); item.className = "chronote-test-item";
 		if (test.done) item.addClass("chronote-test-done");
 		const hr = item.createDiv({ cls: "chronote-test-header" });
 		const icon = hr.createDiv({ cls: "chronote-expand-icon" }); setIcon(icon, "chevron-right");
@@ -303,7 +302,7 @@ export class ChronoteDashboardView extends ItemView {
 
 		const doneBtn = hr.createEl("button", { cls: "chronote-done-btn" + (test.done ? " is-done" : ""), attr: { title: test.done ? "Mark as not done" : "Mark as done" } });
 		setIcon(doneBtn, test.done ? "check-circle" : "circle");
-		doneBtn.addEventListener("click", async (e) => { e.stopPropagation(); await this.testService.toggleDone(test.id); this.renderTests(); this.renderReviews(); });
+		doneBtn.addEventListener("click", (e) => { e.stopPropagation(); void (async () => { await this.testService.toggleDone(test.id); this.renderTests(); this.renderReviews(); })(); });
 
 		const d = parseLocalDate(test.date) || startOfLocalDay(new Date());
 		const ds = d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
@@ -329,20 +328,29 @@ export class ChronoteDashboardView extends ItemView {
 			if (excl) li.addClass("excluded");
 
 			const link = li.createEl("a", { cls: "chronote-test-note-link", text: file.basename });
-			link.addEventListener("click", async (e) => { e.preventDefault(); await this.app.workspace.getLeaf("tab").openFile(file); });
+			link.addEventListener("click", (e) => { e.preventDefault(); void this.app.workspace.getLeaf("tab").openFile(file); });
 
 			const ss = li.createEl("span", { cls: "chronote-test-note-score" });
 			if (fm?.confidence !== undefined && fm?.confidence !== null) { ss.addClass("has-score"); ss.setText(`Score: ${fm.confidence}/5`); }
 			else { ss.addClass("no-score"); ss.setText("No score"); }
 
 			const exb = li.createEl("button", { cls: "chronote-exclude-btn" + (excl ? " excluded" : ""), text: excl ? "Excluded" : "Exclude" });
-			exb.addEventListener("click", async (e) => { e.stopPropagation(); await this.toggleExcl(file, excl); this.renderTests(); });
+			exb.addEventListener("click", (e) => { e.stopPropagation(); void (async () => { await this.toggleExcl(file, excl); this.renderTests(); })(); });
 			li.appendChild(link); li.appendChild(ss); li.appendChild(exb);
 		}
 
 		const dbtn = item.createEl("button", { cls: "chronote-test-delete-btn" });
 		setIcon(dbtn, "trash");
-		dbtn.addEventListener("click", async (e) => { e.stopPropagation(); if (confirm(`Delete "${test.name}"?`)) { await this.testService.removeTest(test.id); this.renderTests(); this.renderReviews(); } });
+		dbtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			new ConfirmModal(this.app, `Delete "${test.name}"?`, () => {
+				void (async () => {
+					await this.testService.removeTest(test.id);
+					this.renderTests();
+					this.renderReviews();
+				})();
+			}).open();
+		});
 
 		item.addEventListener("click", (e) => {
 			const el = e.target as HTMLElement;
@@ -354,7 +362,7 @@ export class ChronoteDashboardView extends ItemView {
 	}
 
 	private async toggleExcl(file: TFile, excl: boolean): Promise<void> {
-		await this.app.fileManager.processFrontMatter(file, (fm) => { if (excl) delete fm["exclude_from_exam"]; else fm["exclude_from_exam"] = true; });
+		await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => { if (excl) delete fm["exclude_from_exam"]; else fm["exclude_from_exam"] = true; });
 	}
 
 	private calculateTestProgress(test: ChronoteTest): number {
@@ -421,7 +429,7 @@ export class ChronoteDashboardView extends ItemView {
 	}
 
 	private getDueNoteScore(f: TFile): number | null {
-		const raw = this.app.metadataCache.getFileCache(f)?.frontmatter?.confidence;
+		const raw: unknown = this.app.metadataCache.getFileCache(f)?.frontmatter?.confidence;
 		if (raw === undefined || raw === null) return null;
 		const v = Number(raw); if (!Number.isFinite(v)) return null;
 		return Math.max(1, Math.min(5, v));

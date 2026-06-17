@@ -35,10 +35,8 @@ export class ReviewFilterModal extends Modal {
 		contentEl.createEl("h3", { text: "Sort by score:" });
 
 		const sortContainer = contentEl.createDiv({ cls: "chronote-filter-sort-group" });
-		sortContainer.style.cssText = "display: flex; flex-direction: column; gap: 0.5em; margin-bottom: 1.5em;";
 
 		const lowToHighLabel = sortContainer.createEl("label", { cls: "chronote-filter-checkbox" });
-		lowToHighLabel.style.cssText = "display: flex; align-items: center; cursor: pointer; gap: 0.5em;";
 		const lowToHighInput = lowToHighLabel.createEl("input", { type: "radio", attr: { name: "sort-order", value: "low-to-high" } });
 		lowToHighInput.checked = this.currentFilters.sortOrder === "low-to-high";
 		lowToHighInput.addEventListener("change", () => {
@@ -47,7 +45,6 @@ export class ReviewFilterModal extends Modal {
 		lowToHighLabel.createEl("span", { text: "Low to High (unknown first)" });
 
 		const highToLowLabel = sortContainer.createEl("label", { cls: "chronote-filter-checkbox" });
-		highToLowLabel.style.cssText = "display: flex; align-items: center; cursor: pointer; gap: 0.5em;";
 		const highToLowInput = highToLowLabel.createEl("input", { type: "radio", attr: { name: "sort-order", value: "high-to-low" } });
 		highToLowInput.checked = this.currentFilters.sortOrder === "high-to-low";
 		highToLowInput.addEventListener("change", () => {
@@ -60,11 +57,9 @@ export class ReviewFilterModal extends Modal {
 			contentEl.createEl("h3", { text: "Filter by test:" });
 
 			const testContainer = contentEl.createDiv({ cls: "chronote-filter-test-group" });
-			testContainer.style.cssText = "display: flex; flex-direction: column; gap: 0.5em; margin-bottom: 1.5em;";
 
 			// "All Tests" checkbox
 			const allTestsLabel = testContainer.createEl("label", { cls: "chronote-filter-checkbox" });
-			allTestsLabel.style.cssText = "display: flex; align-items: center; cursor: pointer; gap: 0.5em;";
 			const allTestsInput = allTestsLabel.createEl("input", { type: "checkbox", attr: { value: "all" } });
 			const allTestsChecked = this.currentFilters.selectedTestIds.size === 0 || this.currentFilters.selectedTestIds.size === this.allTests.length;
 			allTestsInput.checked = allTestsChecked;
@@ -81,8 +76,7 @@ export class ReviewFilterModal extends Modal {
 
 			// Individual test checkboxes
 			for (const test of this.allTests) {
-				const testLabel = testContainer.createEl("label", { cls: "chronote-filter-checkbox" });
-				testLabel.style.cssText = "display: flex; align-items: center; cursor: pointer; gap: 0.5em; padding-left: 1.5em;";
+				const testLabel = testContainer.createEl("label", { cls: "chronote-filter-checkbox is-indented" });
 				const testInput = testLabel.createEl("input", { type: "checkbox", attr: { value: test.id } });
 				
 				// If selectedTestIds is empty, it means all tests are selected
@@ -102,13 +96,11 @@ export class ReviewFilterModal extends Modal {
 
 		// ── Buttons ──
 		const buttonContainer = contentEl.createDiv({ cls: "chronote-filter-buttons" });
-		buttonContainer.style.cssText = "display: flex; gap: 0.5em; margin-top: 1.5em;";
 
 		const applyBtn = buttonContainer.createEl("button", {
 			cls: "chronote-filter-apply-btn",
 			text: "Apply",
 		});
-		applyBtn.style.cssText = "flex: 1; padding: 0.5em;";
 		applyBtn.addEventListener("click", () => {
 			this.onApply(this.currentFilters);
 			this.close();
@@ -118,7 +110,6 @@ export class ReviewFilterModal extends Modal {
 			cls: "chronote-filter-cancel-btn",
 			text: "Cancel",
 		});
-		cancelBtn.style.cssText = "flex: 1; padding: 0.5em;";
 		cancelBtn.addEventListener("click", () => {
 			this.close();
 		});

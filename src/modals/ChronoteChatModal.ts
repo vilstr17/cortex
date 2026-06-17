@@ -147,7 +147,7 @@ export class ChronoteChatModal extends Modal {
     this.inputEl.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        this.sendMessage();
+        void this.sendMessage();
       }
     });
 
@@ -155,11 +155,11 @@ export class ChronoteChatModal extends Modal {
       cls: "chat-send-btn",
       text: "Send",
     });
-    this.sendBtn.addEventListener("click", () => this.sendMessage());
+    this.sendBtn.addEventListener("click", () => { void this.sendMessage(); });
 
     // Auto-resize textarea
     this.inputEl.addEventListener("input", () => {
-      this.inputEl.style.height = "auto";
+      this.inputEl.setCssStyles({ height: "auto" });
       this.inputEl.style.height = Math.min(this.inputEl.scrollHeight, 120) + "px";
     });
   }
@@ -194,7 +194,7 @@ export class ChronoteChatModal extends Modal {
 
     // Clear input
     this.inputEl.value = "";
-    this.inputEl.style.height = "auto";
+    this.inputEl.setCssStyles({ height: "auto" });
 
     // Append user message
     this.appendUserMessage(text);
@@ -440,10 +440,12 @@ export class ChronoteChatModal extends Modal {
       cls: "mod-cta",
       text: "✓ Approve Schedule",
     });
-    approveBtn.addEventListener("click", async () => {
-      await this.approveSchedule(events);
-      approveBtn.disabled = true;
-      approveBtn.setText("✓ Events created");
+    approveBtn.addEventListener("click", () => {
+      void (async () => {
+        await this.approveSchedule(events);
+        approveBtn.disabled = true;
+        approveBtn.setText("✓ Events created");
+      })();
     });
   }
 
@@ -689,7 +691,7 @@ export class ChronoteChatModal extends Modal {
     const files = this.app.vault.getMarkdownFiles();
     for (const file of files) {
       const cache = this.app.metadataCache.getFileCache(file);
-      const fm = cache?.frontmatter;
+      const fm: Record<string, unknown> | undefined = cache?.frontmatter;
       if (!fm) continue;
 
       const rawDate = fm.next_review;
@@ -720,7 +722,7 @@ export class ChronoteChatModal extends Modal {
     if (!jsonMatch) return { text, events: null };
 
     try {
-      const parsed = JSON.parse(jsonMatch[0]);
+      const parsed: unknown = JSON.parse(jsonMatch[0]);
       if (Array.isArray(parsed) && parsed.length > 0) {
         const hasEventShape = parsed.every(
           (item: unknown) =>

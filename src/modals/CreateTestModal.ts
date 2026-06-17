@@ -57,8 +57,7 @@ export class CreateTestModal extends Modal {
         value: defaultDate,
       },
     });
-    dateInput.style.cssText =
-      "width: 100%; padding: 6px 8px; border-radius: 4px; border: 1px solid var(--background-modifier-border); background: var(--background-modifier-form-field); color: var(--text-normal); font-size: var(--font-ui-small);";
+    dateInput.addClass("chronote-create-test-date-input");
 
     dateInput.addEventListener("change", () => {
       this.testDate = dateInput!.value;

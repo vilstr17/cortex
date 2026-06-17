@@ -193,7 +193,7 @@ export class AnthropicAdapter implements AIProviderAdapter {
             prev.content.push({ type: "text", text: m.text });
           } else {
             prev.content = [
-              { type: "text", text: prev.content as string },
+              { type: "text", text: prev.content },
               { type: "text", text: m.text },
             ];
           }

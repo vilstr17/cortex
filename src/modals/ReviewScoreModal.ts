@@ -25,7 +25,6 @@ export class ReviewScoreModal extends Modal {
       .setName("Review Score")
       .setDesc('Left (1) = "Don\'t know it at all"  ·  Right (5) = "Know it perfectly"');
     sliderSetting.settingEl.addClass("chronote-review-score-setting");
-    sliderSetting.settingEl.style.display = "block";
 
     const scoreInfoButton = sliderSetting.nameEl.createEl("button", {
       cls: "chronote-score-info-btn",
@@ -45,7 +44,6 @@ export class ReviewScoreModal extends Modal {
       cls: "chronote-score-label",
       text: `${this.score} / 5`,
     });
-    this.scoreLabel.style.cssText = "font-weight: bold; font-size: 1.4em; display: block; text-align: center; margin-bottom: 0.75em;";
 
     sliderSetting.addSlider((slider) => {
       this.slider = slider;
@@ -59,12 +57,9 @@ export class ReviewScoreModal extends Modal {
         });
 
       // Force the slider to be wide and easier to grab
-      slider.sliderEl.style.width = "100%";
-      slider.sliderEl.style.padding = "12px 0";
     });
 
     // Ensure the Setting's info/name area also stretches
-    sliderSetting.infoEl.style.marginBottom = "0.5em";
 
     // Scale legend — evenly spaced labels directly under the slider
     const legend = contentEl.createDiv({ cls: "chronote-score-legend" });

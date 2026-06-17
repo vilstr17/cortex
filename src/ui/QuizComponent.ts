@@ -47,7 +47,8 @@ export function renderQuizComponent(
 
   function renderQuestion() {
     answered = false;
-    feedbackEl.style.display = "none";
+    feedbackEl.removeClass("is-correct");
+    feedbackEl.removeClass("is-incorrect");
     feedbackEl.empty();
     optionsEl.empty();
 
@@ -75,7 +76,7 @@ export function renderQuizComponent(
     if (correct) score++;
 
     // Disable all option buttons and mark correct / incorrect.
-    const buttons = Array.from(optionsEl.querySelectorAll(".chronote-quiz-option")) as HTMLButtonElement[];
+    const buttons = Array.from(optionsEl.querySelectorAll<HTMLButtonElement>(".chronote-quiz-option"));
     buttons.forEach((b, idx) => {
       b.disabled = true;
       if (idx === q.correct_index) {
@@ -85,7 +86,6 @@ export function renderQuizComponent(
       }
     });
 
-    feedbackEl.style.display = "";
     feedbackEl.addClass(correct ? "is-correct" : "is-incorrect");
     feedbackEl.createEl("strong", {
       text: correct ? "Correct!" : "Not quite.",
@@ -113,7 +113,7 @@ export function renderQuizComponent(
     const pct = quiz.questions.length === 0 ? 0 : Math.round((score / quiz.questions.length) * 100);
     summary.createEl("p", { text: `${pct}% correct` });
 
-    progressFill.style.width = "100%";
+    progressFill.setCssStyles({ width: "100%" });
   }
 
   nextBtn.addEventListener("click", () => {

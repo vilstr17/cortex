@@ -1,7 +1,7 @@
 {
   "name": "chronote",
-  "version": "1.1.0",
-  "description": "Spaced-repetition study tool with Google Calendar scheduling, multi-provider AI agent",
+  "version": "1.1.1",
+  "description": "Spaced-repetition study tool with Google Calendar scheduling and a multi-provider AI agent.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
@@ -21,7 +21,6 @@
     "@typescript-eslint/eslint-plugin": "^5.29.0",
     "@typescript-eslint/parser": "^5.29.0",
     "@vitest/coverage-v8": "^1.6.1",
-    "builtin-modules": "3.3.0",
     "esbuild": "0.17.3",
     "eslint": "^8.57.1",
     "obsidian": "latest",

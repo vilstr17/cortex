@@ -51,14 +51,13 @@ export class ChronoteSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h3", { text: "Chronote" });
     containerEl.createEl("p", {
       text: "All review data is stored locally in each note's YAML frontmatter (confidence, interval, next_review).",
     });
 
-    containerEl.createEl("h4", { text: "AI Provider" });
+    new Setting(containerEl).setName("AI Provider").setHeading();
     containerEl.createEl("p", {
-      text: "Pick a provider and supply credentials, or use Chronote Cloud for managed access. Local providers (Ollama, LM Studio) run on your machine; the others call out to a hosted API. Only the fields for the active provider are used.",
+      text: "Pick a provider and supply credentials. Local providers (Ollama, LM Studio) run on your machine; the others call out to a hosted API. Only the fields for the active provider are used.",
     });
 
     // Important: embeddings are provider-specific, so the index must be rebuilt.
@@ -73,6 +72,9 @@ export class ChronoteSettingTab extends PluginSettingTab {
       .setDesc("Switching providers does not clear the others' credentials — you can flip back without re-entering anything.")
       .addDropdown((dropdown) => {
         for (const p of Object.keys(PROVIDER_LABELS) as AIProvider[]) {
+          // Chronote Cloud is not yet available — keep it out of the
+          // picker so users can't select a provider that doesn't work.
+          if (p === "chronote_cloud") continue;
           dropdown.addOption(p, PROVIDER_LABELS[p]);
         }
         dropdown.setValue(this.plugin.settings.ai.provider);
@@ -238,7 +240,7 @@ export class ChronoteSettingTab extends PluginSettingTab {
           })
       );
 
-    const prefTextArea = containerEl.querySelector("textarea") as HTMLTextAreaElement | null;
+    const prefTextArea = containerEl.querySelector("textarea");
     if (prefTextArea) {
       prefTextArea.rows = 4;
     }
@@ -257,7 +259,7 @@ export class ChronoteSettingTab extends PluginSettingTab {
       );
     
     // Daily Routine section
-    containerEl.createEl("h4", { text: "Daily Routine" });
+    new Setting(containerEl).setName("Daily Routine").setHeading();
     
     new Setting(containerEl)
       .setName("Wake Up Time")
@@ -286,7 +288,7 @@ export class ChronoteSettingTab extends PluginSettingTab {
       );
       
     // Review load balancing section
-    containerEl.createEl("h4", { text: "Review scheduling" });
+    new Setting(containerEl).setName("Review scheduling").setHeading();
 
     const clampDailyLimit = (value: number): number => {
       return Math.max(1, Math.min(20, value));
@@ -354,7 +356,7 @@ export class ChronoteSettingTab extends PluginSettingTab {
       );
 
     // Google Calendar section
-    containerEl.createEl("h4", { text: "Google Calendar" });
+    new Setting(containerEl).setName("Google Calendar").setHeading();
     containerEl.createEl("p", {
       text: "Google Calendar is connected from the Dashboard. If you encounter permission errors, disconnect and re-authenticate with the correct scopes.",
     });
@@ -383,7 +385,7 @@ export class ChronoteSettingTab extends PluginSettingTab {
     // `DEFAULT_EMBEDDING_MODEL`) — there's no separate field to keep
     // in sync. The status line is a small `setDesc` we refresh on
     // every `display()` call so it reflects the live index state.
-    containerEl.createEl("h4", { text: "Indexing" });
+    new Setting(containerEl).setName("Indexing").setHeading();
     containerEl.createEl("p", {
       text:
         "Embeddings use the active AI provider's key and base URL, with " +

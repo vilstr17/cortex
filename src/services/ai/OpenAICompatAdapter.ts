@@ -224,7 +224,7 @@ export class OpenAICompatAdapter implements AIProviderAdapter {
     const nativeToolCalls: ToolCall[] = (message.tool_calls ?? []).map((tc) => {
       let args: Record<string, unknown> = {};
       try {
-        const parsed = JSON.parse(tc.function.arguments);
+        const parsed: unknown = JSON.parse(tc.function.arguments);
         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
           args = parsed as Record<string, unknown>;
         }

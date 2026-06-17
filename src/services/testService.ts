@@ -83,7 +83,7 @@ export class TestService {
     const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
     if (!(file instanceof TFile)) return;
 
-    await this.plugin.app.fileManager.processFrontMatter(file, (frontmatter) => {
+    await this.plugin.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
       frontmatter.exam_date = test.date;
     });
   }
