@@ -1,6 +1,6 @@
 import { App, FuzzySuggestModal, Notice, Platform, PluginSettingTab, Setting } from "obsidian";
 import { requestUrl } from "obsidian";
-import CortexPlugin from "./main.js";
+import ChronotePlugin from "./main.js";
 
 // Re-export the pure data types from the dependency-free module so tests
 // and other non-Obsidian code paths can import them without pulling in
@@ -8,12 +8,12 @@ import CortexPlugin from "./main.js";
 export type {
   AIProvider,
   AIProviderConfig,
-  CortexTest,
-  CortexSettings,
+  ChronoteTest,
+  ChronoteSettings,
   ResponseStyle,
 } from "./settingsTypes.js";
 export { DEFAULT_SETTINGS } from "./settingsTypes.js";
-import type { AIProvider, AIProviderConfig, CortexSettings, ResponseStyle } from "./settingsTypes.js";
+import type { AIProvider, AIProviderConfig, ChronoteSettings, ResponseStyle } from "./settingsTypes.js";
 import { formatRelative } from "./utils/formatRelative.js";
 
 import { DEFAULT_SETTINGS } from "./settingsTypes.js";
@@ -28,8 +28,8 @@ import {
 } from "./services/ai/catalog.js";
 import { listLocalModels } from "./services/ai/listLocalModels.js";
 
-export class CortexSettingTab extends PluginSettingTab {
-  plugin: CortexPlugin;
+export class ChronoteSettingTab extends PluginSettingTab {
+  plugin: ChronotePlugin;
 
   /**
    * Cache of models fetched from local AI servers. Persisted across
@@ -42,7 +42,7 @@ export class CortexSettingTab extends PluginSettingTab {
     lmstudio: [],
   };
 
-  constructor(app: App, plugin: CortexPlugin) {
+  constructor(app: App, plugin: ChronotePlugin) {
     super(app, plugin);
     this.plugin = plugin;
   }
@@ -51,19 +51,19 @@ export class CortexSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h3", { text: "Cortex" });
+    containerEl.createEl("h3", { text: "Chronote" });
     containerEl.createEl("p", {
       text: "All review data is stored locally in each note's YAML frontmatter (confidence, interval, next_review).",
     });
 
     containerEl.createEl("h4", { text: "AI Provider" });
     containerEl.createEl("p", {
-      text: "Pick a provider and supply credentials, or use Cortex Cloud for managed access. Local providers (Ollama, LM Studio) run on your machine; the others call out to a hosted API. Only the fields for the active provider are used.",
+      text: "Pick a provider and supply credentials, or use Chronote Cloud for managed access. Local providers (Ollama, LM Studio) run on your machine; the others call out to a hosted API. Only the fields for the active provider are used.",
     });
 
     // Important: embeddings are provider-specific, so the index must be rebuilt.
     containerEl.createEl("div", {
-      cls: "cortex-provider-warning",
+      cls: "chronote-provider-warning",
       text: "Important: each provider uses a different embedding model and index format. After switching providers, open the Dashboard and click Reindex vault. We recommend sticking with one provider to avoid rebuilding your index.",
     });
 
@@ -121,8 +121,8 @@ export class CortexSettingTab extends PluginSettingTab {
     // Provider-specific sub-sections
     const ai = this.plugin.settings.ai;
     switch (ai.provider) {
-      case "cortex_cloud":
-        this.renderCortexCloudSettings(containerEl, ai);
+      case "chronote_cloud":
+        this.renderChronoteCloudSettings(containerEl, ai);
         break;
       case "gemini":
         this.renderGeminiSettings(containerEl, ai);
@@ -468,17 +468,17 @@ export class CortexSettingTab extends PluginSettingTab {
   // showing only the active provider's fields; these methods don't
   // hide or unhide anything themselves.
 
-  private renderCortexCloudSettings(
+  private renderChronoteCloudSettings(
     containerEl: HTMLElement,
     ai: AIProviderConfig,
   ): void {
     containerEl.createEl("p", {
-      text: "Cortex Cloud routes through cortex-proxy.vercel.app. Billed per token. We pick the best price/perf model for you — no model to choose.",
-      cls: "cortex-settings-hint",
+      text: "Chronote Cloud routes through cortex-proxy.vercel.app. Billed per token. We pick the best price/perf model for you — no model to choose.",
+      cls: "chronote-settings-hint",
     });
 
     new Setting(containerEl)
-      .setName("Cortex account id")
+      .setName("Chronote account id")
       .setDesc(
         "Get one by signing up at the proxy site. The id is sent in the Authorization header on every chat request.",
       )
@@ -486,9 +486,9 @@ export class CortexSettingTab extends PluginSettingTab {
         text.inputEl.type = "password";
         text
           .setPlaceholder("acct_xxxxx")
-          .setValue(ai.cortexAccountId)
+          .setValue(ai.chronoteAccountId)
           .onChange(async (value) => {
-            this.plugin.settings.ai.cortexAccountId = value.trim();
+            this.plugin.settings.ai.chronoteAccountId = value.trim();
             await this.plugin.saveData(this.plugin.settings);
           });
       });
@@ -506,8 +506,8 @@ export class CortexSettingTab extends PluginSettingTab {
       );
 
     containerEl.createEl("p", {
-      text: "Cortex Cloud picks the embedding model for you — no configuration needed.",
-      cls: "cortex-settings-hint",
+      text: "Chronote Cloud picks the embedding model for you — no configuration needed.",
+      cls: "chronote-settings-hint",
     });
   }
 
@@ -560,7 +560,7 @@ export class CortexSettingTab extends PluginSettingTab {
   ): void {
     containerEl.createEl("p", {
       text: "Get an OpenAI API key from https://platform.openai.com/api-keys.",
-      cls: "cortex-settings-hint",
+      cls: "chronote-settings-hint",
     });
     new Setting(containerEl)
       .setName("OpenAI API key")
@@ -599,14 +599,14 @@ export class CortexSettingTab extends PluginSettingTab {
   ): void {
     containerEl.createEl("p", {
       text: "Get an Anthropic API key from https://console.anthropic.com/settings/keys.",
-      cls: "cortex-settings-hint",
+      cls: "chronote-settings-hint",
     });
     // Anthropic has no embedding endpoint, so we surface a clear
     // warning here. The user can still use Anthropic for chat — the
     // "Index vault" button will throw a clear "Anthropic has no
     // embedding endpoint" error at click time, which is the right
     // moment to tell the user why their index is empty.
-    const warn = containerEl.createEl("p", { cls: "cortex-settings-warning" });
+    const warn = containerEl.createEl("p", { cls: "chronote-settings-warning" });
     warn.createEl("strong", { text: "Anthropic has no embedding endpoint. " });
     warn.appendText(
       "To use AI search, switch to OpenAI, Gemini, or set a " +
@@ -656,7 +656,7 @@ export class CortexSettingTab extends PluginSettingTab {
         : "Start LM Studio's local server (Developer → OpenAI-compatible API server) on the port below. Click 'Load models' to populate the dropdown.";
     containerEl.createEl("p", {
       text: helpText,
-      cls: "cortex-settings-hint",
+      cls: "chronote-settings-hint",
     });
 
     new Setting(containerEl)
@@ -717,7 +717,7 @@ export class CortexSettingTab extends PluginSettingTab {
             const cur = this.plugin.settings.ai;
             const baseUrl = (cur.baseUrl || "").trim();
             if (!baseUrl) {
-              new Notice("Cortex: enter the base URL first.");
+              new Notice("Chronote: enter the base URL first.");
               return;
             }
             button.setDisabled(true);
@@ -727,7 +727,7 @@ export class CortexSettingTab extends PluginSettingTab {
               const models = await listLocalModels(baseUrl, apiKey);
               if (models.length === 0) {
                 new Notice(
-                  `Cortex: could not load models from ${baseUrl}. ` +
+                  `Chronote: could not load models from ${baseUrl}. ` +
                   "Is the server running? Check the base URL.",
                 );
                 return;
@@ -745,7 +745,7 @@ export class CortexSettingTab extends PluginSettingTab {
                 await this.plugin.saveData(this.plugin.settings);
               }
               new Notice(
-                `Cortex: loaded ${models.length} model${models.length === 1 ? "" : "s"} from ${baseUrl}.`,
+                `Chronote: loaded ${models.length} model${models.length === 1 ? "" : "s"} from ${baseUrl}.`,
               );
               this.display(); // re-render so the dropdown shows the new options
             } finally {
@@ -782,13 +782,13 @@ export class CortexSettingTab extends PluginSettingTab {
     // an informational nudge rather than a blocking warning.
     containerEl.createEl("p", {
       text: "Tool calling depends on the model and quant — if the model rejects tools we'll fall back to text-only.",
-      cls: "cortex-settings-hint",
+      cls: "chronote-settings-hint",
     });
 
     if (provider === "ollama") {
       containerEl.createEl("p", {
         text: "Embeddings use nomic-embed-text — run `ollama pull nomic-embed-text` once so the vault index can build.",
-        cls: "cortex-settings-hint",
+        cls: "chronote-settings-hint",
       });
     }
   }
@@ -799,7 +799,7 @@ export class CortexSettingTab extends PluginSettingTab {
   ): void {
     containerEl.createEl("p", {
       text: "Custom works with any OpenAI Chat Completions-compatible endpoint (OpenRouter, Groq, Together, vLLM, llama.cpp server, …).",
-      cls: "cortex-settings-hint",
+      cls: "chronote-settings-hint",
     });
 
     // Custom is fully free-form: the user types whatever they want
@@ -863,7 +863,7 @@ export class CortexSettingTab extends PluginSettingTab {
   private async testAiConnection(): Promise<void> {
     const ai = this.plugin.settings.ai;
     const missing = providerMissingFields(ai.provider, {
-      cortexAccountId: ai.cortexAccountId,
+      chronoteAccountId: ai.chronoteAccountId,
       geminiApiKey: ai.geminiApiKey,
       geminiModel: ai.geminiModel,
       apiKey: ai.apiKey,
@@ -872,7 +872,7 @@ export class CortexSettingTab extends PluginSettingTab {
     });
     if (missing.length > 0) {
       new Notice(
-        `Cortex: ${PROVIDER_LABELS[ai.provider]} is missing: ${missing.join(", ")}.`,
+        `Chronote: ${PROVIDER_LABELS[ai.provider]} is missing: ${missing.join(", ")}.`,
       );
       return;
     }
@@ -887,13 +887,13 @@ export class CortexSettingTab extends PluginSettingTab {
         temperature: 0,
       });
       if (reply.text) {
-        new Notice(`Cortex: ${PROVIDER_LABELS[ai.provider]} reachable. Reply: "${reply.text.slice(0, 80)}"`);
+        new Notice(`Chronote: ${PROVIDER_LABELS[ai.provider]} reachable. Reply: "${reply.text.slice(0, 80)}"`);
       } else {
-        new Notice(`Cortex: ${PROVIDER_LABELS[ai.provider]} reachable (empty body).`);
+        new Notice(`Chronote: ${PROVIDER_LABELS[ai.provider]} reachable (empty body).`);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      new Notice(`Cortex: ${PROVIDER_LABELS[ai.provider]} test failed — ${msg}`);
+      new Notice(`Chronote: ${PROVIDER_LABELS[ai.provider]} test failed — ${msg}`);
     }
   }
 

@@ -1,7 +1,7 @@
 /**
  * Test tool: list_tests.
  *
- * Surfaces the user's `CortexTest[]` (the data behind the dashboard's
+ * Surfaces the user's `ChronoteTest[]` (the data behind the dashboard's
  * "Upcoming Tests" panel) to the LLM on demand. The model calls this
  * when the user asks "what's my next exam?", "plan my revision for
  * the calculus test", or "what tests do I have on the 20th?".
@@ -20,7 +20,7 @@
  */
 
 import { Tool } from "../toolRegistry.js";
-import { CortexTest } from "../../settingsTypes.js";
+import { ChronoteTest } from "../../settingsTypes.js";
 import { localISODate, parseLocalDate, daysUntil, startOfLocalDay } from "../../utils/dateUtils.js";
 
 /**
@@ -29,7 +29,7 @@ import { localISODate, parseLocalDate, daysUntil, startOfLocalDay } from "../../
  * and an injectable `now` so the unit tests are deterministic.
  */
 export function createTestTools(deps: {
-  getTests: () => CortexTest[];
+  getTests: () => ChronoteTest[];
   now?: () => Date;
 }): Tool[] {
   const getTests = deps.getTests;
@@ -77,7 +77,7 @@ export function createTestTools(deps: {
         const todayMidnight = startOfLocalDay(now());
 
         const all = getTests();
-        const matching: CortexTest[] = [];
+        const matching: ChronoteTest[] = [];
         for (const t of all) {
           if (!includeDone && t.done) continue;
           const td = parseLocalDate(t.date);
@@ -85,9 +85,9 @@ export function createTestTools(deps: {
             // Defensive: TestService writes ISO dates, but a hand-edited
             // data.json could break the parse. Skip with a warning rather
             // than throwing — the rest of the list is still useful.
-            console.warn(`Cortex: skipping test "${t.name}" with unparseable date "${t.date}"`);
             continue;
           }
+
           if (isSameLocalDay(td, targetDate)) {
             matching.push(t);
           }
@@ -139,7 +139,7 @@ function isSameLocalDay(a: Date, b: Date): boolean {
  * "(today)" / "(in N days)" convention so the model's prose aligns
  * with what the user sees in the UI.
  */
-function formatTests(tests: CortexTest[], dateStr: string, nowMidnight: Date): string {
+function formatTests(tests: ChronoteTest[], dateStr: string, nowMidnight: Date): string {
   const lines: string[] = [];
   lines.push(`Found ${tests.length} test(s) on ${dateStr}:`);
   lines.push("");

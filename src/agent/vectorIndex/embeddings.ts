@@ -1,5 +1,5 @@
 /**
- * Embedding provider for the Cortex AI knowledge index.
+ * Embedding provider for the Chronote AI knowledge index.
  *
  * The actual wire transport lives on the LLM adapters under
  * `src/services/ai/`. This file is a thin façade: it picks the right
@@ -35,7 +35,7 @@
  *     LM Studio via the existing `ai.baseUrl` field.
  */
 
-import type { CortexSettings } from "../../settingsTypes.js";
+import type { ChronoteSettings } from "../../settingsTypes.js";
 import { createAdapter } from "../../services/ai/index.js";
 
 /** Default embedding dimension. Used as a fallback for index construction only;
@@ -85,7 +85,7 @@ export interface EmbeddingProvider {
  * via `runIndex()`.
  */
 export function createEmbeddingProvider(
-  settings: CortexSettings,
+  settings: ChronoteSettings,
 ): EmbeddingProvider {
   const adapter = createAdapter(settings);
   if (!adapter.embed) {
@@ -94,7 +94,7 @@ export function createEmbeddingProvider(
       dim: DEFAULT_EMBEDDING_DIM,
       async embed() {
         throw new Error(
-          "Cortex: the active AI provider does not support embeddings. " +
+          "Chronote: the active AI provider does not support embeddings. " +
             "Switch to OpenAI, Gemini, or a Custom OpenAI-compatible endpoint.",
         );
       },

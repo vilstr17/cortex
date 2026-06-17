@@ -30,9 +30,9 @@ import {
   DEFAULT_EMBEDDING_DIM,
   EMBED_BATCH_SIZE,
 } from "../embeddings.js";
-import { DEFAULT_SETTINGS, CortexSettings } from "../../../settingsTypes.js";
+import { DEFAULT_SETTINGS, ChronoteSettings } from "../../../settingsTypes.js";
 
-function settingsFor(extras: Partial<CortexSettings> = {}): CortexSettings {
+function settingsFor(extras: Partial<ChronoteSettings> = {}): ChronoteSettings {
   return {
     ...DEFAULT_SETTINGS,
     ...extras,

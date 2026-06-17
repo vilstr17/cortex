@@ -1,4 +1,4 @@
-# Cortex Developer Guide
+# Chronote Developer Guide
 
 ## Development Setup
 
@@ -28,12 +28,12 @@ Build artifacts:
 - `styles.css` — plugin styles (keep in sync with source changes)
 - `manifest.json` — plugin metadata
 
-These must be placed in `<Vault>/.obsidian/plugins/cortex/` for Obsidian to load them.
+These must be placed in `<Vault>/.obsidian/plugins/chronote/` for Obsidian to load them.
 
 ### Testing Locally
 1. Build the plugin (`npm run dev` or `npm run build`).
-2. Copy `main.js`, `manifest.json`, and `styles.css` into your vault's `.obsidian/plugins/cortex/` folder.
-3. Open Obsidian → **Settings → Community plugins** → enable **Cortex**.
+2. Copy `main.js`, `manifest.json`, and `styles.css` into your vault's `.obsidian/plugins/chronote/` folder.
+3. Open Obsidian → **Settings → Community plugins** → enable **Chronote**.
 4. For dev iteration, keep `npm run dev` running and reload Obsidian after changes (**Command Palette → Reload app without saving**).
 5. Open the Developer Tools (`Cmd+Option+I` on macOS) to see console output from the plugin.
 
@@ -58,9 +58,9 @@ src/
     tools/                      # Notes, tests, flashcards, quizzes, calendar tools
     vectorIndex/                # chunker, embeddings, in-memory index, persistence, knowledgeBase
   views/
-    CortexDashboardView.ts      # Custom ItemView: calendar, reviews, tests
+    ChronoteDashboardView.ts      # Custom ItemView: calendar, reviews, tests
   modals/
-    CortexChatModal.ts          # AI chat UI with schedule approval
+    ChronoteChatModal.ts          # AI chat UI with schedule approval
     CreateTestModal.ts          # Test creation form
     AddToTestModal.ts           # Add current note to an existing test
     MarkTestDoneModal.ts        # Mark a test as completed
@@ -117,7 +117,7 @@ Keep modals self-contained; pass callbacks for actions that need to trigger a pa
 The agent layer (`src/agent/toolRegistry.ts`) maps a tool name to a typed implementation. To add a new tool:
 
 1. Create a new file under `src/agent/tools/` exporting a `Tool` object (name, description, JSON Schema, and `execute(args, ctx)`).
-2. Register it in `CortexChatModal` (or wherever the tool list lives) so it gets passed to the active AI adapter.
+2. Register it in `ChronoteChatModal` (or wherever the tool list lives) so it gets passed to the active AI adapter.
 3. Add a unit test in `src/agent/tools/__tests__/`.
 
 ## Key Conventions

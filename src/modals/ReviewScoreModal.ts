@@ -15,7 +15,7 @@ export class ReviewScoreModal extends Modal {
   onOpen(): void {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.createEl("h2", { text: "📊 Log Cortex Review" });
+    contentEl.createEl("h2", { text: "📊 Log Chronote Review" });
     contentEl.createEl("p", {
       text: "How well do you know this material?",
     });
@@ -24,11 +24,11 @@ export class ReviewScoreModal extends Modal {
     const sliderSetting = new Setting(contentEl)
       .setName("Review Score")
       .setDesc('Left (1) = "Don\'t know it at all"  ·  Right (5) = "Know it perfectly"');
-    sliderSetting.settingEl.addClass("cortex-review-score-setting");
+    sliderSetting.settingEl.addClass("chronote-review-score-setting");
     sliderSetting.settingEl.style.display = "block";
 
     const scoreInfoButton = sliderSetting.nameEl.createEl("button", {
-      cls: "cortex-score-info-btn",
+      cls: "chronote-score-info-btn",
       text: "i",
       attr: {
         type: "button",
@@ -42,7 +42,7 @@ export class ReviewScoreModal extends Modal {
 
     // Score display label
     this.scoreLabel = sliderSetting.controlEl.createSpan({
-      cls: "cortex-score-label",
+      cls: "chronote-score-label",
       text: `${this.score} / 5`,
     });
     this.scoreLabel.style.cssText = "font-weight: bold; font-size: 1.4em; display: block; text-align: center; margin-bottom: 0.75em;";
@@ -67,7 +67,7 @@ export class ReviewScoreModal extends Modal {
     sliderSetting.infoEl.style.marginBottom = "0.5em";
 
     // Scale legend — evenly spaced labels directly under the slider
-    const legend = contentEl.createDiv({ cls: "cortex-score-legend" });
+    const legend = contentEl.createDiv({ cls: "chronote-score-legend" });
     legend.createSpan({ text: "1 — Don't know it" });
     legend.createSpan({ text: "3 — Partially" });
     legend.createSpan({ text: "5 — Know it perfectly" });

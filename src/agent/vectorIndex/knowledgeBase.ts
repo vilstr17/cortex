@@ -36,10 +36,10 @@ import {
   EmbeddingProvider,
 } from "./embeddings.js";
 import { decodeSnapshot, encodeSnapshot } from "./persistence.js";
-import { CortexSettings } from "../../settingsTypes.js";
+import { ChronoteSettings } from "../../settingsTypes.js";
 
 const INDEX_FILENAME = "knowledge-index.bin";
-const PROBE_TEXT = "cortex probe"; // single-word short text for the dim probe call
+const PROBE_TEXT = "chronote probe"; // single-word short text for the dim probe call
 
 export interface ReindexProgress {
   /** Number of files processed so far. */
@@ -55,10 +55,10 @@ export interface ReindexProgress {
 export class KnowledgeBase extends EventTarget {
   readonly app: App;
   /** Mutable reference so the chat modal sees updates from main.ts. */
-  settings: CortexSettings;
+  settings: ChronoteSettings;
   /** Save hook from main.ts — wraps `app.saveData`-style persistence. */
   private saveSettings: () => Promise<void>;
-  /** Plugin data directory, e.g. ".obsidian/plugins/cortex". */
+  /** Plugin data directory, e.g. ".obsidian/plugins/chronote". */
   private pluginDataDir: string;
 
   /** The live vector index. Replaced when the embedding dim changes. */
@@ -75,7 +75,7 @@ export class KnowledgeBase extends EventTarget {
 
   constructor(deps: {
     app: App;
-    settings: CortexSettings;
+    settings: ChronoteSettings;
     saveSettings: () => Promise<void>;
     pluginDataDir: string;
   }) {
@@ -123,9 +123,9 @@ export class KnowledgeBase extends EventTarget {
       dim: DEFAULT_EMBEDDING_DIM,
       async embed() {
         throw new Error(
-          "Cortex: no embedding provider configured. " +
+          "Chronote: no embedding provider configured. " +
             "Set a base URL (+ API key, if required) in " +
-            "Settings → Cortex → Indexing. [code=E100]",
+            "Settings → Chronote → Indexing. [code=E100]",
         );
       },
     };
@@ -195,7 +195,7 @@ export class KnowledgeBase extends EventTarget {
         // Dimension mismatch means the user switched providers
         // between sessions. Treat the on-disk index as stale.
         console.warn(
-          `Cortex: persisted index dim ${snapshot.dim} != current provider dim ${this.embedder.dim} — discarding.`,
+          `Chronote: persisted index dim ${snapshot.dim} != current provider dim ${this.embedder.dim} — discarding.`,
         );
         return false;
       }
@@ -206,7 +206,7 @@ export class KnowledgeBase extends EventTarget {
       this.dispatchEvent(new Event("change"));
       return true;
     } catch (err) {
-      console.warn("Cortex: failed to load persisted index:", err);
+      console.warn("Chronote: failed to load persisted index:", err);
       return false;
     }
   }
@@ -267,7 +267,7 @@ export class KnowledgeBase extends EventTarget {
     try {
       const probeVecs = await this.embedder.embed([PROBE_TEXT]);
       if (probeVecs.length === 0 || !probeVecs[0] || probeVecs[0].length === 0) {
-        throw new Error("Cortex: embedder returned an empty vector during dim probe.");
+        throw new Error("Chronote: embedder returned an empty vector during dim probe.");
       }
       liveDim = probeVecs[0].length;
     } catch (err) {
@@ -325,8 +325,8 @@ export class KnowledgeBase extends EventTarget {
         this.index.add(chunkSlice, vecs);
         embedded += chunkSlice.length;
         this._chunkCount = this.index.size;
-        console.log(`[Cortex] indexing ${embedded}/${totalChunks} chunks`);
         if (onProgress) {
+
           onProgress({
             done: Math.round((embedded / totalChunks) * total),
             total,
@@ -341,9 +341,8 @@ export class KnowledgeBase extends EventTarget {
       // whole reindex. Surface a single Notice naming the first
       // failure so the user knows what to fix.
       const message = err instanceof Error ? err.message : String(err);
-      console.warn("Cortex: batched embed failed, falling back to per-file:", err);
       new Notice(
-        `Cortex: bulk embed failed (${message}). Falling back to per-file indexing.`,
+        `Chronote: bulk embed failed (${message}). Falling back to per-file indexing.`,
       );
       await this._reindexPerFileFallback(perFile, onProgress, total);
       return;
@@ -355,7 +354,6 @@ export class KnowledgeBase extends EventTarget {
     this._lastIndexedAt = Date.now();
     await this.syncEmbeddingDim(this.index.dim);
     await this.persistToDisk();
-    console.log(`[Cortex] indexing complete: ${this._chunkCount} chunks`);
 
     if (onProgress) {
       onProgress({
@@ -395,11 +393,11 @@ export class KnowledgeBase extends EventTarget {
         chunks = this.index.size;
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        console.warn(`Cortex: failed to embed ${file.path}:`, err);
         if (firstError === null) {
           firstError = `${file.path}: ${message}`;
-          new Notice(`Cortex: failed to embed ${file.path}: ${message}`);
+          new Notice(`Chronote: failed to embed ${file.path}: ${message}`);
         }
+
       }
       if (onProgress) {
         onProgress({ done, total, chunks, currentFile: file.path });
@@ -446,7 +444,7 @@ export class KnowledgeBase extends EventTarget {
     try {
       await this.saveSettings();
     } catch (err) {
-      console.warn("Cortex: failed to persist embedding dim:", err);
+      // Silently fail if settings can't be saved during dim sync
     }
   }
 
@@ -485,9 +483,9 @@ export class KnowledgeBase extends EventTarget {
       this.index.add(chunks, embeddings);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.warn(`Cortex: failed to embed ${file.path}:`, err);
-      new Notice(`Cortex: failed to embed ${file.path}: ${message}`);
+      new Notice(`Chronote: failed to embed ${file.path}: ${message}`);
     }
+
     this._chunkCount = this.index.size;
     this._lastIndexedAt = Date.now();
     await this.syncEmbeddingDim(this.index.dim);
@@ -503,8 +501,9 @@ export class KnowledgeBase extends EventTarget {
     try {
       await this.app.vault.adapter.writeBinary(path, bytes.buffer);
     } catch (err) {
-      console.error("Cortex: failed to persist index:", err);
+      // Persistence failure is logged by the vault adapter
     }
+
   }
 }
 

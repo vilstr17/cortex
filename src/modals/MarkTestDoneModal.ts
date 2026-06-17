@@ -1,12 +1,12 @@
 import { App, Modal, Notice, Setting } from "obsidian";
-import CortexPlugin from "../main.js";
+import ChronotePlugin from "../main.js";
 import { TestService } from "../services/testService.js";
 
 export class MarkTestDoneModal extends Modal {
-  private plugin: CortexPlugin;
+  private plugin: ChronotePlugin;
   private testService: TestService;
 
-  constructor(app: App, plugin: CortexPlugin) {
+  constructor(app: App, plugin: ChronotePlugin) {
     super(app);
     this.plugin = plugin;
     this.testService = new TestService(plugin);
@@ -21,7 +21,7 @@ export class MarkTestDoneModal extends Modal {
 
     if (tests.length === 0) {
       contentEl.createEl("p", {
-        text: "No tests found. Create a test first in the Cortex Dashboard.",
+        text: "No tests found. Create a test first in the Chronote Dashboard.",
       });
       new Setting(contentEl).addButton((btn) =>
         btn.setButtonText("Close").onClick(() => this.close())

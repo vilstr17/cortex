@@ -3,13 +3,13 @@
  *
  * Obsidian stores plugin data in a single JSON blob (`data.json`) inside the
  * vault. When the plugin schema changes, the saved blob may contain legacy
- * keys that are no longer referenced in `CortexSettings`. If they hold any
+ * keys that are no longer referenced in `ChronoteSettings`. If they hold any
  * sensitive value (OAuth client secret, refresh tokens for revoked apps,
  * device addresses, etc.) they sit on disk forever and become a privacy /
  * security liability the moment a user shares or syncs the vault.
  *
  * `migrateSettings()` runs on every `onload()` and returns a sanitized copy
- * containing ONLY the keys listed in `CortexSettings` plus the canonical
+ * containing ONLY the keys listed in `ChronoteSettings` plus the canonical
  * migration source-of-truth. It also normalizes values that the type
  * checker / runtime rely on (e.g. arrays, nulls, enums).
  *
@@ -18,7 +18,7 @@
  * sanitization.
  */
 import { App } from "obsidian";
-import { CortexSettings, DEFAULT_SETTINGS } from "../settingsTypes.js";
+import { ChronoteSettings, DEFAULT_SETTINGS } from "../settingsTypes.js";
 import { DEFAULT_BASE_URL } from "../services/ai/catalog.js";
 
 /**
@@ -48,7 +48,7 @@ const OBSOLETE_TOP_LEVEL_KEYS: ReadonlySet<string> = new Set([
   "geminiApiKey",
   "geminiModel",
   // Pre-simplification embedding stack. The five fields lived at
-  // the top level of `CortexSettings` and are now unified under
+  // the top level of `ChronoteSettings` and are now unified under
   // `ai.embeddingModel` / `ai.embeddingDim` (or, for everything
   // else, removed entirely — embeddings now use the chat provider's
   // key / URL via `ai.apiKey` / `ai.baseUrl`). `embeddingModel` is
@@ -108,23 +108,20 @@ export function correctEmbeddingBaseUrl(raw: string): string {
   }
 
   if (url !== original) {
-    // One-line console log so a user who checks the Obsidian console
-    // sees what was corrected. Avoids spamming Notices at startup.
-    console.info(
-      `Cortex: corrected embedding base URL from "${original}" to "${url}".`,
-    );
+    return url;
   }
+
   return url;
 }
 
 /**
- * Drop keys not present on the current `CortexSettings` schema and known
+ * Drop keys not present on the current `ChronoteSettings` schema and known
  * legacy subtrees. The result is a strict subset of the input keys plus
  * any defaults that are missing.
  *
- * Returned shape: a full `CortexSettings` with all fields populated.
+ * Returned shape: a full `ChronoteSettings` with all fields populated.
  */
-export function migrateSettings(raw: unknown): CortexSettings {
+export function migrateSettings(raw: unknown): ChronoteSettings {
   const safeRaw: Record<string, unknown> = isPlainObject(raw) ? raw : {};
 
   // First, copy through any keys that exist on the current schema.
@@ -221,7 +218,7 @@ export function migrateSettings(raw: unknown): CortexSettings {
   // provider's slot from the legacy ai.baseUrl (so a vault saved
   // before per-provider URLs existed still has the right value when
   // the user switches back) and pre-fill the documented defaults for
-  // ollama / lmstudio / cortex_cloud.
+  // ollama / lmstudio / chronote_cloud.
   //
   // Build a fresh `ai` object so we don't mutate the caller's
   // `migrated.ai` (which is the same reference as `raw.ai` from the
@@ -284,7 +281,7 @@ export function migrateSettings(raw: unknown): CortexSettings {
     migrated.maxReviewIntervalDays = null;
   }
 
-  return migrated as unknown as CortexSettings;
+  return migrated as unknown as ChronoteSettings;
 }
 
 /**
@@ -317,7 +314,7 @@ export const OBSOLETE_KEYS_FOR_TESTS = OBSOLETE_TOP_LEVEL_KEYS;
  *   offset 5  size 4   dim (uint32 little-endian)
  *   …
  */
-export async function readCortexIndexDim(
+export async function readChronoteIndexDim(
   app: App,
   pluginDataDir: string,
 ): Promise<number | null> {
@@ -353,12 +350,12 @@ export async function readCortexIndexDim(
  * subsequent migration), we leave it alone.
  */
 export async function seedEmbeddingDimFromDisk(
-  settings: CortexSettings,
+  settings: ChronoteSettings,
   app: App,
   pluginDataDir: string,
-): Promise<CortexSettings> {
+): Promise<ChronoteSettings> {
   if (settings.ai.embeddingDim != null) return settings;
-  const dim = await readCortexIndexDim(app, pluginDataDir);
+  const dim = await readChronoteIndexDim(app, pluginDataDir);
   if (dim == null) return settings;
   return {
     ...settings,

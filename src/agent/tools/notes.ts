@@ -70,7 +70,7 @@ export function createNoteTools(deps: {
         if (!knowledge.isReady()) {
           return (
             "The vault knowledge index is empty. Ask the user to open " +
-            "Cortex settings and click 'Reindex vault' to build it."
+            "Chronote settings and click 'Reindex vault' to build it."
           );
         }
         const query = typeof args.query === "string" ? args.query : "";
@@ -89,7 +89,7 @@ export function createNoteTools(deps: {
           return (
             `Error: embedding dimension mismatch. The active embedding model returns ${queryVec.length}-dimensional vectors, ` +
             `but the knowledge index was built with ${knowledge.index.dim}-dimensional vectors. ` +
-            `Open Cortex settings and click 'Reindex vault' to rebuild the index for the current model.`
+            `Open Chronote settings and click 'Reindex vault' to rebuild the index for the current model.`
           );
         }
         const hits: SearchHit[] = filterByRelevance(

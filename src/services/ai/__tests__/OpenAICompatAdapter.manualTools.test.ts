@@ -15,9 +15,9 @@ vi.mock("obsidian", () => ({
 }));
 
 import { OpenAICompatAdapter } from "../OpenAICompatAdapter.js";
-import { DEFAULT_SETTINGS, CortexSettings } from "../../../settingsTypes.js";
+import { DEFAULT_SETTINGS, ChronoteSettings } from "../../../settingsTypes.js";
 
-function settingsFor(): CortexSettings {
+function settingsFor(): ChronoteSettings {
   return {
     ...DEFAULT_SETTINGS,
     ai: {

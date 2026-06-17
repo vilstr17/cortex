@@ -21,7 +21,7 @@
  * model calls the `list_tests` tool to discover them on demand.
  */
 import { requestUrl } from "obsidian";
-import { CortexSettings } from "../settings.js";
+import { ChronoteSettings } from "../settings.js";
 import { GoogleCalendarService } from "./googleCalendarService.js";
 import { localISODate } from "../utils/dateUtils.js";
 import { ToolRegistry, Tool, ToolContext } from "../agent/toolRegistry.js";
@@ -46,7 +46,7 @@ export interface ScheduledEvent {
 }
 
 export class GeminiService {
-  private settings: CortexSettings;
+  private settings: ChronoteSettings;
   private calendarService?: GoogleCalendarService;
   private readonly adapter: AIProviderAdapter;
 
@@ -57,7 +57,7 @@ export class GeminiService {
    */
   readonly tools: ToolRegistry = new ToolRegistry();
 
-  constructor(settings: CortexSettings, calendarService?: GoogleCalendarService) {
+  constructor(settings: ChronoteSettings, calendarService?: GoogleCalendarService) {
     this.settings = settings;
     this.calendarService = calendarService;
     // Pick the adapter that matches the active provider. The chat
@@ -65,7 +65,7 @@ export class GeminiService {
     // button in settings — that button goes through `createAdapter`
     // directly, but chat was previously hardcoded to GeminiAdapter,
     // which sent every provider's traffic to Google and produced
-    // HTTP 403s for LM Studio / Ollama / Anthropic / OpenAI / Cortex
+    // HTTP 403s for LM Studio / Ollama / Anthropic / OpenAI / Chronote
     // Cloud users.
     this.adapter = createAdapter(settings);
 
@@ -140,7 +140,7 @@ export class GeminiService {
     const parts = [
       timeContext,
       "",
-      "You are Cortex. " +
+      "You are Chronote. " +
         "Right now the user asked for a study plan, so we're in planning mode. " +
         "Build the most useful schedule you can for today, given their notes, their calendar, and the time they actually have. " +
         "Be opinionated. If a note is overdue and the test is tomorrow, it goes first. " +
@@ -221,7 +221,7 @@ export class GeminiService {
    * be unit-tested without standing up a fake vault.
    *
    * Voice & shape: this prompt is the user's first read of the
-   * assistant. We open with a concrete persona (Cortex, not
+   * assistant. We open with a concrete persona (Chronote, not
    * "intelligent personal assistant"), then layer the active
    * response-style fragment in (see `RESPONSE_STYLES` in
    * `services/ai/catalog.ts`), then put the hard "don't lie" rules
@@ -232,7 +232,7 @@ export class GeminiService {
   private buildGeneralSystemPrompt(knowledgeState: string = "unknown"): string {
     return (
       this.getTimeContext() +
-      "\n\nYou are Cortex. You live inside the user's Obsidian vault. " +
+      "\n\nYou are Chronote. You live inside the user's Obsidian vault. " +
       "Your job is to help them study, revise, and remember things — and to keep their calendar honest when they ask. " +
       this.getStyleFragment() +
 
@@ -241,7 +241,7 @@ export class GeminiService {
       "\n- When you quote or paraphrase a note, cite it inline as a wikilink — [[NoteName]], no .md extension." +
       "\n- If the user asks for flashcards, draft them with propose_flashcard, then reply with ONLY a short framing sentence such as 'Here are the flashcards.' or 'I drafted some cards for you.' DO NOT reveal the answers, list the questions, or describe the card contents in your prose." +
       "\n- If the user asks for a quiz, call propose_quiz with well-formed questions, then reply with ONLY a short framing sentence such as 'Here is a quiz.' DO NOT reveal the correct answers, list the questions, or describe the quiz contents in your prose." +
-      "\n- If the user's knowledge index is empty (the tool returns an error about it), tell them to open Cortex settings and click Reindex vault. Don't pretend to search." +
+      "\n- If the user's knowledge index is empty (the tool returns an error about it), tell them to open Chronote settings and click Reindex vault. Don't pretend to search." +
       `\n- Knowledge index status right now: ${knowledgeState}.` +
 
       "\n\nYour tools (use them, don't talk about them):" +

@@ -1,15 +1,15 @@
 import { ItemView, Notice, TFile, WorkspaceLeaf, setIcon, moment } from "obsidian";
-import CortexPlugin from "../main.js";
+import ChronotePlugin from "../main.js";
 import { DisplayCalendarEvent } from "../services/googleCalendarService.js";
-import { CortexChatModal } from "../modals/CortexChatModal.js";
+import { ChronoteChatModal } from "../modals/ChronoteChatModal.js";
 import { CreateTestModal } from "../modals/CreateTestModal.js";
 import { ReviewFilterModal, ReviewFilters } from "../modals/ReviewFilterModal.js";
 import { TestService } from "../services/testService.js";
-import { CortexTest } from "../settings.js";
+import { ChronoteTest } from "../settings.js";
 import { localISODate, parseLocalDate, startOfLocalDay, isSameLocalDay, addDays, daysUntil } from "../utils/dateUtils.js";
 import { providerMissingFields, PROVIDER_LABELS } from "../services/ai/catalog.js";
 
-export const CORTEX_DASHBOARD_VIEW = "cortex-dashboard";
+export const CHRONOTE_DASHBOARD_VIEW = "chronote-dashboard";
 
 interface DueNote {
 	file: TFile;
@@ -22,8 +22,8 @@ interface ReviewFilterOptions {
 	selectedTestIds: Set<string>;
 }
 
-export class CortexDashboardView extends ItemView {
-	private plugin: CortexPlugin;
+export class ChronoteDashboardView extends ItemView {
+	private plugin: ChronotePlugin;
 	private reviewsContainer!: HTMLElement;
 	private scheduleContainer!: HTMLElement;
 	private authContainer!: HTMLElement;
@@ -40,13 +40,13 @@ export class CortexDashboardView extends ItemView {
 		selectedTestIds: new Set(),
 	};
 
-	constructor(leaf: WorkspaceLeaf, plugin: CortexPlugin) {
+	constructor(leaf: WorkspaceLeaf, plugin: ChronotePlugin) {
 		super(leaf);
 		this.plugin = plugin;
 	}
 
-	getViewType(): string { return CORTEX_DASHBOARD_VIEW; }
-	getDisplayText(): string { return "Cortex Dashboard"; }
+	getViewType(): string { return CHRONOTE_DASHBOARD_VIEW; }
+	getDisplayText(): string { return "Chronote Dashboard"; }
 	getIcon(): string { return "brain"; }
 
 	async onOpen(): Promise<void> {
@@ -55,13 +55,13 @@ export class CortexDashboardView extends ItemView {
 
 		this.testService = this.plugin.testService;
 
-		const wrapper = container.createDiv({ cls: "cortex-dashboard" });
+		const wrapper = container.createDiv({ cls: "chronote-dashboard" });
 
-		const headerRow = wrapper.createDiv({ cls: "cortex-header-row" });
-		headerRow.createEl("h1", { text: "Cortex Command Center" });
+		const headerRow = wrapper.createDiv({ cls: "chronote-header-row" });
+		headerRow.createEl("h1", { text: "Chronote Command Center" });
 
-		const chatBtn = headerRow.createEl("button", { cls: "cortex-chat-icon-btn" });
-		chatBtn.setAttr("title", "Open Cortex AI Chat");
+		const chatBtn = headerRow.createEl("button", { cls: "chronote-chat-icon-btn" });
+		chatBtn.setAttr("title", "Open Chronote AI Chat");
 		setIcon(chatBtn, "message-square");
 		chatBtn.addEventListener("click", () => {
 			// Provider-aware credentials check — same logic as the chat
@@ -69,7 +69,7 @@ export class CortexDashboardView extends ItemView {
 			// user knows exactly what to set.
 			const ai = this.plugin.settings.ai;
 			const missing = providerMissingFields(ai.provider, {
-				cortexAccountId: ai.cortexAccountId,
+				chronoteAccountId: ai.chronoteAccountId,
 				geminiApiKey: ai.geminiApiKey,
 				geminiModel: ai.geminiModel,
 				apiKey: ai.apiKey,
@@ -78,14 +78,14 @@ export class CortexDashboardView extends ItemView {
 			});
 			if (missing.length > 0) {
 				new Notice(
-					`Cortex: ${PROVIDER_LABELS[ai.provider]} is not configured. Missing: ${missing.join(", ")}. Set them in Settings → Cortex.`,
+					`Chronote: ${PROVIDER_LABELS[ai.provider]} is not configured. Missing: ${missing.join(", ")}. Set them in Settings → Chronote.`,
 				);
 				return;
 			}
-			new CortexChatModal(this.app, this.plugin).open();
+			new ChronoteChatModal(this.app, this.plugin).open();
 		});
 
-		const refreshBtn = headerRow.createEl("button", { cls: "cortex-refresh-btn clickable-icon" });
+		const refreshBtn = headerRow.createEl("button", { cls: "chronote-refresh-btn clickable-icon" });
 		refreshBtn.setAttr("title", "Refresh");
 		setIcon(refreshBtn, "refresh-cw");
 		refreshBtn.addEventListener("click", () => {
@@ -95,10 +95,10 @@ export class CortexDashboardView extends ItemView {
 			this.render();
 		});
 
-		this.reviewsContainer = wrapper.createDiv({ cls: "cortex-reviews-section" });
-		this.scheduleContainer = wrapper.createDiv({ cls: "cortex-schedule-section" });
-		this.testsContainer = wrapper.createDiv({ cls: "cortex-tests-section" });
-		this.authContainer = wrapper.createDiv({ cls: "cortex-auth-section" });
+		this.reviewsContainer = wrapper.createDiv({ cls: "chronote-reviews-section" });
+		this.scheduleContainer = wrapper.createDiv({ cls: "chronote-schedule-section" });
+		this.testsContainer = wrapper.createDiv({ cls: "chronote-tests-section" });
+		this.authContainer = wrapper.createDiv({ cls: "chronote-auth-section" });
 
 		// Debounced: while editing, metadata changes fire on every save —
 		// re-rendering the whole dashboard (incl. a calendar fetch) each
@@ -148,7 +148,7 @@ export class CortexDashboardView extends ItemView {
 	}
 
 	/**
-	 * Public re-render hook called by the plugin after a `cortex-auth`
+	 * Public re-render hook called by the plugin after a `chronote-auth`
 	 * callback resolves. Clears any cached events so the freshly-saved
 	 * tokens are honored on the next render, then re-renders the section.
 	 */
@@ -161,9 +161,9 @@ export class CortexDashboardView extends ItemView {
 	private renderConnectButton(): void {
 		this.authContainer.createEl("p", {
 			text: "Connect your Google Calendar to see today's schedule alongside your reviews.",
-			cls: "cortex-calendar-connect-desc",
+			cls: "chronote-calendar-connect-desc",
 		});
-		const btn = this.authContainer.createEl("button", { cls: "cortex-connect-google-btn", text: "Connect Google Calendar" });
+		const btn = this.authContainer.createEl("button", { cls: "chronote-connect-google-btn", text: "Connect Google Calendar" });
 		btn.addEventListener("click", async () => { await this.handleConnectGoogleCalendar(); });
 	}
 
@@ -171,9 +171,9 @@ export class CortexDashboardView extends ItemView {
 		const state = this.plugin.generateOAuthState();
 		window.open(`https://cortex-proxy.vercel.app/api/auth?state=${encodeURIComponent(state)}`);
 		this.authContainer.empty();
-		const el = this.authContainer.createDiv({ cls: "cortex-auth-status" });
+		const el = this.authContainer.createDiv({ cls: "chronote-auth-status" });
 		el.createEl("h4", { text: "Waiting for authorization\u2026" });
-		el.createEl("p", { text: "Please complete the login in your web browser.", cls: "cortex-auth-hint" });
+		el.createEl("p", { text: "Please complete the login in your web browser.", cls: "chronote-auth-hint" });
 	}
 
 	private async renderTodaysSchedule(): Promise<void> {
@@ -192,7 +192,7 @@ export class CortexDashboardView extends ItemView {
 		}
 		this.scheduleContainer.empty();
 
-		const hr = this.scheduleContainer.createDiv({ cls: "cortex-dashboard-header-row" });
+		const hr = this.scheduleContainer.createDiv({ cls: "chronote-dashboard-header-row" });
 		hr.style.display = "flex"; hr.style.justifyContent = "space-between"; hr.style.alignItems = "center"; hr.style.marginBottom = "10px";
 		const titleStr = isSameLocalDay(this.currentCalendarDate, new Date()) ? `Today's Schedule (${events.length})` : `${this.currentCalendarDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })} Schedule (${events.length})`;
 		const t = hr.createEl("h2", { text: titleStr }); t.style.margin = "0";
@@ -203,14 +203,14 @@ export class CortexDashboardView extends ItemView {
 			() => { const d = new Date(this.currentCalendarDate); d.setDate(d.getDate() + 1); this.currentCalendarDate = d; this.renderTodaysSchedule(); },
 		);
 
-		if (events.length === 0) { this.scheduleContainer.createDiv({ cls: "cortex-schedule-placeholder", text: "No events scheduled for this day." }); return; }
+		if (events.length === 0) { this.scheduleContainer.createDiv({ cls: "chronote-schedule-placeholder", text: "No events scheduled for this day." }); return; }
 
-		const list = this.scheduleContainer.createEl("div", { cls: "cortex-event-list" });
+		const list = this.scheduleContainer.createEl("div", { cls: "chronote-event-list" });
 		for (const ev of events) {
-			const item = list.createDiv({ cls: "cortex-event-item" });
-			item.createEl("span", { cls: "cortex-event-time", text: `${this.formatTime(ev.startTime)} \u2013 ${this.formatTime(ev.endTime)}` });
-			item.createEl("span", { cls: "cortex-event-summary", text: ev.summary });
-			if (ev.htmlLink) { const a = item.createEl("a", { cls: "cortex-event-link", text: "\u2197", href: ev.htmlLink }); a.setAttr("target", "_blank"); a.setAttr("title", "Open in Google Calendar"); }
+			const item = list.createDiv({ cls: "chronote-event-item" });
+			item.createEl("span", { cls: "chronote-event-time", text: `${this.formatTime(ev.startTime)} \u2013 ${this.formatTime(ev.endTime)}` });
+			item.createEl("span", { cls: "chronote-event-summary", text: ev.summary });
+			if (ev.htmlLink) { const a = item.createEl("a", { cls: "chronote-event-link", text: "\u2197", href: ev.htmlLink }); a.setAttr("target", "_blank"); a.setAttr("title", "Open in Google Calendar"); }
 		}
 	}
 
@@ -219,7 +219,7 @@ export class CortexDashboardView extends ItemView {
 		const dueNotes = this.getDueNotes(targetDate);
 		this.reviewsContainer.empty();
 
-		const hr = this.reviewsContainer.createDiv({ cls: "cortex-dashboard-header-row" });
+		const hr = this.reviewsContainer.createDiv({ cls: "chronote-dashboard-header-row" });
 		hr.style.display = "flex"; hr.style.justifyContent = "space-between"; hr.style.alignItems = "center"; hr.style.marginBottom = "10px";
 		const header = hr.createEl("h2", { text: "" }); header.style.margin = "0";
 
@@ -229,7 +229,7 @@ export class CortexDashboardView extends ItemView {
 			() => { const d = new Date(this.currentReviewsDate); d.setDate(d.getDate() + 1); this.currentReviewsDate = d; this.renderDueReviews(); },
 		);
 
-		const fb = nav.createEl("button", { cls: "cortex-date-nav-btn cortex-filter-btn" });
+		const fb = nav.createEl("button", { cls: "chronote-date-nav-btn chronote-filter-btn" });
 		setIcon(fb, "filter");
 		fb.addEventListener("click", () => {
 			new ReviewFilterModal(this.app, this.reviewFilters, this.testService.getAllTests(), (f) => { this.reviewFilters = f; this.renderDueReviews(); }).open();
@@ -248,7 +248,7 @@ export class CortexDashboardView extends ItemView {
 		const titleStr = isSameLocalDay(targetDate, new Date()) ? `Due Reviews (${filtered.length})` : `${targetDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })} Reviews (${filtered.length})`;
 		header.setText(titleStr);
 
-		if (filtered.length === 0) { this.reviewsContainer.createDiv({ cls: "cortex-reviews-placeholder", text: "No reviews due for this day." }); return; }
+		if (filtered.length === 0) { this.reviewsContainer.createDiv({ cls: "chronote-reviews-placeholder", text: "No reviews due for this day." }); return; }
 
 		if (this.reviewFilters.sortOrder === "low-to-high") {
 			filtered.sort((a, b) => {
@@ -268,14 +268,14 @@ export class CortexDashboardView extends ItemView {
 			});
 		}
 
-		const list = this.reviewsContainer.createEl("ul", { cls: "cortex-due-list" });
+		const list = this.reviewsContainer.createEl("ul", { cls: "chronote-due-list" });
 		for (const { file, nextReview, isOverdue } of filtered) {
-			const li = list.createEl("li", { cls: "cortex-due-item" });
-			if (isOverdue) li.addClasses(["cortex-overdue"]);
-			if (isOverdue) li.createEl("span", { cls: "cortex-badge cortex-overdue-badge", text: "overdue" });
-			const link = li.createEl("a", { cls: "cortex-note-link", text: file.basename });
+			const li = list.createEl("li", { cls: "chronote-due-item" });
+			if (isOverdue) li.addClasses(["chronote-overdue"]);
+			if (isOverdue) li.createEl("span", { cls: "chronote-badge chronote-overdue-badge", text: "overdue" });
+			const link = li.createEl("a", { cls: "chronote-note-link", text: file.basename });
 			link.addEventListener("click", async (e) => { e.preventDefault(); await this.app.workspace.getLeaf("tab").openFile(file); });
-			li.createSpan({ cls: "cortex-note-date", text: nextReview.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) });
+			li.createSpan({ cls: "chronote-note-date", text: nextReview.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) });
 		}
 	}
 
@@ -285,26 +285,26 @@ export class CortexDashboardView extends ItemView {
 		const active = tests.filter(t => !t.done);
 		const sorted = [...active].sort((a, b) => { const da = parseLocalDate(a.date); const db = parseLocalDate(b.date); if (!da || !db) return 0; return da.getTime() - db.getTime(); });
 
-		const hr = this.testsContainer.createDiv({ cls: "cortex-tests-header" });
+		const hr = this.testsContainer.createDiv({ cls: "chronote-tests-header" });
 		hr.createEl("h2", { text: `Upcoming Tests (${sorted.length})` });
-		const cbtn = hr.createEl("button", { cls: "cortex-create-test-btn" });
+		const cbtn = hr.createEl("button", { cls: "chronote-create-test-btn" });
 		setIcon(cbtn, "plus");
 		cbtn.addEventListener("click", () => { new CreateTestModal(this.app, this.plugin, () => this.renderTests()).open(); });
 
-		if (sorted.length === 0) { this.testsContainer.createDiv({ cls: "cortex-tests-placeholder", text: "No upcoming tests. Click + to create one." }); return; }
+		if (sorted.length === 0) { this.testsContainer.createDiv({ cls: "chronote-tests-placeholder", text: "No upcoming tests. Click + to create one." }); return; }
 
-		const list = this.testsContainer.createEl("div", { cls: "cortex-test-list" });
+		const list = this.testsContainer.createEl("div", { cls: "chronote-test-list" });
 		for (const t of sorted) list.appendChild(this.renderTestItem(t));
 	}
 
-	private renderTestItem(test: CortexTest): HTMLElement {
-		const item = document.createElement("div"); item.className = "cortex-test-item";
-		if (test.done) item.addClass("cortex-test-done");
-		const hr = item.createDiv({ cls: "cortex-test-header" });
-		const icon = hr.createDiv({ cls: "cortex-expand-icon" }); setIcon(icon, "chevron-right");
-		hr.createEl("span", { cls: "cortex-test-name", text: test.name });
+	private renderTestItem(test: ChronoteTest): HTMLElement {
+		const item = document.createElement("div"); item.className = "chronote-test-item";
+		if (test.done) item.addClass("chronote-test-done");
+		const hr = item.createDiv({ cls: "chronote-test-header" });
+		const icon = hr.createDiv({ cls: "chronote-expand-icon" }); setIcon(icon, "chevron-right");
+		hr.createEl("span", { cls: "chronote-test-name", text: test.name });
 
-		const doneBtn = hr.createEl("button", { cls: "cortex-done-btn" + (test.done ? " is-done" : ""), attr: { title: test.done ? "Mark as not done" : "Mark as done" } });
+		const doneBtn = hr.createEl("button", { cls: "chronote-done-btn" + (test.done ? " is-done" : ""), attr: { title: test.done ? "Mark as not done" : "Mark as done" } });
 		setIcon(doneBtn, test.done ? "check-circle" : "circle");
 		doneBtn.addEventListener("click", async (e) => { e.stopPropagation(); await this.testService.toggleDone(test.id); this.renderTests(); this.renderReviews(); });
 
@@ -312,44 +312,44 @@ export class CortexDashboardView extends ItemView {
 		const ds = d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 		const dif = (moment as unknown as (input?: unknown) => { diff(other: unknown, unit: string): number })(test.date).diff((moment as unknown as (input?: unknown) => { startOf(unit: string): unknown })().startOf("day"), "days");
 		const dl = dif < 0 ? " (past)" : dif === 0 ? " (today)" : dif === 1 ? " (tomorrow)" : ` (in ${dif} days)`;
-		hr.createEl("span", { cls: "cortex-test-date", text: `${ds}${dl}` });
+		hr.createEl("span", { cls: "chronote-test-date", text: `${ds}${dl}` });
 
-		const det = item.createDiv({ cls: "cortex-test-details" });
+		const det = item.createDiv({ cls: "chronote-test-details" });
 		const pg = this.calculateTestProgress(test);
-		const pc = det.createDiv({ cls: "cortex-test-progress-container" });
-		const pb = pc.createDiv({ cls: "cortex-test-progress-bar" });
-		pb.createDiv({ cls: "cortex-test-progress-fill" }).style.width = `${pg}%`;
-		pc.createEl("span", { cls: "cortex-test-progress-label", text: `${Math.round(pg)}% prepared` });
+		const pc = det.createDiv({ cls: "chronote-test-progress-container" });
+		const pb = pc.createDiv({ cls: "chronote-test-progress-bar" });
+		pb.createDiv({ cls: "chronote-test-progress-fill" }).style.width = `${pg}%`;
+		pc.createEl("span", { cls: "chronote-test-progress-label", text: `${Math.round(pg)}% prepared` });
 
-		const nl = det.createEl("ul", { cls: "cortex-test-notes-list" });
+		const nl = det.createEl("ul", { cls: "chronote-test-notes-list" });
 		for (const fp of test.filePaths) {
 			const file = this.app.vault.getFileByPath(fp); if (!file) continue;
 			const cache = this.app.metadataCache.getFileCache(file);
 			const fm = cache?.frontmatter;
 			const excl = fm?.exclude_from_exam === true;
 
-			const li = nl.createEl("li", { cls: "cortex-test-note-item" });
+			const li = nl.createEl("li", { cls: "chronote-test-note-item" });
 			if (excl) li.addClass("excluded");
 
-			const link = li.createEl("a", { cls: "cortex-test-note-link", text: file.basename });
+			const link = li.createEl("a", { cls: "chronote-test-note-link", text: file.basename });
 			link.addEventListener("click", async (e) => { e.preventDefault(); await this.app.workspace.getLeaf("tab").openFile(file); });
 
-			const ss = li.createEl("span", { cls: "cortex-test-note-score" });
+			const ss = li.createEl("span", { cls: "chronote-test-note-score" });
 			if (fm?.confidence !== undefined && fm?.confidence !== null) { ss.addClass("has-score"); ss.setText(`Score: ${fm.confidence}/5`); }
 			else { ss.addClass("no-score"); ss.setText("No score"); }
 
-			const exb = li.createEl("button", { cls: "cortex-exclude-btn" + (excl ? " excluded" : ""), text: excl ? "Excluded" : "Exclude" });
+			const exb = li.createEl("button", { cls: "chronote-exclude-btn" + (excl ? " excluded" : ""), text: excl ? "Excluded" : "Exclude" });
 			exb.addEventListener("click", async (e) => { e.stopPropagation(); await this.toggleExcl(file, excl); this.renderTests(); });
 			li.appendChild(link); li.appendChild(ss); li.appendChild(exb);
 		}
 
-		const dbtn = item.createEl("button", { cls: "cortex-test-delete-btn" });
+		const dbtn = item.createEl("button", { cls: "chronote-test-delete-btn" });
 		setIcon(dbtn, "trash");
 		dbtn.addEventListener("click", async (e) => { e.stopPropagation(); if (confirm(`Delete "${test.name}"?`)) { await this.testService.removeTest(test.id); this.renderTests(); this.renderReviews(); } });
 
 		item.addEventListener("click", (e) => {
 			const el = e.target as HTMLElement;
-			if (el.closest(".cortex-test-delete-btn") || el.closest(".cortex-exclude-btn") || el.closest(".cortex-done-btn")) return;
+			if (el.closest(".chronote-test-delete-btn") || el.closest(".chronote-exclude-btn") || el.closest(".chronote-done-btn")) return;
 			item.classList.toggle("expanded");
 		});
 
@@ -360,7 +360,7 @@ export class CortexDashboardView extends ItemView {
 		await this.app.fileManager.processFrontMatter(file, (fm) => { if (excl) delete fm["exclude_from_exam"]; else fm["exclude_from_exam"] = true; });
 	}
 
-	private calculateTestProgress(test: CortexTest): number {
+	private calculateTestProgress(test: ChronoteTest): number {
 		const MAX = 5; let sum = 0, count = 0;
 		for (const fp of test.filePaths) {
 			const f = this.app.vault.getFileByPath(fp); if (!f) continue;
@@ -382,12 +382,12 @@ export class CortexDashboardView extends ItemView {
 		onToday: () => void,
 		onNext: () => void,
 	): HTMLElement {
-		const nav = parent.createDiv({ cls: "cortex-date-nav" });
-		const pb = nav.createEl("button", { cls: "cortex-date-nav-btn", text: "←" });
+		const nav = parent.createDiv({ cls: "chronote-date-nav" });
+		const pb = nav.createEl("button", { cls: "chronote-date-nav-btn", text: "←" });
 		pb.addEventListener("click", onPrev);
-		const tb = nav.createEl("button", { cls: "cortex-date-nav-btn cortex-date-nav-today-btn", text: "Today" });
+		const tb = nav.createEl("button", { cls: "chronote-date-nav-btn chronote-date-nav-today-btn", text: "Today" });
 		tb.addEventListener("click", onToday);
-		const nb = nav.createEl("button", { cls: "cortex-date-nav-btn", text: "→" });
+		const nb = nav.createEl("button", { cls: "chronote-date-nav-btn", text: "→" });
 		nb.addEventListener("click", onNext);
 		return nav;
 	}

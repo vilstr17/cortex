@@ -29,16 +29,16 @@ vi.mock("../ai/catalog", () => ({
 }));
 
 import { runIndex } from "../indexRunner.js";
-import { DEFAULT_SETTINGS, CortexSettings } from "../../settingsTypes.js";
+import { DEFAULT_SETTINGS, ChronoteSettings } from "../../settingsTypes.js";
 
-function settingsFor(overrides: Partial<CortexSettings["ai"]> = {}): CortexSettings {
+function settingsFor(overrides: Partial<ChronoteSettings["ai"]> = {}): ChronoteSettings {
   return {
     ...DEFAULT_SETTINGS,
     ai: { ...DEFAULT_SETTINGS.ai, ...overrides },
   };
 }
 
-function makePlugin(ai: CortexSettings["ai"]) {
+function makePlugin(ai: ChronoteSettings["ai"]) {
   const kb = {
     isReindexInFlight: vi.fn(() => false),
     // Cast through `unknown` so we can pass a callback shape when
@@ -102,7 +102,7 @@ describe("runIndex", () => {
 
     await runIndex(plugin as unknown as Parameters<typeof runIndex>[0], { onStateChange });
 
-    expect(NoticeMock).toHaveBeenCalledWith("Cortex: a reindex is already running.");
+    expect(NoticeMock).toHaveBeenCalledWith("Chronote: a reindex is already running.");
     expect(plugin.kb.reindexVault).not.toHaveBeenCalled();
     expect(onStateChange).not.toHaveBeenCalled();
   });

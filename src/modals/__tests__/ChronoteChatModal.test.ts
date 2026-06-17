@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { App } from "obsidian";
-import { CortexChatModal } from "../CortexChatModal.js";
+import { ChronoteChatModal } from "../ChronoteChatModal.js";
 import { pendingProposals } from "../../agent/tools/flashcards.js";
 import { pendingQuizzes } from "../../agent/tools/quizzes.js";
-import { DEFAULT_SETTINGS, CortexSettings } from "../../settingsTypes.js";
-import type CortexPlugin from "../../main.js";
+import { DEFAULT_SETTINGS, ChronoteSettings } from "../../settingsTypes.js";
+import type ChronotePlugin from "../../main.js";
 
 const { mockChat, mockRenderMarkdown, mockRenderDeck, mockRenderQuiz } = vi.hoisted(() => ({
   mockChat: vi.fn(),
@@ -34,7 +34,7 @@ vi.mock("../../ui/QuizComponent", () => ({
   renderQuizComponent: mockRenderQuiz,
 }));
 
-function fakePlugin(): CortexPlugin {
+function fakePlugin(): ChronotePlugin {
   return {
     settings: {
       ...DEFAULT_SETTINGS,
@@ -45,7 +45,7 @@ function fakePlugin(): CortexPlugin {
         geminiApiKey: "test-key",
         geminiModel: "gemini-2.5-flash",
       },
-    } as CortexSettings,
+    } as ChronoteSettings,
     saveData: vi.fn(),
     getCalendarService: () => ({
       getEventsForDay: vi.fn().mockResolvedValue([]),
@@ -55,10 +55,10 @@ function fakePlugin(): CortexPlugin {
       isReady: () => true,
       chunkCount: 5,
     }),
-  } as unknown as CortexPlugin;
+  } as unknown as ChronotePlugin;
 }
 
-describe("CortexChatModal — flashcard/quiz proposal capture", () => {
+describe("ChronoteChatModal — flashcard/quiz proposal capture", () => {
   beforeEach(() => {
     pendingProposals.length = 0;
     pendingQuizzes.length = 0;
@@ -75,7 +75,7 @@ describe("CortexChatModal — flashcard/quiz proposal capture", () => {
       metadataCache: { getFileCache: () => null },
     } as unknown as App;
     const plugin = fakePlugin();
-    const modal = new CortexChatModal(app, plugin);
+    const modal = new ChronoteChatModal(app, plugin);
     await modal.onOpen();
 
     mockChat.mockImplementation(async () => {
@@ -106,7 +106,7 @@ describe("CortexChatModal — flashcard/quiz proposal capture", () => {
       metadataCache: { getFileCache: () => null },
     } as unknown as App;
     const plugin = fakePlugin();
-    const modal = new CortexChatModal(app, plugin);
+    const modal = new ChronoteChatModal(app, plugin);
     await modal.onOpen();
 
     mockChat.mockImplementation(async () => {
@@ -142,7 +142,7 @@ describe("CortexChatModal — flashcard/quiz proposal capture", () => {
       metadataCache: { getFileCache: () => null },
     } as unknown as App;
     const plugin = fakePlugin();
-    const modal = new CortexChatModal(app, plugin);
+    const modal = new ChronoteChatModal(app, plugin);
     await modal.onOpen();
 
     mockChat.mockImplementation(async () => {
@@ -199,7 +199,7 @@ describe("CortexChatModal — flashcard/quiz proposal capture", () => {
         },
       },
     ];
-    const modal = new CortexChatModal(app, plugin);
+    const modal = new ChronoteChatModal(app, plugin);
     await modal.onOpen();
 
     expect(mockRenderDeck).toHaveBeenCalledTimes(1);
@@ -232,7 +232,7 @@ describe("CortexChatModal — flashcard/quiz proposal capture", () => {
         },
       },
     ];
-    const modal = new CortexChatModal(app, plugin);
+    const modal = new ChronoteChatModal(app, plugin);
     await modal.onOpen();
 
     expect(mockRenderQuiz).toHaveBeenCalledTimes(1);

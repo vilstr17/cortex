@@ -1,6 +1,6 @@
 # Obsidian Community Plugin
 
-> **Status:** This file originated as the sample-plugin template guide. It has been kept as a general reference for Obsidian plugin conventions. For Cortex-specific documentation, see [`docs/`](docs/) and [`PERFORMANCE.md`](PERFORMANCE.md).
+> **Status:** This file originated as the sample-plugin template guide. It has been kept as a general reference for Obsidian plugin conventions. For Chronote-specific documentation, see [`docs/`](docs/) and [`PERFORMANCE.md`](PERFORMANCE.md).
 
 ## Project Overview
 

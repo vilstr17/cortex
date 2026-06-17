@@ -1,8 +1,8 @@
-# Cortex Security
+# Chronote Security
 
 ## Threat Model
 
-Cortex operates inside an Obsidian vault with access to note contents, frontmatter, and the network. The primary concerns are:
+Chronote operates inside an Obsidian vault with access to note contents, frontmatter, and the network. The primary concerns are:
 
 - OAuth token handling (Google Calendar)
 - API key storage (AI providers, embedding providers)
@@ -15,21 +15,21 @@ Cortex operates inside an Obsidian vault with access to note contents, frontmatt
 1. The user clicks **Connect Google Calendar** in the Dashboard.
 2. Obsidian opens a browser tab to `https://cortex-proxy.vercel.app/api/auth`.
 3. The user authenticates with Google and authorizes calendar access.
-4. The proxy redirects to the Obsidian protocol `cortex-auth://?access_token=...&refresh_token=...&expires_in=...`.
-5. `main.ts` registers an Obsidian protocol handler (`cortex-auth`) that captures these parameters and persists them.
+4. The proxy redirects to the Obsidian protocol `chronote-auth://?access_token=...&refresh_token=...&expires_in=...`.
+5. `main.ts` registers an Obsidian protocol handler (`chronote-auth`) that captures these parameters and persists them.
 
 ### Token Storage
 
 - Access token, refresh token, and expiry timestamp are stored in **Obsidian's plugin `data.json`** via the standard `Plugin.loadData()` / `Plugin.saveData()` APIs.
-- This file lives inside the vault at `.obsidian/plugins/cortex/data.json`.
+- This file lives inside the vault at `.obsidian/plugins/chronote/data.json`.
 - There is no encryption at rest; Obsidian does not provide an encrypted settings store.
 - The refresh token is the most sensitive credential. If the vault is synced to a cloud provider, `data.json` travels with it.
 
 ### Transmission
 
-- The refresh token is sent to the Cortex proxy via **HTTP POST** (`POST /api/refresh`) with the token in the JSON body, not in the URL query string.
+- The refresh token is sent to the Chronote proxy via **HTTP POST** (`POST /api/refresh`) with the token in the JSON body, not in the URL query string.
 - Access tokens are transmitted to Google APIs in the `Authorization: Bearer` header.
-- The user's chosen AI provider sees the prompt, the user's message, and any context Cortex needs to answer it (selected by the user when they open the chat or ask for a study plan). API keys are sent in the format the provider requires (header, query parameter, or body) — the exact format is whatever that provider's API expects.
+- The user's chosen AI provider sees the prompt, the user's message, and any context Chronote needs to answer it (selected by the user when they open the chat or ask for a study plan). API keys are sent in the format the provider requires (header, query parameter, or body) — the exact format is whatever that provider's API expects.
 
 ### Scope & Data Handling
 
@@ -44,13 +44,13 @@ Cortex operates inside an Obsidian vault with access to note contents, frontmatt
 - AI provider API keys are stored as plaintext in `data.json` (the active provider's field, e.g. `settings.geminiApiKey`).
 - Each adapter (`GeminiAdapter`, `OpenAICompatAdapter`, `AnthropicAdapter`) sends the credential using the format the upstream API requires. Consult the destination's own docs for the canonical transmission rules.
 - No vault note contents are sent to a provider unless the user opens the chat modal and the message or context gathering intentionally includes them (due notes metadata and file basenames are included in scheduling mode).
-- **Cortex Cloud** is the planned managed option for users who don't want to manage their own API keys. It is **not available yet** — the option is reserved in the catalog and settings, and will activate when the managed service goes live. Once it does, the same context rules apply: the prompt goes to the cloud, but nothing leaves the vault until the user actively asks for it.
+- **Chronote Cloud** is the planned managed option for users who don't want to manage their own API keys. It is **not available yet** — the option is reserved in the catalog and settings, and will activate when the managed service goes live. Once it does, the same context rules apply: the prompt goes to the cloud, but nothing leaves the vault until the user actively asks for it.
 
 ## Embedding Provider Credentials
 
 **File:** `src/agent/vectorIndex/embeddings.ts`
 
-- The embedding provider (used for vault search and flashcard suggestions) is configured separately from the chat provider, in **Settings → Cortex → Indexing**.
+- The embedding provider (used for vault search and flashcard suggestions) is configured separately from the chat provider, in **Settings → Chronote → Indexing**.
 - The same credential rules as chat apply: keys are stored in `data.json`, sent in the format the provider's API requires, and never used to send anything other than embedding requests.
 - Local servers (Ollama, LM Studio) require no API key at all.
 

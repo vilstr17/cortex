@@ -15,7 +15,7 @@ import { localISODate, parseLocalDate, startOfLocalDay } from "../../utils/dateU
 /**
  * The four calendar tools the agent can call. We declare them as
  * factory functions rather than constants so the closures bind to the
- * concrete `GoogleCalendarService` and `CortexSettings` instance the
+ * concrete `GoogleCalendarService` and `ChronoteSettings` instance the
  * caller passes in.
  */
 export function createCalendarTools(deps: {

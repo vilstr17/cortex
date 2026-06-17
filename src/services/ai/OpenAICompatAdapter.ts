@@ -31,7 +31,7 @@
  *     of a generic "unexpected response structure".
  */
 import { requestUrl } from "obsidian";
-import type { AIProvider, CortexSettings } from "../../settingsTypes.js";
+import type { AIProvider, ChronoteSettings } from "../../settingsTypes.js";
 import type {
   AIProviderAdapter,
   ChatRequest,
@@ -72,13 +72,13 @@ interface OpenAIResponse {
 export class OpenAICompatAdapter implements AIProviderAdapter {
   readonly provider: string;
 
-  private readonly settings: CortexSettings;
+  private readonly settings: ChronoteSettings;
   private readonly baseUrl: string;
   private readonly apiKey: string | null;
   private readonly model: string;
   private readonly providerKey: AIProvider;
 
-  constructor(settings: CortexSettings) {
+  constructor(settings: ChronoteSettings) {
     this.settings = settings;
     this.providerKey = settings.ai.provider;
     this.provider = settings.ai.provider;
@@ -165,7 +165,7 @@ export class OpenAICompatAdapter implements AIProviderAdapter {
     const detail = upstreamMsg || response.text || "no body";
     const providerLabel = PROVIDER_LABELS[this.providerKey] ?? this.providerKey;
     throw new Error(
-      `Cortex: ${providerLabel} returned HTTP ${status}${providerHint}. ${detail}`,
+      `Chronote: ${providerLabel} returned HTTP ${status}${providerHint}. ${detail}`,
     );
   }
 
@@ -213,12 +213,12 @@ export class OpenAICompatAdapter implements AIProviderAdapter {
   ): ChatResponse {
     if (!isResponse(json)) {
       throw new Error(
-        "Cortex: OpenAI-compatible provider returned an unexpected response structure.",
+        "Chronote: OpenAI-compatible provider returned an unexpected response structure.",
       );
     }
     const choices = json.choices;
     if (!choices || choices.length === 0) {
-      throw new Error("Cortex: OpenAI-compatible provider returned no choices.");
+      throw new Error("Chronote: OpenAI-compatible provider returned no choices.");
     }
     const message = choices[0].message;
     const nativeToolCalls: ToolCall[] = (message.tool_calls ?? []).map((tc) => {
@@ -264,8 +264,8 @@ export class OpenAICompatAdapter implements AIProviderAdapter {
     if (texts.length === 0) return [];
     if (!this.baseUrl) {
       throw new Error(
-        "Cortex: no base URL configured for the OpenAI-compatible provider. " +
-          "Set it in Settings → Cortex.",
+        "Chronote: no base URL configured for the OpenAI-compatible provider. " +
+          "Set it in Settings → Chronote.",
       );
     }
     const embeddingModel = resolveEmbeddingModel(
@@ -299,13 +299,13 @@ export class OpenAICompatAdapter implements AIProviderAdapter {
   private parseEmbeddings(json: unknown, expected: number): number[][] {
     if (!isResponse(json)) {
       throw new Error(
-        "Cortex: OpenAI-compatible /v1/embeddings returned an unexpected response structure.",
+        "Chronote: OpenAI-compatible /v1/embeddings returned an unexpected response structure.",
       );
     }
     const data = (json as { data?: unknown }).data;
     if (!Array.isArray(data) || data.length !== expected) {
       throw new Error(
-        `Cortex: /v1/embeddings returned ${Array.isArray(data) ? data.length : 0} vectors, expected ${expected}.`,
+        `Chronote: /v1/embeddings returned ${Array.isArray(data) ? data.length : 0} vectors, expected ${expected}.`,
       );
     }
     const out: number[][] = [];
@@ -313,7 +313,7 @@ export class OpenAICompatAdapter implements AIProviderAdapter {
       const row = data[i] as { embedding?: unknown } | null;
       if (!row || !Array.isArray(row.embedding)) {
         throw new Error(
-          `Cortex: /v1/embeddings returned a row without an embedding vector at index ${i}.`,
+          `Chronote: /v1/embeddings returned a row without an embedding vector at index ${i}.`,
         );
       }
       out.push(row.embedding as number[]);

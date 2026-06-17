@@ -23,7 +23,7 @@ import {
   Setting,
   TFile,
 } from "obsidian";
-import type CortexPlugin from "../main.js";
+import type ChronotePlugin from "../main.js";
 import { SaveTarget } from "../services/flashcardSaveService.js";
 
 /**
@@ -123,7 +123,7 @@ function collectVaultFolders(app: App): string[] {
  */
 export function promptForSaveLocation(
   app: App,
-  plugin: CortexPlugin,
+  plugin: ChronotePlugin,
 ): Promise<SaveTarget | null> {
   return new Promise((resolve) => {
     const modal = new SaveFlashcardsModal(app, plugin, resolve);
@@ -132,7 +132,7 @@ export function promptForSaveLocation(
 }
 
 class SaveFlashcardsModal extends Modal {
-  private plugin: CortexPlugin;
+  private plugin: ChronotePlugin;
   private resolve: (target: SaveTarget | null) => void;
   private choice: "default" | "custom" = "default";
   /** The custom destination, once the user has picked one. */
@@ -147,7 +147,7 @@ class SaveFlashcardsModal extends Modal {
 
   constructor(
     app: App,
-    plugin: CortexPlugin,
+    plugin: ChronotePlugin,
     resolve: (target: SaveTarget | null) => void,
   ) {
     super(app);
@@ -158,7 +158,7 @@ class SaveFlashcardsModal extends Modal {
   onOpen(): void {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass("cortex-save-flashcards-modal");
+    contentEl.addClass("chronote-save-flashcards-modal");
 
     contentEl.createEl("h2", { text: "Save flashcards" });
 
@@ -195,14 +195,14 @@ class SaveFlashcardsModal extends Modal {
       });
 
     this.customSection = contentEl.createDiv({
-      cls: "cortex-save-fc-custom-section",
+      cls: "chronote-save-fc-custom-section",
     });
     this.customSection.style.display = "none";
     this.customSection.style.marginLeft = "24px";
     this.customSection.style.marginBottom = "12px";
 
     this.customReadout = this.customSection.createEl("p", {
-      cls: "cortex-save-fc-readout",
+      cls: "chronote-save-fc-readout",
     });
 
     new Setting(this.customSection)
@@ -214,7 +214,7 @@ class SaveFlashcardsModal extends Modal {
     this.renderReadout();
 
     // ── Footer buttons ────────────────────────────────────────────
-    const footer = contentEl.createDiv({ cls: "cortex-save-fc-footer" });
+    const footer = contentEl.createDiv({ cls: "chronote-save-fc-footer" });
     const cancelBtn = footer.createEl("button", { text: "Cancel" });
     cancelBtn.addEventListener("click", () => this.cancel());
 
@@ -282,7 +282,7 @@ class SaveFlashcardsModal extends Modal {
     let target: SaveTarget;
     if (this.choice === "custom") {
       if (this.custom === null) {
-        new Notice("Cortex: pick a destination first.");
+        new Notice("Chronote: pick a destination first.");
         return;
       }
       target = this.custom.type === "folder"

@@ -1,12 +1,12 @@
-# Cortex — Performance Notes
+# Chronote — Performance Notes
 
-This document records the runtime-cost considerations and optimization work in the current Cortex tree. It is meant for contributors who need to know *why* the codebase is shaped the way it is.
+This document records the runtime-cost considerations and optimization work in the current Chronote tree. It is meant for contributors who need to know *why* the codebase is shaped the way it is.
 
 ## Principles
 
 - **The vault is the database.** Review state lives in note frontmatter; tests live in `data.json`. There is no separate DB, so the main cost of "the system running" is Obsidian's own `metadataCache`.
-- **The user is the bottleneck, not Cortex.** A typical review takes 5–10 seconds; a single chat turn costs more than a hundred background ticks. Optimize for the user, then for the system.
-- **The AI provider is the network boundary.** Whatever the chat or embedding provider costs is on the provider. Cortex's job is to not send more than it needs to.
+- **The user is the bottleneck, not Chronote.** A typical review takes 5–10 seconds; a single chat turn costs more than a hundred background ticks. Optimize for the user, then for the system.
+- **The AI provider is the network boundary.** Whatever the chat or embedding provider costs is on the provider. Chronote's job is to not send more than it needs to.
 
 ## Startup
 
@@ -21,9 +21,9 @@ This document records the runtime-cost considerations and optimization work in t
 
 ## Network costs
 
-- **Chat calls.** Cortex sends the user's message plus the minimum context the active adapter needs (due notes metadata, file basenames, today's calendar events, upcoming tests). It does not silently upload the whole vault.
+- **Chat calls.** Chronote sends the user's message plus the minimum context the active adapter needs (due notes metadata, file basenames, today's calendar events, upcoming tests). It does not silently upload the whole vault.
 - **Embedding calls** happen only when the user explicitly clicks **Reindex vault**. The chunker (`src/agent/vectorIndex/chunker.ts`) bounds the size of each request.
-- **Provider keys** are sent in the format the provider's API expects. The user's choice of provider is the only network destination Cortex uses for AI traffic.
+- **Provider keys** are sent in the format the provider's API expects. The user's choice of provider is the only network destination Chronote uses for AI traffic.
 
 ## Bundle size
 

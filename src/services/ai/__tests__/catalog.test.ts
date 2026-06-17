@@ -3,7 +3,7 @@ import {
   providerMissingFields,
   embeddingMissingFields,
   resolveEmbeddingModel,
-  CORTEX_CLOUD_BASE_URL,
+  CHRONOTE_CLOUD_BASE_URL,
 } from "../catalog.js";
 
 /**
@@ -13,7 +13,7 @@ import {
  */
 
 const baseConfig = {
-  cortexAccountId: "",
+  chronoteAccountId: "",
   geminiApiKey: "",
   geminiModel: "",
   apiKey: "",
@@ -22,14 +22,14 @@ const baseConfig = {
 };
 
 describe("providerMissingFields", () => {
-  it("cortex_cloud: requires only the account id", () => {
-    expect(providerMissingFields("cortex_cloud", baseConfig)).toEqual([
-      "Cortex account id",
+  it("chronote_cloud: requires only the account id", () => {
+    expect(providerMissingFields("chronote_cloud", baseConfig)).toEqual([
+      "Chronote account id",
     ]);
     expect(
-      providerMissingFields("cortex_cloud", {
+      providerMissingFields("chronote_cloud", {
         ...baseConfig,
-        cortexAccountId: "acct_42",
+        chronoteAccountId: "acct_42",
       }),
     ).toEqual([]);
   });
@@ -118,7 +118,7 @@ describe("resolveEmbeddingModel", () => {
     expect(resolveEmbeddingModel("gemini", "")).toBe("gemini-embedding-001");
     expect(resolveEmbeddingModel("ollama", "")).toBe("nomic-embed-text");
     expect(resolveEmbeddingModel("lmstudio", "")).toBe("nomic-embed-text");
-    expect(resolveEmbeddingModel("cortex_cloud", "")).toBe("nomic-embed-text");
+    expect(resolveEmbeddingModel("chronote_cloud", "")).toBe("nomic-embed-text");
   });
 
   it("returns an empty string when there is no default (custom / anthropic)", () => {
@@ -157,14 +157,14 @@ describe("embeddingMissingFields", () => {
   });
 
   it("allows every other provider with no embedding model configured", () => {
-    for (const p of ["openai", "gemini", "ollama", "lmstudio", "custom", "cortex_cloud"] as const) {
+    for (const p of ["openai", "gemini", "ollama", "lmstudio", "custom", "chronote_cloud"] as const) {
       expect(embeddingMissingFields(p, "")).toEqual([]);
     }
   });
 });
 
-describe("CORTEX_CLOUD_BASE_URL", () => {
+describe("CHRONOTE_CLOUD_BASE_URL", () => {
   it("points at the cortex-proxy subdomain", () => {
-    expect(CORTEX_CLOUD_BASE_URL).toMatch(/^https:\/\/cortex-proxy\.vercel\.app/);
+    expect(CHRONOTE_CLOUD_BASE_URL).toMatch(/^https:\/\/cortex-proxy\.vercel\.app/);
   });
 });

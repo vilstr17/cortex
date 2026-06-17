@@ -14,7 +14,7 @@ import { vi } from "vitest";
 // Minimal DOM stub for tests that instantiate Obsidian UI classes.
 // Real browser APIs are unavailable in the default Node test environment,
 // but modals/views need document.createElement and a handful of element
-// helpers. The stub is intentionally small; it covers what CortexChatModal
+// helpers. The stub is intentionally small; it covers what ChronoteChatModal
 // and related views use at test time.
 class FakeElement {
   children: FakeElement[] = [];

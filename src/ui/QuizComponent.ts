@@ -1,5 +1,5 @@
 /**
- * Interactive quiz renderer for the Cortex chat UI.
+ * Interactive quiz renderer for the Chronote chat UI.
  *
  * Renders a multiple-choice quiz one question at a time, with immediate
  * feedback, explanations, score tracking, and a final summary.
@@ -14,23 +14,23 @@ export function renderQuizComponent(
 ): void {
   if (quiz.questions.length === 0) return;
 
-  const container = parent.createDiv({ cls: "cortex-quiz" });
+  const container = parent.createDiv({ cls: "chronote-quiz" });
 
-  const header = container.createDiv({ cls: "cortex-quiz-header" });
-  header.createDiv({ cls: "cortex-quiz-title", text: `Quiz — ${quiz.testName}` });
-  const scoreEl = header.createDiv({ cls: "cortex-quiz-score" });
-  const progressEl = header.createDiv({ cls: "cortex-quiz-progress" });
-  const progressBar = container.createDiv({ cls: "cortex-quiz-progress-bar" });
-  const progressFill = progressBar.createDiv({ cls: "cortex-quiz-progress-fill" });
+  const header = container.createDiv({ cls: "chronote-quiz-header" });
+  header.createDiv({ cls: "chronote-quiz-title", text: `Quiz — ${quiz.testName}` });
+  const scoreEl = header.createDiv({ cls: "chronote-quiz-score" });
+  const progressEl = header.createDiv({ cls: "chronote-quiz-progress" });
+  const progressBar = container.createDiv({ cls: "chronote-quiz-progress-bar" });
+  const progressFill = progressBar.createDiv({ cls: "chronote-quiz-progress-fill" });
 
-  const questionArea = container.createDiv({ cls: "cortex-quiz-question-area" });
-  const promptEl = questionArea.createDiv({ cls: "cortex-quiz-prompt" });
-  const optionsEl = questionArea.createDiv({ cls: "cortex-quiz-options" });
-  const feedbackEl = questionArea.createDiv({ cls: "cortex-quiz-feedback" });
+  const questionArea = container.createDiv({ cls: "chronote-quiz-question-area" });
+  const promptEl = questionArea.createDiv({ cls: "chronote-quiz-prompt" });
+  const optionsEl = questionArea.createDiv({ cls: "chronote-quiz-options" });
+  const feedbackEl = questionArea.createDiv({ cls: "chronote-quiz-feedback" });
 
-  const controls = container.createDiv({ cls: "cortex-quiz-controls" });
+  const controls = container.createDiv({ cls: "chronote-quiz-controls" });
   const nextBtn = controls.createEl("button", {
-    cls: "cortex-quiz-next-btn",
+    cls: "chronote-quiz-next-btn",
     text: "Next",
   });
 
@@ -56,7 +56,7 @@ export function renderQuizComponent(
 
     q.options.forEach((option, idx) => {
       const btn = optionsEl.createEl("button", {
-        cls: "cortex-quiz-option",
+        cls: "chronote-quiz-option",
         text: option,
       });
       btn.addEventListener("click", () => handleAnswer(idx));
@@ -75,7 +75,7 @@ export function renderQuizComponent(
     if (correct) score++;
 
     // Disable all option buttons and mark correct / incorrect.
-    const buttons = Array.from(optionsEl.querySelectorAll(".cortex-quiz-option")) as HTMLButtonElement[];
+    const buttons = Array.from(optionsEl.querySelectorAll(".chronote-quiz-option")) as HTMLButtonElement[];
     buttons.forEach((b, idx) => {
       b.disabled = true;
       if (idx === q.correct_index) {
@@ -104,11 +104,11 @@ export function renderQuizComponent(
     header.empty();
 
     header.createDiv({
-      cls: "cortex-quiz-title",
+      cls: "chronote-quiz-title",
       text: `Quiz complete — ${quiz.testName}`,
     });
 
-    const summary = questionArea.createDiv({ cls: "cortex-quiz-summary" });
+    const summary = questionArea.createDiv({ cls: "chronote-quiz-summary" });
     summary.createEl("h3", { text: `You scored ${score} / ${quiz.questions.length}` });
     const pct = quiz.questions.length === 0 ? 0 : Math.round((score / quiz.questions.length) * 100);
     summary.createEl("p", { text: `${pct}% correct` });

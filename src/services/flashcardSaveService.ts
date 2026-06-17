@@ -113,7 +113,7 @@ async function appendToExistingFile(
     const header = `\n## Saved ${localISODate(new Date())} (${proposals.length} card${proposals.length === 1 ? "" : "s"})\n\n`;
     return current.replace(/\n*$/, "") + "\n" + header + body + "\n";
   });
-  new Notice(`Cortex: appended ${proposals.length} card(s) to ${file.name}.`);
+  new Notice(`Chronote: appended ${proposals.length} card(s) to ${file.name}.`);
   return { file, cardsAppended: proposals.length };
 }
 
@@ -151,7 +151,7 @@ async function createOrAppendInFolder(
       const header = `\n## Saved ${localISODate(new Date())} (${proposals.length} card${proposals.length === 1 ? "" : "s"})\n\n`;
       return current.replace(/\n*$/, "") + "\n" + header + body + "\n";
     });
-    new Notice(`Cortex: appended ${proposals.length} card(s) to ${fileName}.`);
+    new Notice(`Chronote: appended ${proposals.length} card(s) to ${fileName}.`);
     return { file: existing, cardsAppended: proposals.length };
   }
 
@@ -170,7 +170,7 @@ async function createOrAppendInFolder(
   ].join("\n");
   const initial = frontmatter + body + "\n";
   const file = await app.vault.create(filePath, initial);
-  new Notice(`Cortex: created ${fileName} with ${proposals.length} card(s).`);
+  new Notice(`Chronote: created ${fileName} with ${proposals.length} card(s).`);
   return { file, cardsAppended: proposals.length };
 }
 

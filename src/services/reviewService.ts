@@ -1,7 +1,7 @@
 /**
  * Review service: compute the spaced-repetition review queue.
  *
- * The dashboard's "Due Reviews" panel (`CortexDashboardView.getDueNotes`)
+ * The dashboard's "Due Reviews" panel (`ChronoteDashboardView.getDueNotes`)
  * used to be the only consumer of this logic, which meant the agent
  * had no way to answer "what reviews are due today?". This module
  * extracts that computation so both the dashboard and the new
@@ -15,7 +15,7 @@
  */
 
 import { App } from "obsidian";
-import { CortexTest } from "../settingsTypes.js";
+import { ChronoteTest } from "../settingsTypes.js";
 import { parseLocalDate, startOfLocalDay } from "../utils/dateUtils.js";
 
 /** A note's review-relevant frontmatter, lifted off the TFile. */
@@ -50,7 +50,7 @@ export interface DueReview {
  * done test are retired from the review queue — there's nothing left
  * to revise once the exam is over.
  */
-export function donePathsFromTests(tests: CortexTest[]): Set<string> {
+export function donePathsFromTests(tests: ChronoteTest[]): Set<string> {
   const set = new Set<string>();
   for (const t of tests) {
     if (!t.done) continue;

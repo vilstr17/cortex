@@ -1,14 +1,14 @@
 import { App, Modal, Setting, moment, ButtonComponent } from "obsidian";
-import CortexPlugin from "../main.js";
+import ChronotePlugin from "../main.js";
 
 export class CreateTestModal extends Modal {
-  private plugin: CortexPlugin;
+  private plugin: ChronotePlugin;
   private onSubmit: () => void;
   private testName = "";
   private testDate = "";
   private saveButtonComponent: ButtonComponent | null = null;
 
-  constructor(app: App, plugin: CortexPlugin, onSubmit: () => void) {
+  constructor(app: App, plugin: ChronotePlugin, onSubmit: () => void) {
     super(app);
     this.plugin = plugin;
     this.onSubmit = onSubmit;

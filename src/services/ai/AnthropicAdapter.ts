@@ -19,7 +19,7 @@
  * instead of the generic "unexpected response structure" complaint.
  */
 import { requestUrl } from "obsidian";
-import type { CortexSettings } from "../../settingsTypes.js";
+import type { ChronoteSettings } from "../../settingsTypes.js";
 import type {
   AIProviderAdapter,
   ChatRequest,
@@ -75,7 +75,7 @@ export class AnthropicAdapter implements AIProviderAdapter {
 
   private readonly apiUrl = "https://api.anthropic.com/v1/messages";
 
-  constructor(private settings: CortexSettings) {}
+  constructor(private settings: ChronoteSettings) {}
 
   private get apiKey(): string {
     return this.settings.ai.apiKey;
@@ -141,7 +141,7 @@ export class AnthropicAdapter implements AIProviderAdapter {
     const detail = upstreamMsg || response.text || "no body";
     const prefix = upstreamType ? ` [${upstreamType}]` : "";
     throw new Error(
-      `Cortex: Anthropic returned HTTP ${status}${hint}.${prefix} ${detail}`,
+      `Chronote: Anthropic returned HTTP ${status}${hint}.${prefix} ${detail}`,
     );
   }
 
@@ -212,7 +212,7 @@ export class AnthropicAdapter implements AIProviderAdapter {
 
   private parseResponse(json: unknown): ChatResponse {
     if (!isResponse(json)) {
-      throw new Error("Cortex: Anthropic returned an unexpected response structure.");
+      throw new Error("Chronote: Anthropic returned an unexpected response structure.");
     }
     const blocks = json.content ?? [];
     let text = "";
@@ -243,7 +243,7 @@ export class AnthropicAdapter implements AIProviderAdapter {
    */
   async embed(_texts: string[]): Promise<number[][]> {
     throw new Error(
-      "Cortex: Anthropic has no embedding endpoint. To use AI search, " +
+      "Chronote: Anthropic has no embedding endpoint. To use AI search, " +
         "switch to OpenAI, Gemini, or set a Custom OpenAI-compatible " +
         "endpoint that serves /v1/embeddings.",
     );

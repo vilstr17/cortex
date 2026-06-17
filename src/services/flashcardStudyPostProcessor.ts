@@ -12,7 +12,7 @@
  */
 
 import { MarkdownPostProcessorContext, TFile } from "obsidian";
-import type CortexPlugin from "../main.js";
+import type ChronotePlugin from "../main.js";
 import { StudyFlashcardsModal } from "../modals/StudyFlashcardsModal.js";
 import { parseSavedCardsFromMarkdown } from "./flashcardSaveService.js";
 
@@ -21,7 +21,7 @@ import { parseSavedCardsFromMarkdown } from "./flashcardSaveService.js";
  * file being rendered. Returns the corresponding `TFile`, or
  * null if the file cannot be resolved.
  */
-function resolveFile(plugin: CortexPlugin, ctx: MarkdownPostProcessorContext): TFile | null {
+function resolveFile(plugin: ChronotePlugin, ctx: MarkdownPostProcessorContext): TFile | null {
   const path = ctx.sourcePath;
   if (!path) return null;
   const file = plugin.app.vault.getAbstractFileByPath(path);
@@ -50,8 +50,8 @@ function isFlashcardNote(fm: unknown): boolean {
  * this is a flashcard note, prepend a Study button to the
  * `el` element.
  */
-export const cortexStudyPostProcessor =
-  (plugin: CortexPlugin) =>
+export const chronoteStudyPostProcessor =
+  (plugin: ChronotePlugin) =>
   async (el: HTMLElement, ctx: MarkdownPostProcessorContext): Promise<void> => {
     // Frontmatter lives in the metadata cache, not the rendered
     // element. We can read it from the source file directly.
@@ -64,12 +64,12 @@ export const cortexStudyPostProcessor =
     // Build the Study button. We attach it as a sibling of the
     // first rendered child by inserting at the very top of `el`.
     const wrapper = document.createElement("div");
-    wrapper.className = "cortex-flashcard-study-wrapper";
+    wrapper.className = "chronote-flashcard-study-wrapper";
 
     const button = document.createElement("button");
-    button.className = "mod-cta cortex-flashcard-study-btn";
+    button.className = "mod-cta chronote-flashcard-study-btn";
     button.textContent = "▶ Study flashcards";
-    button.setAttribute("data-cortex-study", file.path);
+    button.setAttribute("data-chronote-study", file.path);
 
     wrapper.appendChild(button);
     el.prepend(wrapper);
@@ -82,7 +82,7 @@ export const cortexStudyPostProcessor =
  * Called from the workspace click delegate in `main.ts`.
  */
 export async function openStudyForFile(
-  plugin: CortexPlugin,
+  plugin: ChronotePlugin,
   file: TFile,
 ): Promise<void> {
   const content = await plugin.app.vault.cachedRead(file);
@@ -91,7 +91,7 @@ export async function openStudyForFile(
 
   if (cards.length === 0) {
     new (await import("obsidian")).Notice(
-      "Cortex: no flashcards found in this note.",
+      "Chronote: no flashcards found in this note.",
     );
     return;
   }

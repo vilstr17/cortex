@@ -12,10 +12,10 @@ vi.mock("obsidian", () => ({
 }));
 
 import { AnthropicAdapter } from "../AnthropicAdapter.js";
-import { DEFAULT_SETTINGS, CortexSettings } from "../../../settingsTypes.js";
+import { DEFAULT_SETTINGS, ChronoteSettings } from "../../../settingsTypes.js";
 import { runWithTools } from "../runWithTools.js";
 
-function settingsWithKey(key: string, model = "claude-sonnet-4-6"): CortexSettings {
+function settingsWithKey(key: string, model = "claude-sonnet-4-6"): ChronoteSettings {
   return {
     ...DEFAULT_SETTINGS,
     ai: { ...DEFAULT_SETTINGS.ai, provider: "anthropic", apiKey: key, model },

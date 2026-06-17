@@ -20,7 +20,7 @@
  * the user needs the verbatim text to fix the configuration.
  */
 import { Notice } from "obsidian";
-import type CortexPlugin from "../main.js";
+import type ChronotePlugin from "../main.js";
 import { providerMissingFields, embeddingMissingFields } from "./ai/catalog.js";
 
 export interface RunIndexOptions {
@@ -34,14 +34,14 @@ export interface RunIndexOptions {
 }
 
 export async function runIndex(
-  plugin: CortexPlugin,
+  plugin: ChronotePlugin,
   opts: RunIndexOptions = {},
 ): Promise<void> {
   const ai = plugin.settings.ai;
 
   // 1. The chat provider must be configured.
   const missing = providerMissingFields(ai.provider, {
-    cortexAccountId: ai.cortexAccountId,
+    chronoteAccountId: ai.chronoteAccountId,
     geminiApiKey: ai.geminiApiKey,
     geminiModel: ai.geminiModel,
     apiKey: ai.apiKey,
@@ -50,7 +50,7 @@ export async function runIndex(
   });
   if (missing.length > 0) {
     new Notice(
-      `Cortex: AI provider is not configured. Missing: ${missing.join(", ")}. Open Settings → Cortex.`,
+      `Chronote: AI provider is not configured. Missing: ${missing.join(", ")}. Open Settings → Chronote.`,
     );
     opts.onStateChange?.("error", "not configured");
     return;
@@ -63,7 +63,7 @@ export async function runIndex(
   const embMissing = embeddingMissingFields(ai.provider, ai.embeddingModel);
   if (embMissing.length > 0) {
     new Notice(
-      `Cortex: cannot index. ${embMissing.join(", ")}. Open Settings → Cortex.`,
+      `Chronote: cannot index. ${embMissing.join(", ")}. Open Settings → Chronote.`,
     );
     opts.onStateChange?.("error", "embedding not configured");
     return;
@@ -71,27 +71,27 @@ export async function runIndex(
 
   const kb = plugin.getKnowledgeBase();
   if (kb.isReindexInFlight()) {
-    new Notice("Cortex: a reindex is already running.");
+    new Notice("Chronote: a reindex is already running.");
     return;
   }
 
   opts.onStateChange?.("running");
-  const progressNotice = new Notice("Cortex: indexing… 0/?", 0);
+  const progressNotice = new Notice("Chronote: indexing… 0/?", 0);
   try {
     await kb.reindexVault((p) => {
       const label = `Indexing… ${p.done}/${p.total} (${p.chunks} chunks)`;
       // Obsidian replaces Notice text in place via setMessage — no
       // visible flicker.
-      progressNotice.setMessage(`Cortex: ${label}`);
+      progressNotice.setMessage(`Chronote: ${label}`);
       opts.onProgress?.(label);
     });
     progressNotice.hide();
-    new Notice(`Cortex: indexed ${kb.chunkCount} chunk(s).`);
+    new Notice(`Chronote: indexed ${kb.chunkCount} chunk(s).`);
     opts.onStateChange?.("done");
   } catch (err) {
     progressNotice.hide();
     const msg = err instanceof Error ? err.message : String(err);
-    new Notice(`Cortex: indexing failed — ${msg}`);
+    new Notice(`Chronote: indexing failed — ${msg}`);
     opts.onStateChange?.("error", msg);
   }
 }

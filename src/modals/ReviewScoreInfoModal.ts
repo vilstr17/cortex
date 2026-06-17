@@ -9,10 +9,10 @@ export class ReviewScoreInfoModal extends Modal {
     const { contentEl } = this;
     contentEl.empty();
 
-    contentEl.addClass("cortex-score-info-modal");
+    contentEl.addClass("chronote-score-info-modal");
     contentEl.createEl("h3", { text: "How to choose your review score" });
 
-    const list = contentEl.createEl("ul", { cls: "cortex-score-info-list" });
+    const list = contentEl.createEl("ul", { cls: "chronote-score-info-list" });
 
     list.createEl("li", {
       text: "1 — No idea. I couldn’t recall this without help.",
@@ -31,7 +31,7 @@ export class ReviewScoreInfoModal extends Modal {
     });
 
     contentEl.createEl("p", {
-      cls: "cortex-score-info-note",
+      cls: "chronote-score-info-note",
       text: "Tip: Be honest with your score — it helps scheduling stay effective.",
     });
   }

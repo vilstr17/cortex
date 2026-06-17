@@ -1,5 +1,5 @@
 /**
- * Markdown rendering helpers for the Cortex chat UI.
+ * Markdown rendering helpers for the Chronote chat UI.
  *
  * The chat modal uses Obsidian's `MarkdownRenderer` so assistant replies
  * are displayed as real headings, lists, bold text, code blocks, tables,
@@ -48,7 +48,7 @@ const INTERNAL_LINK_SELECTOR = "a.internal-link, a[href*='.md']";
  * Walk `container` and attach a click handler to every internal-link
  * anchor. External (`http(s)://`, `file://`) anchors are left alone so
  * the browser handles them normally. Each anchor is wired at most once
- * via `dataset.cortexWired`.
+ * via `dataset.chronoteWired`.
  */
 export function wireLinkClicks(
   container: HTMLElement,
@@ -58,10 +58,10 @@ export function wireLinkClicks(
 ): void {
   const links = container.querySelectorAll<HTMLAnchorElement>(INTERNAL_LINK_SELECTOR);
   links.forEach((anchor) => {
-    if (anchor.dataset.cortexWired === "1") return;
+    if (anchor.dataset.chronoteWired === "1") return;
     const href = anchor.getAttribute("href") ?? "";
     if (isExternalHref(href)) return;
-    anchor.dataset.cortexWired = "1";
+    anchor.dataset.chronoteWired = "1";
     component.registerDomEvent(anchor, "click", (ev: MouseEvent) => {
       const resolved = resolveLinkClick(anchor, ev);
       if (!resolved) return;

@@ -1,4 +1,4 @@
-# Cortex Chat UI & Tool-Calling Improvements — Implementation Plan
+# Chronote Chat UI & Tool-Calling Improvements — Implementation Plan
 
 ## Goal
 Deliver the five improvements from the roadmap while keeping LFM 2.5 (local / OpenAI-compatible) a reliable baseline and remaining compatible with larger models.
@@ -11,7 +11,7 @@ Deliver the five improvements from the roadmap while keeping LFM 2.5 (local / Op
 
 ## High-level approach
 - Keep changes inside the existing chat modal and AI adapter architecture.
-- Introduce small, testable UI helper modules so `CortexChatModal.ts` does not become a monolith.
+- Introduce small, testable UI helper modules so `ChronoteChatModal.ts` does not become a monolith.
 - Extend the tool registry with argument validation and a local-model JSON fallback, rather than replacing the native tool-calling path.
 - Persist chat history in the existing plugin `data.json` (settings) with a safe upper bound.
 
@@ -19,12 +19,12 @@ Deliver the five improvements from the roadmap while keeping LFM 2.5 (local / Op
 
 ### Settings / migration
 - `src/settingsTypes.ts`
-  - Add `chatHistory: Array<{ role: "user" | "assistant"; text: string }>` to `CortexSettings`.
+  - Add `chatHistory: Array<{ role: "user" | "assistant"; text: string }>` to `ChronoteSettings`.
   - Set default to `[]` in `DEFAULT_SETTINGS`.
 - `src/utils/settingsMigration.ts`
   - No new migration logic required; `DEFAULT_SETTINGS` fill handles older blobs. Add a test that confirms `chatHistory` is defaulted when missing.
 
-### Chat modal (`src/modals/CortexChatModal.ts`)
+### Chat modal (`src/modals/ChronoteChatModal.ts`)
 - Import `MarkdownRenderer` and new UI helpers.
 - On open, restore `this.chatHistory` from `this.plugin.settings.chatHistory` and replay it into the DOM (skip the welcome message if history is non-empty).
 - After each user/assistant exchange, trim history to a cap (e.g. 100 messages), write it back to settings, and save.
@@ -47,14 +47,14 @@ Deliver the five improvements from the roadmap while keeping LFM 2.5 (local / Op
   - Click card or a "Flip" button toggles a CSS 3D flip.
   - Prev / Next buttons + "Card N / M" progress.
   - A "Save all" button per test group writes the whole group to the flashcard note.
-- Use CSS classes scoped under `.cortex-chat-flashcard-deck`.
+- Use CSS classes scoped under `.chronote-chat-flashcard-deck`.
 
 ### Quiz tool + UI (`src/agent/tools/quizzes.ts`, `src/ui/QuizComponent.ts`)
 - New tool `propose_quiz` with schema:
   - `test_name` (optional).
   - `questions`: array of `{ type: "multiple_choice", prompt, options: string[], correct_index: number, explanation?: string }`.
   - Tool validates shape and stores in a `pendingQuizzes` queue (same pattern as `pendingProposals`).
-- Register the tool in `CortexChatModal`.
+- Register the tool in `ChronoteChatModal`.
 - `QuizComponent` renders one question at a time:
   - Option buttons, immediate correct/incorrect styling.
   - Explanation reveal after answering.

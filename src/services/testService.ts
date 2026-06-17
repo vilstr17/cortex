@@ -1,24 +1,24 @@
-import CortexPlugin from "../main.js";
-import { CortexTest } from "../settings.js";
+import ChronotePlugin from "../main.js";
+import { ChronoteTest } from "../settings.js";
 import { TFile } from "obsidian";
 
 export class TestService {
-  private plugin: CortexPlugin;
+  private plugin: ChronotePlugin;
 
-  constructor(plugin: CortexPlugin) {
+  constructor(plugin: ChronotePlugin) {
     this.plugin = plugin;
   }
 
-  getAllTests(): CortexTest[] {
+  getAllTests(): ChronoteTest[] {
     return this.plugin.settings.tests;
   }
 
-  getTestById(id: string): CortexTest | undefined {
+  getTestById(id: string): ChronoteTest | undefined {
     return this.plugin.settings.tests.find((test) => test.id === id);
   }
 
-  async addTest(name: string, date: string): Promise<CortexTest> {
-    const newTest: CortexTest = {
+  async addTest(name: string, date: string): Promise<ChronoteTest> {
+    const newTest: ChronoteTest = {
       id: crypto.randomUUID(),
       name,
       date,
@@ -38,7 +38,7 @@ export class TestService {
     await this.plugin.saveData(this.plugin.settings);
   }
 
-  async toggleDone(id: string): Promise<CortexTest | undefined> {
+  async toggleDone(id: string): Promise<ChronoteTest | undefined> {
     const test = this.getTestById(id);
     if (!test) return undefined;
     test.done = !test.done;
@@ -46,7 +46,7 @@ export class TestService {
     return test;
   }
 
-  async addFileToTest(testId: string, filePath: string): Promise<CortexTest | undefined> {
+  async addFileToTest(testId: string, filePath: string): Promise<ChronoteTest | undefined> {
     const test = this.getTestById(testId);
     if (!test) return undefined;
 
@@ -79,7 +79,7 @@ export class TestService {
    * Sync the exam date to a single note's frontmatter.
    * Always overwrites to keep it in sync with the test date.
    */
-  private async syncExamDateToFile(test: CortexTest, filePath: string): Promise<void> {
+  private async syncExamDateToFile(test: ChronoteTest, filePath: string): Promise<void> {
     const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
     if (!(file instanceof TFile)) return;
 

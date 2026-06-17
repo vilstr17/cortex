@@ -1,5 +1,5 @@
 /**
- * Tool registry for the Cortex AI agent.
+ * Tool registry for the Chronote AI agent.
  *
  * Gemini's function-calling protocol expects a `tools` array of
  * `functionDeclarations` and lets the model return a `functionCall`
@@ -161,11 +161,9 @@ export class ToolRegistry {
   private tools = new Map<string, Tool>();
 
   register(tool: Tool): void {
-    if (this.tools.has(tool.name)) {
-      console.warn(`Cortex: tool "${tool.name}" registered twice — overwriting.`);
-    }
     this.tools.set(tool.name, tool);
   }
+
 
   has(name: string): boolean {
     return this.tools.has(name);
@@ -213,9 +211,9 @@ export class ToolRegistry {
       return await tool.execute(call.args, ctx);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`Cortex: tool "${call.name}" failed:`, err);
       return `Error executing ${call.name}: ${msg}`;
     }
+
   }
 }
 

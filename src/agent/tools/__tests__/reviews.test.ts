@@ -7,7 +7,7 @@ vi.mock("obsidian", () => ({
 
 import { App, TFile } from "obsidian";
 import { createReviewTools } from "../reviews.js";
-import type { CortexTest } from "../../../settingsTypes.js";
+import type { ChronoteTest } from "../../../settingsTypes.js";
 
 /**
  * Build a minimal fake App that satisfies `readReviewableNotes`:
@@ -45,7 +45,7 @@ function fakeApp(files: Array<{ path: string; basename?: string; fm?: Record<str
 
 function getListReviewsTool(deps: {
   app: App;
-  getTests: () => CortexTest[];
+  getTests: () => ChronoteTest[];
   now: Date;
 }) {
   const tools = createReviewTools({ app: deps.app, getTests: deps.getTests, now: () => deps.now });
@@ -84,7 +84,7 @@ describe("list_reviews", () => {
     const app = fakeApp([
       { path: "Calculus.md", fm: { next_review: "2026-06-16" } },
     ]);
-    const tests: CortexTest[] = [
+    const tests: ChronoteTest[] = [
       {
         id: "t1",
         name: "Calculus final",

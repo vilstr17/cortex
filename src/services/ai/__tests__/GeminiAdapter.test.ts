@@ -16,9 +16,9 @@ vi.mock("obsidian", () => ({
 }));
 
 import { GeminiAdapter } from "../GeminiAdapter.js";
-import { DEFAULT_SETTINGS, CortexSettings } from "../../../settingsTypes.js";
+import { DEFAULT_SETTINGS, ChronoteSettings } from "../../../settingsTypes.js";
 
-function settingsFor(model = "gemini-2.5-flash", apiKey = "AIzaLEAKED"): CortexSettings {
+function settingsFor(model = "gemini-2.5-flash", apiKey = "AIzaLEAKED"): ChronoteSettings {
   return {
     ...DEFAULT_SETTINGS,
     ai: {
@@ -339,7 +339,7 @@ describe("GeminiAdapter — embed", () => {
     // Override the default settingsFor() model with an empty
     // embedding model so the adapter falls back to the documented
     // default ("gemini-embedding-001").
-    (adapter as unknown as { settings: CortexSettings }).settings.ai.embeddingModel =
+    (adapter as unknown as { settings: ChronoteSettings }).settings.ai.embeddingModel =
       "";
     await adapter.embed(["a"]);
     const call = requestUrlMock.mock.calls[0][0] as { url: string; body: string };

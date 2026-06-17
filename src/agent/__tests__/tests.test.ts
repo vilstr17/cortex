@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { createTestTools } from "../tools/tests.js";
-import { CortexTest } from "../../settingsTypes.js";
+import { ChronoteTest } from "../../settingsTypes.js";
 
 /**
  * Tests for the list_tests tool.
@@ -12,7 +12,7 @@ import { CortexTest } from "../../settingsTypes.js";
  * just a copy of the explicit-date path with `date` omitted.
  */
 
-function makeTest(over: Partial<CortexTest> & Pick<CortexTest, "id" | "name" | "date">): CortexTest {
+function makeTest(over: Partial<ChronoteTest> & Pick<ChronoteTest, "id" | "name" | "date">): ChronoteTest {
   return {
     filePaths: [],
     done: false,
@@ -23,7 +23,7 @@ function makeTest(over: Partial<CortexTest> & Pick<CortexTest, "id" | "name" | "
 const NOW = new Date(2026, 5, 14, 10, 0, 0); // 2026-06-14 local
 const NOW_ISO = "2026-06-14";
 
-function build(rows: CortexTest[]) {
+function build(rows: ChronoteTest[]) {
   return createTestTools({
     getTests: () => rows,
     now: () => NOW,

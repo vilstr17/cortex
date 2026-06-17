@@ -1,16 +1,16 @@
 import { TFile } from "obsidian";
-import CortexPlugin from "./main.js";
+import ChronotePlugin from "./main.js";
 import { ReviewScoreModal } from "./modals/ReviewScoreModal.js";
 import { AddToTestModal } from "./modals/AddToTestModal.js";
 import { MarkTestDoneModal } from "./modals/MarkTestDoneModal.js";
 import { calculateNextReview } from "./utils/srsLogic.js";
-import { cortexNotice } from "./utils/notice.js";
+import { chronoteNotice } from "./utils/notice.js";
 import { localISODate, parseLocalDate, startOfLocalDay, addDays } from "./utils/dateUtils.js";
 
 export default class Commands {
-  plugin: CortexPlugin;
+  plugin: ChronotePlugin;
 
-  constructor(plugin: CortexPlugin) {
+  constructor(plugin: ChronotePlugin) {
     this.plugin = plugin;
   }
 
@@ -18,8 +18,8 @@ export default class Commands {
     const plugin = this.plugin;
 
     plugin.addCommand({
-      id: "log-cortex-review",
-      name: "Log Cortex Review",
+      id: "log-chronote-review",
+      name: "Log Chronote Review",
       checkCallback: (checking: boolean) => {
         const activeFile = plugin.app.workspace.getActiveFile();
         if (checking) {
@@ -30,14 +30,14 @@ export default class Commands {
             try {
               const result = await applyReviewToFrontmatter(activeFile, score, plugin);
               if (result.lastReviewBeforeExam) {
-                cortexNotice(`Crush it! Last review done for ${activeFile.name} — good luck on the exam!`);
+                chronoteNotice(`Crush it! Last review done for ${activeFile.name} — good luck on the exam!`);
               } else {
-                cortexNotice(`Logged review score: ${score} for ${activeFile.name}`);
+                chronoteNotice(`Logged review score: ${score} for ${activeFile.name}`);
               }
             } catch (error) {
-              console.error("Cortex: Error logging review:", error);
-              cortexNotice(`Failed to log review for ${activeFile.name}`);
+              chronoteNotice(`Failed to log review for ${activeFile.name}`);
             }
+
           }).open();
         }
       },
@@ -89,7 +89,7 @@ interface ReviewResult {
 async function applyReviewToFrontmatter(
   file: TFile,
   score: number,
-  plugin: CortexPlugin
+  plugin: ChronotePlugin
 ): Promise<ReviewResult> {
   const app = plugin.app;
   // Let's first calculate the basic next review date

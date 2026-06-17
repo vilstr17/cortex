@@ -1,5 +1,5 @@
 import { App, Modal, Notice, setIcon } from "obsidian";
-import CortexPlugin from "../main.js";
+import ChronotePlugin from "../main.js";
 import { GeminiService } from "../services/geminiService.js";
 import type { ScheduledEvent } from "../services/geminiService.js";
 import type { PersistedChatMessage, PersistedChatAttachments } from "../settingsTypes.js";
@@ -34,8 +34,8 @@ interface AIResponseWithEvents {
   quizzes: QuizProposal[];
 }
 
-export class CortexChatModal extends Modal {
-  private plugin: CortexPlugin;
+export class ChronoteChatModal extends Modal {
+  private plugin: ChronotePlugin;
   private geminiService: GeminiService;
   private chatHistory: PersistedChatMessage[];
   private historyContainer!: HTMLElement;
@@ -52,7 +52,7 @@ export class CortexChatModal extends Modal {
   /** Maximum persisted chat turns. Keeps data.json from growing forever. */
   private readonly maxHistorySize = 100;
 
-  constructor(app: App, plugin: CortexPlugin) {
+  constructor(app: App, plugin: ChronotePlugin) {
     super(app);
     this.plugin = plugin;
     this.chatHistory = [...(this.plugin.settings.chatHistory ?? [])];
@@ -96,8 +96,8 @@ export class CortexChatModal extends Modal {
   }
 
   async onOpen(): Promise<void> {
-    this.setTitle("Cortex AI Chat");
-    this.modalEl.addClasses(["cortex-chat-modal"]);
+    this.setTitle("Chronote AI Chat");
+    this.modalEl.addClasses(["chronote-chat-modal"]);
 
     const { contentEl } = this;
     contentEl.empty();
@@ -129,7 +129,7 @@ export class CortexChatModal extends Modal {
     } else {
       // Welcome message for a fresh chat.
       await this.appendAssistantText(
-        "Hi! I'm Cortex. Ask me about your review schedule, or request a study plan for today.",
+        "Hi! I'm Chronote. Ask me about your review schedule, or request a study plan for today.",
       );
     }
 
@@ -178,7 +178,7 @@ export class CortexChatModal extends Modal {
     // rather than a generic "set your API key" error.
     const ai = this.plugin.settings.ai;
     const missing = providerMissingFields(ai.provider, {
-      cortexAccountId: ai.cortexAccountId,
+      chronoteAccountId: ai.chronoteAccountId,
       geminiApiKey: ai.geminiApiKey,
       geminiModel: ai.geminiModel,
       apiKey: ai.apiKey,
@@ -187,7 +187,7 @@ export class CortexChatModal extends Modal {
     });
     if (missing.length > 0) {
       new Notice(
-        `Cortex: ${PROVIDER_LABELS[ai.provider]} is not configured. Missing: ${missing.join(", ")}. Set them in Settings → Cortex.`,
+        `Chronote: ${PROVIDER_LABELS[ai.provider]} is not configured. Missing: ${missing.join(", ")}. Set them in Settings → Chronote.`,
       );
       return;
     }
@@ -276,11 +276,11 @@ export class CortexChatModal extends Modal {
       await this.persistChatHistory();
     } catch (err) {
       this.setLoading(false);
-      console.error("Cortex: Chat error:", err);
       await this.appendAssistantText(
         "Sorry, something went wrong while contacting the AI. Please check your provider settings and try again.",
       );
     }
+
   }
 
   private appendUserMessage(text: string): void {
@@ -311,7 +311,7 @@ export class CortexChatModal extends Modal {
 
     msgEl.createDiv({
       cls: "chat-message-label",
-      text: "Cortex",
+      text: "Chronote",
     });
 
     const textEl = msgEl.createDiv({
@@ -340,7 +340,7 @@ export class CortexChatModal extends Modal {
 
     msgEl.createDiv({
       cls: "chat-message-label",
-      text: "Cortex",
+      text: "Chronote",
     });
 
     return msgEl;
@@ -505,7 +505,7 @@ export class CortexChatModal extends Modal {
 
   private async approveSchedule(events: ScheduledEvent[]): Promise<void> {
     if (!this.plugin.settings.googleAccessToken) {
-      new Notice("Cortex: Please connect Google Calendar first from the dashboard.");
+      new Notice("Chronote: Please connect Google Calendar first from the dashboard.");
       return;
     }
 
@@ -520,14 +520,14 @@ export class CortexChatModal extends Modal {
         });
         if (ok) successCount++;
       } catch (err) {
-        console.error(`Cortex: Failed to create event "${event.summary}":`, err);
       }
     }
 
+
     if (successCount === events.length) {
-      new Notice(`Cortex: All ${successCount} event(s) added to your Google Calendar.`);
+      new Notice(`Chronote: All ${successCount} event(s) added to your Google Calendar.`);
     } else {
-      new Notice(`Cortex: ${successCount}/${events.length} event(s) added. Some may have failed.`);
+      new Notice(`Chronote: ${successCount}/${events.length} event(s) added. Some may have failed.`);
     }
   }
 
@@ -543,7 +543,7 @@ export class CortexChatModal extends Modal {
         cls: "chat-message chat-message-assistant chat-loading",
         attr: { id: "chat-loading-indicator" },
       });
-      indicator.createDiv({ cls: "chat-message-label", text: "Cortex" });
+      indicator.createDiv({ cls: "chat-message-label", text: "Chronote" });
       // Live activity panel: tool-step rows get appended here as the
       // agent works. Empty until the first tool call.
       this.activityEl = indicator.createDiv({ cls: "chat-activity" });

@@ -8,7 +8,7 @@
 import type { FlashcardProposal } from "./agent/tools/flashcards.js";
 import type { QuizProposal } from "./agent/tools/quizzes.js";
 
-export interface CortexTest {
+export interface ChronoteTest {
   id: string;
   name: string;
   date: string; // ISO date string
@@ -39,12 +39,12 @@ export interface PersistedChatMessage {
  *   3. add a UI sub-section in `src/settings.ts`
  *   4. add a curated model list in `PROVIDER_CATALOG` (services/ai/catalog.ts)
  *
- * `cortex_cloud` is the managed proxy: users paste an `acct_…` id
+ * `chronote_cloud` is the managed proxy: users paste an `acct_…` id
  * from the billing flow and the proxy picks the model. There is no
  * model dropdown and no API key — just the account id.
  */
 export type AIProvider =
-  | "cortex_cloud"
+  | "chronote_cloud"
   | "gemini"
   | "openai"
   | "anthropic"
@@ -76,9 +76,9 @@ export interface AIProviderConfig {
   /** Active provider. */
   provider: AIProvider;
 
-  // Cortex Cloud — managed proxy. User pastes the account id they
+  // Chronote Cloud — managed proxy. User pastes the account id they
   // get from the proxy's sign-up flow; no model field is exposed.
-  cortexAccountId: string;
+  chronoteAccountId: string;
 
   // Gemini — kept separate so we don't disturb the (already-shipping)
   // settings keys that may live in user vaults.
@@ -122,7 +122,7 @@ export interface AIProviderConfig {
    * - ollama: "nomic-embed-text"
    * - lmstudio / custom: free-text (server picks if empty)
    * - anthropic: unused (the adapter has no embed endpoint)
-   * - cortex_cloud: empty (the proxy picks)
+   * - chronote_cloud: empty (the proxy picks)
    */
   embeddingModel: string;
 
@@ -162,14 +162,14 @@ export interface AIProviderConfig {
   maxToolRounds: number;
 }
 
-export interface CortexSettings {
+export interface ChronoteSettings {
   ai: AIProviderConfig;
   planningPreferences: string;
   timeZone: string;
   googleAccessToken: string;
   googleRefreshToken: string;
   googleTokenExpiry: number;
-  tests: CortexTest[];
+  tests: ChronoteTest[];
   wakeUpTime: string;
   bedTime: string;
   dailyLimitMax: number | null;
@@ -209,10 +209,10 @@ export interface CortexSettings {
   autoIndexInterval: "manual" | "daily" | "weekly";
 }
 
-export const DEFAULT_SETTINGS: CortexSettings = {
+export const DEFAULT_SETTINGS: ChronoteSettings = {
   ai: {
-    provider: "cortex_cloud",
-    cortexAccountId: "",
+    provider: "chronote_cloud",
+    chronoteAccountId: "",
     geminiApiKey: "",
     geminiModel: "gemini-2.5-flash",
     apiKey: "",

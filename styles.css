@@ -136,33 +136,33 @@
   outline: 2px solid var(--interactive-accent);
 }
 
-/* Cortex Dashboard */
-.cortex-dashboard {
+/* Chronote Dashboard */
+.chronote-dashboard {
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-.cortex-dashboard h1 {
+.chronote-dashboard h1 {
   margin: 0;
   font-size: 1.8rem;
 }
 
-.cortex-header-row {
+.chronote-header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
 }
 
-.cortex-header-row h1 {
+.chronote-header-row h1 {
   margin: 0;
 }
 
 /* Icon buttons in header */
-.cortex-chat-icon-btn,
-.cortex-refresh-btn {
+.chronote-chat-icon-btn,
+.chronote-refresh-btn {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -175,40 +175,40 @@
 	transition: background 0.15s ease, color 0.15s ease;
 }
 
-.cortex-chat-icon-btn {
+.chronote-chat-icon-btn {
 	color: #8A2BE2;
 }
 
-.cortex-chat-icon-btn:hover {
+.chronote-chat-icon-btn:hover {
 	background: rgba(138, 43, 226, 0.15);
 	color: #8A2BE2;
 }
 
-.cortex-refresh-btn:hover {
+.chronote-refresh-btn:hover {
 	background: var(--background-modifier-border);
 	color: var(--text-normal);
 }
 
-.cortex-chat-icon-btn svg,
-.cortex-refresh-btn svg {
+.chronote-chat-icon-btn svg,
+.chronote-refresh-btn svg {
   width: 20px;
   height: 20px;
 }
 
-.cortex-reviews-section {
+.chronote-reviews-section {
   background: var(--background-secondary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
   padding: 1rem 1.25rem;
 }
 
-.cortex-date-nav {
+.chronote-date-nav {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-.cortex-date-nav-btn {
+.chronote-date-nav-btn {
   border: 1px solid var(--background-modifier-border);
   background: var(--background-primary);
   color: var(--text-normal);
@@ -218,40 +218,40 @@
   cursor: pointer;
 }
 
-.cortex-date-nav-btn:hover {
+.chronote-date-nav-btn:hover {
   background: var(--background-modifier-hover);
 }
 
-.cortex-due-sort-btn {
+.chronote-due-sort-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 2px 6px;
 }
 
-.cortex-due-sort-btn svg {
+.chronote-due-sort-btn svg {
   width: 14px;
   height: 14px;
 }
 
-.cortex-due-sort-btn.is-active {
+.chronote-due-sort-btn.is-active {
   border-color: var(--interactive-accent);
   color: var(--interactive-accent);
   background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
 }
 
-.cortex-date-nav-today-btn {
+.chronote-date-nav-today-btn {
   font-size: 0.8rem;
   padding: 2px 10px;
 }
 
-.cortex-reviews-placeholder {
+.chronote-reviews-placeholder {
   color: var(--text-muted);
   font-style: italic;
   padding: 1rem 0;
 }
 
-.cortex-due-list {
+.chronote-due-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -260,7 +260,7 @@
   gap: 0.25rem;
 }
 
-.cortex-due-item {
+.chronote-due-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -271,15 +271,15 @@
   transition: background 0.1s ease;
 }
 
-.cortex-due-item:hover {
+.chronote-due-item:hover {
   background: var(--background-primary-alt);
 }
 
-.cortex-due-item.cortex-overdue {
+.chronote-due-item.chronote-overdue {
   border-color: var(--color-red);
 }
 
-.cortex-note-link {
+.chronote-note-link {
   flex: 1;
   color: var(--text-accent);
   text-decoration: none;
@@ -287,17 +287,17 @@
   cursor: pointer;
 }
 
-.cortex-note-link:hover {
+.chronote-note-link:hover {
   text-decoration: underline;
 }
 
-.cortex-note-date {
+.chronote-note-date {
   font-size: 0.85em;
   color: var(--text-muted);
   white-space: nowrap;
 }
 
-.cortex-badge {
+.chronote-badge {
   font-size: 0.7em;
   font-weight: 600;
   text-transform: uppercase;
@@ -306,14 +306,14 @@
   letter-spacing: 0.03em;
 }
 
-.cortex-overdue-badge {
+.chronote-overdue-badge {
   background: var(--color-red);
   color: white;
 }
 
-/* ── Cortex Chat Modal ─────────────────────────────────────────── */
+/* ── Chronote Chat Modal ─────────────────────────────────────────── */
 
-.cortex-chat-modal {
+.chronote-chat-modal {
   display: flex;
   flex-direction: column;
 }
@@ -516,20 +516,20 @@
 
 /* ── Dashboard Google Calendar auth section ── */
 
-.cortex-auth-section {
+.chronote-auth-section {
   background: var(--background-secondary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
   padding: 1rem 1.25rem;
 }
 
-.cortex-calendar-connect-desc {
+.chronote-calendar-connect-desc {
   font-size: 0.85em;
   color: var(--text-muted);
   margin: 0 0 0.75rem;
 }
 
-.cortex-connect-google-btn {
+.chronote-connect-google-btn {
   padding: 0.5rem 1.25rem;
   border: none;
   border-radius: 6px;
@@ -539,49 +539,49 @@
   cursor: pointer;
 }
 
-.cortex-auth-status h4 {
+.chronote-auth-status h4 {
   margin: 0 0 0.5rem;
 }
 
-.cortex-auth-code {
+.chronote-auth-code {
   font-size: 0.95em;
   margin-bottom: 0.5rem;
 }
 
-.cortex-auth-code-value {
+.chronote-auth-code-value {
   font-family: monospace;
 }
 
-.cortex-auth-link {
+.chronote-auth-link {
   display: inline-block;
   margin-bottom: 0.5rem;
 }
 
-.cortex-schedule-section {
+.chronote-schedule-section {
   background: var(--background-secondary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
   padding: 1rem 1.25rem;
 }
 
-.cortex-schedule-section h2 {
+.chronote-schedule-section h2 {
   margin: 0 0 0.75rem;
   font-size: 1.2rem;
 }
 
-.cortex-schedule-placeholder {
+.chronote-schedule-placeholder {
   color: var(--text-muted);
   font-style: italic;
   padding: 0.5rem 0;
 }
 
-.cortex-event-list {
+.chronote-event-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.cortex-event-item {
+.chronote-event-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -592,56 +592,56 @@
   font-size: 0.9em;
 }
 
-.cortex-event-time {
+.chronote-event-time {
   font-size: 0.85em;
   color: var(--text-muted);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
-.cortex-event-summary {
+.chronote-event-summary {
   flex: 1;
   font-weight: 500;
 }
 
-.cortex-event-link {
+.chronote-event-link {
   color: var(--text-accent);
   text-decoration: none;
   font-size: 0.9em;
 }
 
-.cortex-event-link:hover {
+.chronote-event-link:hover {
   text-decoration: underline;
 }
 
 /* ── Dashboard Upcoming Tests section ── */
 
-.cortex-tests-section {
+.chronote-tests-section {
   background: var(--background-secondary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
   padding: 1rem 1.25rem;
 }
 
-.cortex-tests-header {
+.chronote-tests-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.75rem;
 }
 
-.cortex-tests-header h2 {
+.chronote-tests-header h2 {
   margin: 0;
   font-size: 1.2rem;
 }
 
-.cortex-tests-placeholder {
+.chronote-tests-placeholder {
   color: var(--text-muted);
   font-style: italic;
   padding: 0.5rem 0;
 }
 
-.cortex-create-test-btn {
+.chronote-create-test-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -656,24 +656,24 @@
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.cortex-create-test-btn:hover {
+.chronote-create-test-btn:hover {
   background: var(--background-primary-alt);
   color: var(--text-normal);
   border-color: var(--text-muted);
 }
 
-.cortex-create-test-btn svg {
+.chronote-create-test-btn svg {
   width: 16px;
   height: 16px;
 }
 
-.cortex-test-list {
+.chronote-test-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.cortex-test-item {
+.chronote-test-item {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -685,36 +685,36 @@
   position: relative;
 }
 
-.cortex-test-item:hover {
+.chronote-test-item:hover {
   background: var(--background-primary-alt);
 }
 
-.cortex-test-info {
+.chronote-test-info {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
 }
 
-.cortex-test-name {
+.chronote-test-name {
   font-weight: 600;
   font-size: 0.95em;
   flex: 1;
 }
 
-.cortex-test-date {
+.chronote-test-date {
   font-size: 0.8em;
   color: var(--text-muted);
   white-space: nowrap;
 }
 
-.cortex-test-progress-container {
+.chronote-test-progress-container {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
 
-.cortex-test-progress-bar {
+.chronote-test-progress-bar {
   height: 8px;
   background: var(--background-modifier-border);
   border-radius: 4px;
@@ -722,25 +722,25 @@
   position: relative;
 }
 
-.cortex-test-progress-fill {
+.chronote-test-progress-fill {
   height: 100%;
   background: var(--color-green);
   border-radius: 4px;
   transition: width 0.3s ease;
 }
 
-.cortex-test-progress-label {
+.chronote-test-progress-label {
   font-size: 0.75em;
   color: var(--text-muted);
 }
 
-.cortex-test-file-count {
+.chronote-test-file-count {
   font-size: 0.75em;
   color: var(--text-muted);
   align-self: flex-end;
 }
 
-.cortex-test-delete-btn {
+.chronote-test-delete-btn {
   position: absolute;
   right: 0.5rem;
   top: 0.5rem;
@@ -757,21 +757,21 @@
   transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
-.cortex-test-item:hover .cortex-test-delete-btn {
+.chronote-test-item:hover .chronote-test-delete-btn {
   opacity: 1;
 }
 
-.cortex-test-delete-btn:hover {
+.chronote-test-delete-btn:hover {
   color: var(--color-red);
   background: var(--background-modifier-error-hover);
 }
 
-.cortex-test-delete-btn svg {
+.chronote-test-delete-btn svg {
 	width: 14px;
 	height: 14px;
 }
 
-.cortex-done-btn {
+.chronote-done-btn {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -785,40 +785,40 @@
 	flex-shrink: 0;
 }
 
-.cortex-done-btn:hover {
+.chronote-done-btn:hover {
 	color: var(--color-green);
 	background: rgba(0, 180, 0, 0.08);
 }
 
-.cortex-done-btn.is-done {
+.chronote-done-btn.is-done {
 	color: var(--color-green);
 }
 
-.cortex-done-btn svg {
+.chronote-done-btn svg {
 	width: 16px;
 	height: 16px;
 }
 
-.cortex-test-item.cortex-test-done {
+.chronote-test-item.chronote-test-done {
 	opacity: 0.55;
 }
 
-.cortex-test-item.cortex-test-done .cortex-test-name {
+.chronote-test-item.chronote-test-done .chronote-test-name {
 	text-decoration: line-through;
 }
 
 /* ── Expandable Exam Accordion ── */
-.cortex-test-item {
+.chronote-test-item {
 	cursor: pointer;
 }
 
-.cortex-test-header {
+.chronote-test-header {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
 }
 
-.cortex-expand-icon {
+.chronote-expand-icon {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -829,27 +829,27 @@
 	flex-shrink: 0;
 }
 
-.cortex-expand-icon svg {
+.chronote-expand-icon svg {
 	width: 14px;
 	height: 14px;
 }
 
-.cortex-test-item.expanded .cortex-expand-icon {
+.chronote-test-item.expanded .chronote-expand-icon {
 	transform: rotate(90deg);
 }
 
-.cortex-test-details {
+.chronote-test-details {
 	display: none;
 	margin-top: 0.75rem;
 	padding-top: 0.75rem;
 	border-top: 1px solid var(--background-modifier-border);
 }
 
-.cortex-test-item.expanded .cortex-test-details {
+.chronote-test-item.expanded .chronote-test-details {
 	display: block;
 }
 
-.cortex-test-notes-list {
+.chronote-test-notes-list {
 	display: flex;
 	flex-direction: column;
 	gap: 0.4rem;
@@ -858,7 +858,7 @@
 	padding: 0;
 }
 
-.cortex-test-note-item {
+.chronote-test-note-item {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
@@ -868,34 +868,34 @@
 	font-size: 0.85em;
 }
 
-.cortex-test-note-link {
+.chronote-test-note-link {
 	flex: 1;
 	color: var(--text-accent);
 	text-decoration: none;
 	cursor: pointer;
 }
 
-.cortex-test-note-link:hover {
+.chronote-test-note-link:hover {
 	text-decoration: underline;
 }
 
-.cortex-test-note-score {
+.chronote-test-note-score {
 	font-size: 0.8em;
 	color: var(--text-muted);
 	white-space: nowrap;
 }
 
-.cortex-test-note-score.has-score {
+.chronote-test-note-score.has-score {
 	color: var(--color-green);
 	font-weight: 500;
 }
 
-.cortex-test-note-score.no-score {
+.chronote-test-note-score.no-score {
 	color: var(--text-muted);
 	font-style: italic;
 }
 
-.cortex-exclude-btn {
+.chronote-exclude-btn {
 	padding: 2px 8px;
 	font-size: 0.75em;
 	border: 1px solid var(--background-modifier-border);
@@ -907,31 +907,31 @@
 	white-space: nowrap;
 }
 
-.cortex-exclude-btn:hover {
+.chronote-exclude-btn:hover {
 	background: rgba(138, 43, 226, 0.1);
 	color: #8A2BE2;
 	border-color: #8A2BE2;
 }
 
-.cortex-exclude-btn.excluded {
+.chronote-exclude-btn.excluded {
 	background: rgba(138, 43, 226, 0.15);
 	color: #8A2BE2;
 	border-color: #8A2BE2;
 }
 
-.cortex-test-note-item.excluded {
+.chronote-test-note-item.excluded {
 	opacity: 0.5;
 }
 
 /* ── Review score modal ─────────────────────────────────────────── */
 
-.cortex-review-score-setting .setting-item-name {
+.chronote-review-score-setting .setting-item-name {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
 }
 
-.cortex-score-info-btn {
+.chronote-score-info-btn {
   width: 18px;
   height: 18px;
   border-radius: 50%;
@@ -949,13 +949,13 @@
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.cortex-score-info-btn:hover {
+.chronote-score-info-btn:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
   border-color: var(--interactive-accent);
 }
 
-.cortex-score-legend {
+.chronote-score-legend {
   display: flex;
   justify-content: space-between;
   padding: 0 4px;
@@ -964,11 +964,11 @@
   margin-bottom: 1.5em;
 }
 
-.cortex-score-info-modal h3 {
+.chronote-score-info-modal h3 {
   margin: 0 0 0.75rem;
 }
 
-.cortex-score-info-list {
+.chronote-score-info-list {
   margin: 0;
   padding-left: 1.1rem;
   display: flex;
@@ -976,7 +976,7 @@
   gap: 0.45rem;
 }
 
-.cortex-score-info-note {
+.chronote-score-info-note {
   margin-top: 0.9rem;
   color: var(--text-muted);
   font-size: 0.9em;
@@ -984,7 +984,7 @@
 
 /* ── BLE Warning Overlay (full screen) ────────────────────────────── */
 
-.cortex-ble-warning-overlay {
+.chronote-ble-warning-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
@@ -993,15 +993,15 @@
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(8px);
-  animation: cortex-ble-fade-in 0.3s ease-out;
+  animation: chronote-ble-fade-in 0.3s ease-out;
 }
 
-@keyframes cortex-ble-fade-in {
+@keyframes chronote-ble-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-.cortex-ble-warning-box {
+.chronote-ble-warning-box {
   background: var(--background-primary);
   border: 2px solid var(--color-red);
   border-radius: 16px;
@@ -1010,34 +1010,34 @@
   max-width: 460px;
   width: 90vw;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  animation: cortex-ble-scale-in 0.35s ease-out;
+  animation: chronote-ble-scale-in 0.35s ease-out;
 }
 
-@keyframes cortex-ble-scale-in {
+@keyframes chronote-ble-scale-in {
   from { transform: scale(0.85); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
 
-.cortex-ble-warning-emoji {
+.chronote-ble-warning-emoji {
   font-size: 4rem;
   margin-bottom: 0.75rem;
 }
 
-.cortex-ble-warning-title {
+.chronote-ble-warning-title {
   font-size: 1.8rem;
   font-weight: 700;
   margin: 0 0 0.5rem;
   color: var(--color-red);
 }
 
-.cortex-ble-warning-sub {
+.chronote-ble-warning-sub {
   font-size: 1.05rem;
   color: var(--text-muted);
   margin: 0 0 1.75rem;
   line-height: 1.5;
 }
 
-.cortex-ble-warning-dismiss {
+.chronote-ble-warning-dismiss {
   padding: 0.7rem 2.5rem;
   font-size: 1rem;
   font-weight: 600;
@@ -1047,12 +1047,12 @@
 
 /* ── BLE Dashboard Section ───────────────────────────────────────── */
 
-.cortex-ble-dash-rssi {
+.chronote-ble-dash-rssi {
   font-variant-numeric: tabular-nums;
   color: var(--text-muted);
 }
 
-.cortex-ble-dash-menu-header {
+.chronote-ble-dash-menu-header {
   font-size: 0.75em;
   font-weight: 600;
   text-transform: uppercase;
@@ -1061,7 +1061,7 @@
   margin-bottom: 0.35rem;
 }
 
-.cortex-ble-dash-menu-item {
+.chronote-ble-dash-menu-item {
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -1072,35 +1072,35 @@
   transition: background 0.1s ease;
 }
 
-.cortex-ble-dash-menu-item:hover {
+.chronote-ble-dash-menu-item:hover {
   background: var(--background-modifier-hover);
 }
 
-.cortex-ble-dash-check {
+.chronote-ble-dash-check {
   font-size: 0.7em;
   width: 16px;
   text-align: center;
   flex-shrink: 0;
 }
 
-.cortex-ble-dash-item-name {
+.chronote-ble-dash-item-name {
   flex: 1;
 }
 
-.cortex-ble-dash-item-rssi {
+.chronote-ble-dash-item-rssi {
   font-size: 0.8em;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
-.cortex-ble-dash-empty {
+.chronote-ble-dash-empty {
   font-size: 0.85em;
   color: var(--text-muted);
   font-style: italic;
   padding: 0.35rem 0.5rem;
 }
 
-.cortex-ble-dash-stop-btn {
+.chronote-ble-dash-stop-btn {
   width: 100%;
   margin-top: 0.5rem;
   padding: 0.45rem;
@@ -1113,73 +1113,73 @@
   color: var(--text-normal);
 }
 
-.cortex-ble-dash-stop-btn:hover:not(:disabled) {
+.chronote-ble-dash-stop-btn:hover:not(:disabled) {
   background: var(--background-primary-alt);
 }
 
-.cortex-ble-dash-stop-btn:disabled {
+.chronote-ble-dash-stop-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
 /* ── BLE Calibration Modal ─────────────────────────────────────── */
 
-.cortex-ble-calibration-modal {
+.chronote-ble-calibration-modal {
   min-width: 420px;
 }
 
-.cortex-ble-cal-body {
+.chronote-ble-cal-body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.cortex-ble-cal-body h2 {
+.chronote-ble-cal-body h2 {
   margin: 0;
   font-size: 1.3rem;
 }
 
-.cortex-ble-cal-body h3 {
+.chronote-ble-cal-body h3 {
   margin: 0;
   font-size: 1.1rem;
 }
 
-.cortex-ble-cal-explanation {
+.chronote-ble-cal-explanation {
   font-size: 0.9em;
   color: var(--text-muted);
   line-height: 1.5;
 }
 
-.cortex-ble-cal-exp-phase {
+.chronote-ble-cal-exp-phase {
   margin: 0.75rem 0 0.5rem;
 }
 
-.cortex-ble-cal-exp-phase strong {
+.chronote-ble-cal-exp-phase strong {
   color: var(--text-normal);
   display: block;
   margin-bottom: 0.15rem;
 }
 
-.cortex-ble-cal-exp-detail {
+.chronote-ble-cal-exp-detail {
   margin: 0;
   font-size: 0.9em;
   color: var(--text-muted);
 }
 
-.cortex-ble-cal-exp-note {
+.chronote-ble-cal-exp-note {
   font-size: 0.85em;
   color: var(--text-faint);
   font-style: italic;
 }
 
-.cortex-ble-cal-instruction {
+.chronote-ble-cal-instruction {
   font-size: 0.95em;
   font-weight: 500;
   margin: 0;
   color: var(--text-muted);
 }
 
-.cortex-ble-cal-countdown {
+.chronote-ble-cal-countdown {
   font-size: 5rem;
   font-weight: 800;
   text-align: center;
@@ -1188,25 +1188,25 @@
   padding: 1.5rem 0;
 }
 
-.cortex-ble-cal-go {
+.chronote-ble-cal-go {
   color: var(--color-green);
-  animation: cortex-ble-pulse 0.5s ease-out;
+  animation: chronote-ble-pulse 0.5s ease-out;
 }
 
-@keyframes cortex-ble-pulse {
+@keyframes chronote-ble-pulse {
   0% { transform: scale(0.5); opacity: 0.5; }
   50% { transform: scale(1.2); }
   100% { transform: scale(1); opacity: 1; }
 }
 
-.cortex-ble-cal-status {
+.chronote-ble-cal-status {
   font-size: 0.9em;
   color: var(--text-muted);
   text-align: center;
   margin: 0 0 0.5rem;
 }
 
-.cortex-ble-cal-progress {
+.chronote-ble-cal-progress {
   height: 6px;
   background: var(--background-modifier-border);
   border-radius: 3px;
@@ -1214,19 +1214,19 @@
   margin-bottom: 0.75rem;
 }
 
-.cortex-ble-cal-progress-fill {
+.chronote-ble-cal-progress-fill {
   height: 100%;
   background: var(--interactive-accent);
   border-radius: 3px;
   transition: width 0.15s linear;
 }
 
-.cortex-ble-cal-error {
+.chronote-ble-cal-error {
   color: var(--color-red);
   font-size: 0.9em;
 }
 
-.cortex-ble-cal-summary {
+.chronote-ble-cal-summary {
   margin-bottom: 1rem;
   padding: 0.75rem;
   background: var(--background-secondary);
@@ -1234,29 +1234,29 @@
   border: 1px solid var(--background-modifier-border);
 }
 
-.cortex-ble-cal-summary p {
+.chronote-ble-cal-summary p {
   margin: 0.2rem 0;
   font-size: 0.9em;
 }
 
-.cortex-ble-cal-bad {
+.chronote-ble-cal-bad {
   color: var(--color-red);
   font-weight: 500;
 }
 
-.cortex-ble-cal-label {
+.chronote-ble-cal-label {
   display: block;
   font-size: 0.85em;
   margin-bottom: 0.35rem;
   color: var(--text-muted);
 }
 
-.cortex-ble-cal-input-row {
+.chronote-ble-cal-input-row {
   display: flex;
   gap: 0.5rem;
 }
 
-.cortex-ble-cal-preset-input {
+.chronote-ble-cal-preset-input {
   flex: 1;
   padding: 0.45rem 0.6rem;
   border: 1px solid var(--background-modifier-border);
@@ -1267,24 +1267,24 @@
   box-sizing: border-box;
 }
 
-.cortex-ble-cal-preset-input:focus {
+.chronote-ble-cal-preset-input:focus {
   border-color: var(--interactive-accent);
   outline: none;
 }
 
-.cortex-ble-cal-btn-row {
+.chronote-ble-cal-btn-row {
   display: flex;
   gap: 0.5rem;
 }
 
-.cortex-ble-cal-btn-row button {
+.chronote-ble-cal-btn-row button {
   flex: 1;
   padding: 0.5rem;
   font-weight: 600;
   border-radius: 6px;
   cursor: pointer;
 }
-.cortex-ble-cal-btn {
+.chronote-ble-cal-btn {
   padding: 0.5rem;
   font-weight: 600;
   border-radius: 6px;
@@ -1294,11 +1294,11 @@
   color: var(--text-normal);
 }
 
-.cortex-ble-cal-btn:hover {
+.chronote-ble-cal-btn:hover {
   background: var(--background-primary-alt);
 }
 
-.cortex-ble-cal-existing {
+.chronote-ble-cal-existing {
   font-size: 0.85em;
   color: var(--color-green);
   font-family: monospace;
@@ -1307,13 +1307,13 @@
   border-radius: 4px;
 }
 
-.cortex-ble-cal-selected {
+.chronote-ble-cal-selected {
   font-size: 0.9em;
   color: var(--color-green);
   font-weight: 600;
 }
 
-.cortex-ble-cal-footer {
+.chronote-ble-cal-footer {
   display: flex;
   gap: 0.5rem;
   margin-top: 0.75rem;
@@ -1321,7 +1321,7 @@
 
 /* ── BLE Device List ─────────────────────────────────────────────── */
 
-.cortex-ble-device-list {
+.chronote-ble-device-list {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -1330,7 +1330,7 @@
   margin-bottom: 0.5rem;
 }
 
-.cortex-ble-device-item {
+.chronote-ble-device-item {
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -1342,12 +1342,12 @@
   transition: background 0.1s ease, border-color 0.1s ease;
 }
 
-.cortex-ble-device-item:hover {
+.chronote-ble-device-item:hover {
   background: var(--background-primary-alt);
   border-color: var(--interactive-accent);
 }
 
-.cortex-ble-device-rssi {
+.chronote-ble-device-rssi {
   font-weight: 700;
   font-size: 0.8em;
   color: var(--text-accent);
@@ -1355,35 +1355,35 @@
   min-width: 55px;
 }
 
-.cortex-ble-device-info {
+.chronote-ble-device-info {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
   min-width: 0;
 }
 
-.cortex-ble-device-name {
+.chronote-ble-device-name {
   font-size: 0.9em;
   font-weight: 500;
 }
 
-.cortex-ble-device-uuid {
+.chronote-ble-device-uuid {
   font-size: 0.7em;
   color: var(--text-faint);
   font-family: monospace;
   word-break: break-all;
 }
 
-.cortex-ble-settings-presets {
+.chronote-ble-settings-presets {
   margin-top: 0.5rem;
 }
 
-.cortex-ble-settings-presets h5 {
+.chronote-ble-settings-presets h5 {
   margin: 0 0 0.5rem;
   font-size: 0.9em;
 }
 
-.cortex-ble-settings-preset-row {
+.chronote-ble-settings-preset-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1392,23 +1392,23 @@
   font-size: 0.85em;
 }
 
-.cortex-ble-settings-preset-row:last-child {
+.chronote-ble-settings-preset-row:last-child {
   border-bottom: none;
 }
 
-.cortex-ble-settings-preset-name {
+.chronote-ble-settings-preset-name {
   font-weight: 600;
   min-width: 100px;
 }
 
-.cortex-ble-settings-preset-data {
+.chronote-ble-settings-preset-data {
   flex: 1;
   color: var(--text-muted);
   font-size: 0.85em;
   font-variant-numeric: tabular-nums;
 }
 
-.cortex-ble-settings-delete-btn {
+.chronote-ble-settings-delete-btn {
   padding: 2px 8px;
   font-size: 0.8em;
   border: 1px solid var(--background-modifier-border);
@@ -1418,52 +1418,52 @@
   cursor: pointer;
 }
 
-.cortex-ble-settings-delete-btn:hover {
+.chronote-ble-settings-delete-btn:hover {
   background: rgba(200, 0, 0, 0.1);
 }
 
 /* ── BLE State (reusable) ────────────────────────────────────────── */
 
-.cortex-ble-locked {
+.chronote-ble-locked {
   color: var(--color-green);
   background: rgba(0, 180, 0, 0.1);
 }
 
-.cortex-ble-distracted {
+.chronote-ble-distracted {
   color: var(--color-red);
   background: rgba(200, 0, 0, 0.1);
 }
 
-.cortex-ble-gray {
+.chronote-ble-gray {
   color: var(--text-muted);
   background: var(--background-modifier-border);
 }
 
 /* ── BLE Device Picker Modal ─────────────────────────────────── */
 
-.cortex-ble-device-picker-modal {
+.chronote-ble-device-picker-modal {
   min-width: 420px;
 }
 
-.cortex-ble-device-picker-body {
+.chronote-ble-device-picker-body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.cortex-ble-device-picker-body h2 {
+.chronote-ble-device-picker-body h2 {
   margin: 0;
   font-size: 1.3rem;
 }
 
-.cortex-ble-device-picker-desc {
+.chronote-ble-device-picker-desc {
   font-size: 0.9em;
   color: var(--text-muted);
   line-height: 1.5;
   margin: 0;
 }
 
-.cortex-ble-device-picker-current {
+.chronote-ble-device-picker-current {
   font-size: 0.85em;
   padding: 0.35rem 0.6rem;
   background: rgba(0, 180, 0, 0.08);
@@ -1471,18 +1471,18 @@
   color: var(--text-muted);
 }
 
-.cortex-ble-device-picker-current-name {
+.chronote-ble-device-picker-current-name {
   color: var(--color-green);
   font-weight: 600;
   font-family: monospace;
 }
 
-.cortex-ble-device-picker-btn-row {
+.chronote-ble-device-picker-btn-row {
   display: flex;
   gap: 0.5rem;
 }
 
-.cortex-ble-device-picker-btn-row button {
+.chronote-ble-device-picker-btn-row button {
   flex: 1;
   padding: 0.5rem;
   font-weight: 600;
@@ -1490,25 +1490,25 @@
   cursor: pointer;
 }
 
-.cortex-ble-device-picker-status {
+.chronote-ble-device-picker-status {
   font-size: 0.9em;
   color: var(--text-muted);
   margin: 0;
 }
 
-.cortex-ble-device-picker-error {
+.chronote-ble-device-picker-error {
   color: var(--color-red);
   font-size: 0.9em;
   margin: 0;
 }
 
-.cortex-ble-device-picker-footer {
+.chronote-ble-device-picker-footer {
   display: flex;
   gap: 0.5rem;
   margin-top: 0.5rem;
 }
 
-.cortex-ble-device-signal {
+.chronote-ble-device-signal {
   display: inline-flex;
   align-items: flex-end;
   gap: 2px;
@@ -1516,28 +1516,28 @@
   flex-shrink: 0;
 }
 
-.cortex-ble-signal-bar {
+.chronote-ble-signal-bar {
   width: 4px;
   background: var(--background-modifier-border);
   border-radius: 1px;
   transition: background 0.15s ease;
 }
 
-.cortex-ble-signal-bar:nth-child(1) { height: 4px; }
-.cortex-ble-signal-bar:nth-child(2) { height: 7px; }
-.cortex-ble-signal-bar:nth-child(3) { height: 11px; }
-.cortex-ble-signal-bar:nth-child(4) { height: 16px; }
+.chronote-ble-signal-bar:nth-child(1) { height: 4px; }
+.chronote-ble-signal-bar:nth-child(2) { height: 7px; }
+.chronote-ble-signal-bar:nth-child(3) { height: 11px; }
+.chronote-ble-signal-bar:nth-child(4) { height: 16px; }
 
-.cortex-ble-signal-active {
+.chronote-ble-signal-active {
   background: var(--interactive-accent);
 }
 
-.cortex-ble-device-item-active {
+.chronote-ble-device-item-active {
   border-color: var(--color-green);
   background: rgba(0, 180, 0, 0.06);
 }
 
-.cortex-ble-device-item-disabled {
+.chronote-ble-device-item-disabled {
   opacity: 0.4;
   cursor: not-allowed;
   pointer-events: none;
@@ -1545,12 +1545,12 @@
 
 /* ── Focus panels (side-by-side) ─────────────────────────────────── */
 
-.cortex-focus-row {
+.chronote-focus-row {
   display: flex;
   gap: 1rem;
 }
 
-.cortex-focus-panel {
+.chronote-focus-panel {
   flex: 1;
   min-width: 0;
   background: var(--background-secondary);
@@ -1559,20 +1559,20 @@
   padding: 0.75rem 1rem;
 }
 
-.cortex-focus-panel h4 {
+.chronote-focus-panel h4 {
   margin: 0 0 0.5rem;
   font-size: 0.95em;
 }
 
 /* ── Toggle switch ──────────────────────────────────────────────── */
 
-.cortex-toggle-row {
+.chronote-toggle-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.cortex-toggle {
+.chronote-toggle {
   width: 32px;
   height: 18px;
   border-radius: 9px;
@@ -1583,7 +1583,7 @@
   flex-shrink: 0;
 }
 
-.cortex-toggle::after {
+.chronote-toggle::after {
   content: "";
   position: absolute;
   top: 1px;
@@ -1596,22 +1596,22 @@
   transition: transform 0.2s ease;
 }
 
-.cortex-toggle.is-enabled {
+.chronote-toggle.is-enabled {
   background: var(--color-green);
 }
 
-.cortex-toggle.is-enabled::after {
+.chronote-toggle.is-enabled::after {
   transform: translateX(14px);
 }
 
-.cortex-toggle-label {
+.chronote-toggle-label {
   font-size: 0.85em;
   color: var(--text-muted);
 }
 
 /* ── Focus status ────────────────────────────────────────────────── */
 
-.cortex-ble-status {
+.chronote-ble-status {
   display: flex;
   gap: 0.5rem;
   align-items: center;
@@ -1619,40 +1619,40 @@
   font-size: 0.8em;
 }
 
-.cortex-focus-rssi {
+.chronote-focus-rssi {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
-.cortex-focus-device {
+.chronote-focus-device {
   font-size: 0.75em;
   color: var(--text-muted);
   margin-top: 0.2rem;
 }
 
-.cortex-focus-state {
+.chronote-focus-state {
   font-weight: 700;
   font-size: 0.75em;
   padding: 0.1em 0.4em;
   border-radius: 3px;
 }
 
-.cortex-state-locked {
+.chronote-state-locked {
   color: var(--color-green);
   background: rgba(0, 180, 0, 0.1);
 }
 
-.cortex-state-distracted {
+.chronote-state-distracted {
   color: var(--color-red);
   background: rgba(200, 0, 0, 0.1);
 }
 
-.cortex-state-gray {
+.chronote-state-gray {
   color: var(--text-muted);
   background: var(--background-modifier-border);
 }
 
-.cortex-face-stats {
+.chronote-face-stats {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
@@ -1660,28 +1660,28 @@
   margin-top: 0.35rem;
 }
 
-.cortex-face-stat {
+.chronote-face-stat {
   color: var(--text-muted);
 }
 
 /* Camera-permission error actions. Rendered under the error message in
    the Face Tracking panel — gives the user a one-click way to open
    System Settings → Privacy & Security → Camera and to retry. */
-.cortex-face-error-actions {
+.chronote-face-error-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
   margin-top: 0.5rem;
 }
 
-.cortex-face-error-btn {
+.chronote-face-error-btn {
   font-size: 0.8em;
   padding: 0.25rem 0.6rem;
 }
 
 /* Settings-tab inline warning. Shown above the Face Tracking section on
    macOS to explain why the toggle is disabled. */
-.cortex-settings-warning {
+.chronote-settings-warning {
   border: 1px solid var(--background-modifier-border);
   border-left: 3px solid var(--text-warning, #c08020);
   padding: 0.6rem 0.8rem;
@@ -1693,7 +1693,7 @@
 
 /* Dashboard Face Tracking panel — macOS-only notice that replaces the
    toggle's purpose with a pointer to the BLE alternative. */
-.cortex-face-mac-notice {
+.chronote-face-mac-notice {
   border-left: 3px solid var(--text-warning, #c08020);
   padding: 0.4rem 0.6rem;
   margin-bottom: 0.6rem;
@@ -1702,7 +1702,7 @@
   color: var(--text-muted);
 }
 
-.cortex-toggle.is-disabled {
+.chronote-toggle.is-disabled {
   opacity: 0.4;
   cursor: not-allowed;
   pointer-events: none;
@@ -1777,7 +1777,7 @@
 
 /* ── Interactive flashcard deck ─────────────────────────────────── */
 
-.cortex-flashcard-deck {
+.chronote-flashcard-deck {
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
@@ -1787,18 +1787,18 @@
   gap: 0.75rem;
 }
 
-.cortex-flashcard-deck.is-saved {
+.chronote-flashcard-deck.is-saved {
   opacity: 0.7;
 }
 
-.cortex-flashcard-deck-header {
+.chronote-flashcard-deck-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 0.5rem;
 }
 
-.cortex-flashcard-deck-title {
+.chronote-flashcard-deck-title {
   font-size: 0.85em;
   font-weight: 600;
   color: var(--text-muted);
@@ -1806,18 +1806,18 @@
   letter-spacing: 0.04em;
 }
 
-.cortex-flashcard-deck-progress {
+.chronote-flashcard-deck-progress {
   font-size: 0.85em;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
-.cortex-flashcard-stage {
+.chronote-flashcard-stage {
   perspective: 800px;
   cursor: pointer;
 }
 
-.cortex-flashcard-inner {
+.chronote-flashcard-inner {
   position: relative;
   min-height: 120px;
   transition: transform 0.35s ease;
@@ -1831,15 +1831,15 @@
   grid-template-areas: "stack";
 }
 
-.cortex-flashcard-inner > * {
+.chronote-flashcard-inner > * {
   grid-area: stack;
 }
 
-.cortex-flashcard-inner.flipped {
+.chronote-flashcard-inner.flipped {
   transform: rotateY(180deg);
 }
 
-.cortex-flashcard-face {
+.chronote-flashcard-face {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   border: 1px solid var(--background-modifier-border);
@@ -1854,41 +1854,41 @@
   height: max-content;
 }
 
-.cortex-flashcard-front {
+.chronote-flashcard-front {
   z-index: 2;
 }
 
-.cortex-flashcard-back {
+.chronote-flashcard-back {
   transform: rotateY(180deg);
   z-index: 1;
 }
 
-.cortex-flashcard-question {
+.chronote-flashcard-question {
   font-weight: 600;
   font-size: 0.95em;
   line-height: 1.45;
 }
 
-.cortex-flashcard-answer {
+.chronote-flashcard-answer {
   font-size: 0.95em;
   line-height: 1.45;
   color: var(--text-normal);
 }
 
-.cortex-flashcard-source {
+.chronote-flashcard-source {
   margin-top: 0.6rem;
   font-size: 0.8em;
   color: var(--text-muted);
   font-style: italic;
 }
 
-.cortex-flashcard-controls {
+.chronote-flashcard-controls {
   display: flex;
   justify-content: center;
   gap: 0.5rem;
 }
 
-.cortex-flashcard-control-btn {
+.chronote-flashcard-control-btn {
   padding: 0.4rem 0.75rem;
   font-size: 0.85em;
   border: 1px solid var(--background-modifier-border);
@@ -1899,25 +1899,25 @@
   transition: background 0.15s ease;
 }
 
-.cortex-flashcard-control-btn:hover:not(:disabled) {
+.chronote-flashcard-control-btn:hover:not(:disabled) {
   background: var(--background-modifier-hover);
 }
 
-.cortex-flashcard-control-btn:disabled {
+.chronote-flashcard-control-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-.cortex-flashcard-flip-btn {
+.chronote-flashcard-flip-btn {
   min-width: 110px;
 }
 
-.cortex-flashcard-footer {
+.chronote-flashcard-footer {
   display: flex;
   justify-content: center;
 }
 
-.cortex-flashcard-save-btn {
+.chronote-flashcard-save-btn {
   padding: 0.45rem 1rem;
   font-size: 0.85em;
   font-weight: 600;
@@ -2037,7 +2037,7 @@
 
 /* ── Interactive quiz ───────────────────────────────────────────── */
 
-.cortex-quiz {
+.chronote-quiz {
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
@@ -2047,7 +2047,7 @@
   gap: 0.6rem;
 }
 
-.cortex-quiz-header {
+.chronote-quiz-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -2055,7 +2055,7 @@
   flex-wrap: wrap;
 }
 
-.cortex-quiz-title {
+.chronote-quiz-title {
   font-size: 0.85em;
   font-weight: 600;
   color: var(--text-muted);
@@ -2063,46 +2063,46 @@
   letter-spacing: 0.04em;
 }
 
-.cortex-quiz-score,
-.cortex-quiz-progress {
+.chronote-quiz-score,
+.chronote-quiz-progress {
   font-size: 0.85em;
   color: var(--text-normal);
   font-variant-numeric: tabular-nums;
 }
 
-.cortex-quiz-progress-bar {
+.chronote-quiz-progress-bar {
   height: 6px;
   background: var(--background-modifier-border);
   border-radius: 3px;
   overflow: hidden;
 }
 
-.cortex-quiz-progress-fill {
+.chronote-quiz-progress-fill {
   height: 100%;
   background: var(--interactive-accent);
   border-radius: 3px;
   transition: width 0.25s ease;
 }
 
-.cortex-quiz-question-area {
+.chronote-quiz-question-area {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.cortex-quiz-prompt {
+.chronote-quiz-prompt {
   font-weight: 600;
   font-size: 0.95em;
   line-height: 1.45;
 }
 
-.cortex-quiz-options {
+.chronote-quiz-options {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
 }
 
-.cortex-quiz-option {
+.chronote-quiz-option {
   text-align: left;
   padding: 0.55rem 0.75rem;
   border: 1px solid var(--background-modifier-border);
@@ -2113,56 +2113,56 @@
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.cortex-quiz-option:hover:not(:disabled) {
+.chronote-quiz-option:hover:not(:disabled) {
   background: var(--background-modifier-hover);
 }
 
-.cortex-quiz-option:disabled {
+.chronote-quiz-option:disabled {
   cursor: default;
 }
 
-.cortex-quiz-option.is-correct {
+.chronote-quiz-option.is-correct {
   border-color: var(--color-green);
   background: rgba(0, 180, 0, 0.1);
   color: var(--color-green);
 }
 
-.cortex-quiz-option.is-incorrect {
+.chronote-quiz-option.is-incorrect {
   border-color: var(--color-red);
   background: rgba(200, 0, 0, 0.08);
   color: var(--color-red);
 }
 
-.cortex-quiz-feedback {
+.chronote-quiz-feedback {
   display: none;
   border-radius: 6px;
   padding: 0.55rem 0.75rem;
   font-size: 0.9em;
 }
 
-.cortex-quiz-feedback.is-correct {
+.chronote-quiz-feedback.is-correct {
   display: block;
   background: rgba(0, 180, 0, 0.1);
   color: var(--color-green);
 }
 
-.cortex-quiz-feedback.is-incorrect {
+.chronote-quiz-feedback.is-incorrect {
   display: block;
   background: rgba(200, 0, 0, 0.08);
   color: var(--color-red);
 }
 
-.cortex-quiz-feedback p {
+.chronote-quiz-feedback p {
   margin: 0.35rem 0 0;
   color: var(--text-normal);
 }
 
-.cortex-quiz-controls {
+.chronote-quiz-controls {
   display: flex;
   justify-content: flex-end;
 }
 
-.cortex-quiz-next-btn {
+.chronote-quiz-next-btn {
   padding: 0.45rem 1rem;
   font-size: 0.85em;
   font-weight: 600;
@@ -2173,26 +2173,26 @@
   color: var(--text-normal);
 }
 
-.cortex-quiz-next-btn:hover:not(:disabled) {
+.chronote-quiz-next-btn:hover:not(:disabled) {
   background: var(--background-modifier-hover);
 }
 
-.cortex-quiz-next-btn:disabled {
+.chronote-quiz-next-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-.cortex-quiz-summary {
+.chronote-quiz-summary {
   text-align: center;
   padding: 0.5rem 0;
 }
 
-.cortex-quiz-summary h3 {
+.chronote-quiz-summary h3 {
   margin: 0 0 0.35rem;
   font-size: 1.05em;
 }
 
-.cortex-provider-warning {
+.chronote-provider-warning {
   margin: 0.75rem 0;
   padding: 0.65rem 0.85rem;
   border-left: 3px solid var(--color-orange);
@@ -2204,7 +2204,7 @@
 }
 
 /* ── Save flashcards modal ─────────────────────────────────────── */
-.cortex-save-flashcards-modal .cortex-save-fc-footer {
+.chronote-save-flashcards-modal .chronote-save-fc-footer {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
@@ -2213,17 +2213,17 @@
   border-top: 1px solid var(--background-modifier-border);
 }
 
-.cortex-save-fc-empty {
+.chronote-save-fc-empty {
   color: var(--text-muted);
   font-style: italic;
 }
 
 /* ── Study flashcards button (post-processor) ─────────────────── */
-.cortex-flashcard-study-wrapper {
+.chronote-flashcard-study-wrapper {
   margin: 0 0 12px 0;
 }
 
-.cortex-flashcard-study-btn {
+.chronote-flashcard-study-btn {
   width: 100%;
   text-align: center;
   font-size: 1em;
@@ -2231,7 +2231,7 @@
 }
 
 /* ── Study flashcards modal ────────────────────────────────────── */
-.cortex-study-flashcards-modal {
+.chronote-study-flashcards-modal {
   /* The deck component already has its own card layout. We just
      give the modal a sensible min-height so the card isn't
      squashed on small viewports. */

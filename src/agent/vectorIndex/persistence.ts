@@ -1,5 +1,5 @@
 /**
- * Persistence for the Cortex AI knowledge index.
+ * Persistence for the Chronote AI knowledge index.
  *
  * Binary format (little-endian):
  *
@@ -158,7 +158,7 @@ export function decodeSnapshot(bytes: Uint8Array): IndexSnapshot {
 /** Thrown by decodeSnapshot when the on-disk file is unreadable. */
 export class FormatError extends Error {
   constructor(message: string) {
-    super(`Cortex index file: ${message}`);
+    super(`Chronote index file: ${message}`);
     this.name = "FormatError";
   }
 }

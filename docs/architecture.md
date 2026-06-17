@@ -1,8 +1,8 @@
-# Cortex Architecture
+# Chronote Architecture
 
 ## Overview
 
-Cortex is an Obsidian plugin that combines **spaced repetition (SRS)**, **Google Calendar integration**, and **AI-powered study planning** into a single command center — all running locally inside your vault.
+Chronote is an Obsidian plugin that combines **spaced repetition (SRS)**, **Google Calendar integration**, and **AI-powered study planning** into a single command center — all running locally inside your vault.
 
 ## High-level Architecture
 
@@ -10,7 +10,7 @@ Cortex is an Obsidian plugin that combines **spaced repetition (SRS)**, **Google
 ┌─────────────────────────────────────────────────────────────┐
 │                    Obsidian Plugin Host                      │
 │  ┌─────────────┐  ┌──────────────┐  ┌─────────────────────┐ │
-│  │  main.ts    │  │  settings.ts │  │  CortexDashboardView │ │
+│  │  main.ts    │  │  settings.ts │  │  ChronoteDashboardView │ │
 │  │  (lifecycle)│  │  (config)    │  │  (UI / data hub)     │ │
 │  └──────┬──────┘  └──────────────┘  └─────────────────────┘ │
 │         │                                                    │
@@ -23,7 +23,7 @@ Cortex is an Obsidian plugin that combines **spaced repetition (SRS)**, **Google
 │  ┌──────────────────────────────┐  ┌─────────────────────┐   │
 │  │   AI Service Registry        │  │   Vector Index      │   │
 │  │ (Gemini / OpenAI-compat /    │  │  (local embeddings, │   │
-│  │  Anthropic / Cortex Cloud)   │  │   RAG search)       │   │
+│  │  Anthropic / Chronote Cloud)   │  │   RAG search)       │   │
 │  └──────────────────────────────┘  └─────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -34,12 +34,12 @@ Entry point: `src/main.ts`
 
 1. **`onload()`**
    - Loads settings via `this.loadData()` (merges with `DEFAULT_SETTINGS` from `src/settings.ts`).
-   - Registers the custom view `cortex-dashboard` (`src/views/CortexDashboardView.ts`).
+   - Registers the custom view `chronote-dashboard` (`src/views/ChronoteDashboardView.ts`).
    - Detaches any stale dashboard leaves from previous loads.
-   - Registers the Obsidian protocol handler `cortex-auth` to receive Google OAuth tokens after the browser flow.
-   - Adds the ribbon icon and core commands (`open-cortex-dashboard`, plus the SRS and test commands).
+   - Registers the Obsidian protocol handler `chronote-auth` to receive Google OAuth tokens after the browser flow.
+   - Adds the ribbon icon and core commands (`open-chronote-dashboard`, plus the SRS and test commands).
    - Delegates SRS/test commands to `Commands` (`src/commands.ts`).
-   - Adds the settings tab (`CortexSettingTab`).
+   - Adds the settings tab (`ChronoteSettingTab`).
 
 2. **`onunload()`**
    - Detaches all dashboard leaves.
@@ -72,7 +72,7 @@ The dashboard and chat modals read this data via `app.metadataCache.getFileCache
 
 **Owner:** `src/services/testService.ts`
 
-Tests are stored in plugin settings (`CortexSettings.tests`) as an array of:
+Tests are stored in plugin settings (`ChronoteSettings.tests`) as an array of:
 
 ```ts
 { id: string; name: string; date: string; filePaths: string[]; done?: boolean }
@@ -88,7 +88,7 @@ Tests are stored in plugin settings (`CortexSettings.tests`) as an array of:
 **Owner:** `src/services/googleCalendarService.ts`
 
 - OAuth 2.0 flow initiated from the Dashboard opens the browser to `https://cortex-proxy.vercel.app/api/auth`.
-- The proxy redirects back to Obsidian via the `cortex-auth://` protocol handler.
+- The proxy redirects back to Obsidian via the `chronote-auth://` protocol handler.
 - Tokens are persisted in Obsidian's `data.json` via `saveData()`.
 - `GoogleCalendarService` maintains a preemptive refresh timer (every 60 s) and refreshes 5 minutes before expiry via the proxy (`POST /api/refresh`).
 - Supports CRUD on the user's primary calendar: list, create, update, delete events.
@@ -103,8 +103,8 @@ Tests are stored in plugin settings (`CortexSettings.tests`) as an array of:
   - Existing calendar events for today
   - Upcoming tests (from `TestService`)
 - All adapters expose a normalized tool-calling interface; the agent layer registers tools (`notes`, `tests`, `flashcards`, `quizzes`) on top.
-- `CortexChatModal` (`src/modals/CortexChatModal.ts`) provides an interactive chat UI; scheduling queries may render an "Approve Schedule" button to bulk-create events.
-- `Cortex Cloud` is wired through the same adapter interface as a fixed-base-url OpenAI-compatible endpoint. **It is not available yet** — the option is reserved in the catalog and settings, and will activate when the managed service goes live.
+- `ChronoteChatModal` (`src/modals/ChronoteChatModal.ts`) provides an interactive chat UI; scheduling queries may render an "Approve Schedule" button to bulk-create events.
+- `Chronote Cloud` is wired through the same adapter interface as a fixed-base-url OpenAI-compatible endpoint. **It is not available yet** — the option is reserved in the catalog and settings, and will activate when the managed service goes live.
 
 ## Vault Search (RAG)
 
@@ -113,12 +113,12 @@ Tests are stored in plugin settings (`CortexSettings.tests`) as an array of:
 - Every markdown note is chunked (`chunker.ts`) and embedded (`embeddings.ts`) into a local index.
 - The index is persisted as `knowledge-index.bin` in the plugin folder.
 - The Dashboard, chat, and flashcard / quiz tools all use the same index.
-- The user picks the embedding provider in **Settings → Cortex → Indexing**; local providers (Ollama, LM Studio) work without an API key, cloud providers require one.
+- The user picks the embedding provider in **Settings → Chronote → Indexing**; local providers (Ollama, LM Studio) work without an API key, cloud providers require one.
 - The chat adapter does not have direct access to embeddings — `knowledgeBase.ts` is the single owner of the local index.
 
 ## Dashboard View Architecture
 
-**File:** `src/views/CortexDashboardView.ts`
+**File:** `src/views/ChronoteDashboardView.ts`
 
 The dashboard is a single custom `ItemView` rendered into the workspace. It has three main panels:
 

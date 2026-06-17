@@ -58,7 +58,7 @@ export class App {
 
 export class Plugin {
   app: App;
-  manifest = { id: "cortex", name: "Cortex", version: "0.0.0", minAppVersion: "0.0.0", description: "", isDesktopOnly: false };
+  manifest = { id: "chronote", name: "Chronote", version: "0.0.0", minAppVersion: "0.0.0", description: "", isDesktopOnly: false };
   constructor(app: App) { this.app = app; }
   async loadData() { return null; }
   async saveData() {}

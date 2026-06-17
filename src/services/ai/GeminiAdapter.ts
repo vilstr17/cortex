@@ -19,7 +19,7 @@
  * keys are often allow-listed only for the 2.5 family.
  */
 import { requestUrl } from "obsidian";
-import type { CortexSettings } from "../../settingsTypes.js";
+import type { ChronoteSettings } from "../../settingsTypes.js";
 import type {
   AIProviderAdapter,
   ChatRequest,
@@ -68,7 +68,7 @@ export class GeminiAdapter implements AIProviderAdapter {
 
   private readonly apiBase = "https://generativelanguage.googleapis.com/v1beta/models";
 
-  constructor(private settings: CortexSettings) {}
+  constructor(private settings: ChronoteSettings) {}
 
   private get model(): string {
     return this.settings.ai.geminiModel || "gemini-2.5-flash";
@@ -192,17 +192,17 @@ export class GeminiAdapter implements AIProviderAdapter {
     const detail = upstreamMsg || response.text || "no body";
     const prefix = upstreamStatus ? ` [${upstreamStatus}]` : "";
     throw new Error(
-      `Cortex: Gemini returned HTTP ${status}${hint}.${prefix} ${detail}`,
+      `Chronote: Gemini returned HTTP ${status}${hint}.${prefix} ${detail}`,
     );
   }
 
   private parseResponse(json: unknown): ChatResponse {
     if (!isApiResponse(json)) {
-      throw new Error("Cortex: Gemini returned an unexpected response structure.");
+      throw new Error("Chronote: Gemini returned an unexpected response structure.");
     }
     const candidates = json.candidates;
     if (!candidates || candidates.length === 0) {
-      throw new Error("Cortex: Gemini returned no candidates.");
+      throw new Error("Chronote: Gemini returned no candidates.");
     }
     const parts: GeminiContentPart[] = candidates[0]?.content?.parts ?? [];
 
@@ -259,7 +259,7 @@ export class GeminiAdapter implements AIProviderAdapter {
     if (texts.length === 0) return [];
     if (!this.apiKey) {
       throw new Error(
-        "Cortex: no Gemini API key configured. Set one in Settings → Cortex.",
+        "Chronote: no Gemini API key configured. Set one in Settings → Chronote.",
       );
     }
     const model = this.embeddingModel;
@@ -291,7 +291,7 @@ export class GeminiAdapter implements AIProviderAdapter {
     const embeddings = obj?.embeddings;
     if (!Array.isArray(embeddings) || embeddings.length !== expected) {
       throw new Error(
-        `Cortex: Gemini /batchEmbedContents returned ${Array.isArray(embeddings) ? embeddings.length : 0} vectors, expected ${expected}.`,
+        `Chronote: Gemini /batchEmbedContents returned ${Array.isArray(embeddings) ? embeddings.length : 0} vectors, expected ${expected}.`,
       );
     }
     const out: number[][] = [];
@@ -299,7 +299,7 @@ export class GeminiAdapter implements AIProviderAdapter {
       const values = embeddings[i]?.values;
       if (!Array.isArray(values)) {
         throw new Error(
-          `Cortex: Gemini /batchEmbedContents returned a row without values at index ${i}.`,
+          `Chronote: Gemini /batchEmbedContents returned a row without values at index ${i}.`,
         );
       }
       out.push(values as number[]);

@@ -210,7 +210,7 @@ export async function runWithTools(
   }
 
   throw new Error(
-    `Cortex: hit maximum tool-call rounds (${maxRounds}) without a final response.`,
+    `Chronote: hit maximum tool-call rounds (${maxRounds}) without a final response.`,
   );
 }
 

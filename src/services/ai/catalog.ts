@@ -23,8 +23,8 @@ export interface ModelOption {
 }
 
 export const PROVIDER_CATALOG: Record<AIProvider, ModelOption[]> = {
-  cortex_cloud: [
-    // The user does NOT pick a model for Cortex Cloud — the proxy
+  chronote_cloud: [
+    // The user does NOT pick a model for Chronote Cloud — the proxy
     // chooses the best price/perf model on Ollama Cloud and routes
     // accordingly. The empty list is intentional; the settings UI
     // shows no model dropdown for this provider.
@@ -75,7 +75,7 @@ export const PROVIDER_CATALOG: Record<AIProvider, ModelOption[]> = {
 
 /** Human-readable provider names used in the settings UI. */
 export const PROVIDER_LABELS: Record<AIProvider, string> = {
-  cortex_cloud: "Cortex Cloud",
+  chronote_cloud: "Chronote Cloud",
   gemini: "Google Gemini",
   openai: "OpenAI",
   anthropic: "Anthropic Claude",
@@ -84,8 +84,8 @@ export const PROVIDER_LABELS: Record<AIProvider, string> = {
   custom: "Custom (OpenAI-compatible)",
 };
 
-/** Fixed base URL for the managed Cortex Cloud proxy. */
-export const CORTEX_CLOUD_BASE_URL = "https://cortex-proxy.vercel.app/v1";
+/** Fixed base URL for the managed Chronote Cloud proxy. */
+export const CHRONOTE_CLOUD_BASE_URL = "https://cortex-proxy.vercel.app/v1";
 
 /** Sensible default base URL for OpenAI-compat local providers. */
 export const DEFAULT_BASE_URL: Partial<Record<AIProvider, string>> = {
@@ -93,12 +93,12 @@ export const DEFAULT_BASE_URL: Partial<Record<AIProvider, string>> = {
   // LM Studio's own docs point at 127.0.0.1 (localhost doesn't resolve on
   // some hosts). The fetcher normalizes missing /v1 suffixes.
   lmstudio: "http://127.0.0.1:1234/v1",
-  cortex_cloud: CORTEX_CLOUD_BASE_URL,
+  chronote_cloud: CHRONOTE_CLOUD_BASE_URL,
 };
 
 /** Per-provider placeholder for the model field when nothing is configured. */
 export const MODEL_PLACEHOLDER: Record<AIProvider, string> = {
-  cortex_cloud: "(model picked by Cortex Cloud)",
+  chronote_cloud: "(model picked by Chronote Cloud)",
   gemini: "e.g., gemini-3.5-flash",
   openai: "e.g., gpt-5.4-mini",
   anthropic: "e.g., claude-sonnet-4-6",
@@ -115,7 +115,7 @@ export const BASE_URL_PLACEHOLDER: Partial<Record<AIProvider, string>> = {
 };
 
 /**
- * Default embedding model per provider. Cortex derives the embedding
+ * Default embedding model per provider. Chronote derives the embedding
  * model from the active provider — there is no embedding-model field
  * in the settings UI anymore. (`ai.embeddingModel` survives as an
  * optional override that power users can set by editing data.json.)
@@ -134,7 +134,7 @@ export const DEFAULT_EMBEDDING_MODEL: Partial<Record<AIProvider, string>> = {
   openai: "text-embedding-3-small",
   ollama: "nomic-embed-text",
   lmstudio: "nomic-embed-text",
-  cortex_cloud: "nomic-embed-text",
+  chronote_cloud: "nomic-embed-text",
 };
 
 /**
@@ -182,7 +182,7 @@ export function resolveEmbeddingModel(
 export function providerMissingFields(
   provider: AIProvider,
   config: {
-    cortexAccountId: string;
+    chronoteAccountId: string;
     geminiApiKey: string;
     geminiModel: string;
     apiKey: string;
@@ -191,8 +191,8 @@ export function providerMissingFields(
   },
 ): string[] {
   switch (provider) {
-    case "cortex_cloud":
-      return config.cortexAccountId ? [] : ["Cortex account id"];
+    case "chronote_cloud":
+      return config.chronoteAccountId ? [] : ["Chronote account id"];
     case "gemini":
       return [
         ...(config.geminiApiKey ? [] : ["Gemini API key"]),

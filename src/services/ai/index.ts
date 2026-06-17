@@ -6,20 +6,20 @@
  * both go through this — they never instantiate an adapter class
  * directly.
  */
-import type { CortexSettings } from "../../settingsTypes.js";
+import type { ChronoteSettings } from "../../settingsTypes.js";
 import { GeminiAdapter } from "./GeminiAdapter.js";
 import { AnthropicAdapter } from "./AnthropicAdapter.js";
 import { OpenAICompatAdapter } from "./OpenAICompatAdapter.js";
-import { CORTEX_CLOUD_BASE_URL } from "./catalog.js";
+import { CHRONOTE_CLOUD_BASE_URL } from "./catalog.js";
 import type { AIProviderAdapter } from "./types.js";
 
-export function createAdapter(settings: CortexSettings): AIProviderAdapter {
+export function createAdapter(settings: ChronoteSettings): AIProviderAdapter {
   switch (settings.ai.provider) {
     case "gemini":
       return new GeminiAdapter(settings);
     case "anthropic":
       return new AnthropicAdapter(settings);
-    case "cortex_cloud":
+    case "chronote_cloud":
       // The proxy picks the model — we never let the user configure
       // one. Override settings with a synthetic `apiKey` (the account
       // id) and the fixed base URL. We use a non-empty placeholder
@@ -30,9 +30,9 @@ export function createAdapter(settings: CortexSettings): AIProviderAdapter {
         ...settings,
         ai: {
           ...settings.ai,
-          apiKey: settings.ai.cortexAccountId || "cortex-cloud",
-          model: "cortex-cloud-managed",
-          baseUrl: CORTEX_CLOUD_BASE_URL,
+          apiKey: settings.ai.chronoteAccountId || "chronote-cloud",
+          model: "chronote-cloud-managed",
+          baseUrl: CHRONOTE_CLOUD_BASE_URL,
         },
       });
     case "openai":

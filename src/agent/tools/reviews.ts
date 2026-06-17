@@ -21,7 +21,7 @@
 
 import { App } from "obsidian";
 import { Tool } from "../toolRegistry.js";
-import { CortexTest } from "../../settingsTypes.js";
+import { ChronoteTest } from "../../settingsTypes.js";
 import { localISODate, parseLocalDate, startOfLocalDay, isSameLocalDay, daysUntil } from "../../utils/dateUtils.js";
 import {
   computeDueReviews,
@@ -36,7 +36,7 @@ import {
  */
 export function createReviewTools(deps: {
   app: App;
-  getTests: () => CortexTest[];
+  getTests: () => ChronoteTest[];
   now?: () => Date;
 }): Tool[] {
   const getTests = deps.getTests;

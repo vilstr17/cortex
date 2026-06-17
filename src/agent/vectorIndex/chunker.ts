@@ -1,5 +1,5 @@
 /**
- * Markdown chunker for the Cortex AI knowledge index.
+ * Markdown chunker for the Chronote AI knowledge index.
  *
  * The vector index needs pieces of notes that are small enough to
  * embed (a typical local model tops out at ~500 tokens of useful

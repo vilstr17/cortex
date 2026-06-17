@@ -1,10 +1,10 @@
 import { Plugin, Notice, TFile } from "obsidian";
 import Commands from "./commands.js";
 import {
-  CortexDashboardView,
-  CORTEX_DASHBOARD_VIEW,
-} from "./views/CortexDashboardView.js";
-import { CortexSettings, DEFAULT_SETTINGS, CortexSettingTab } from "./settings.js";
+  ChronoteDashboardView,
+  CHRONOTE_DASHBOARD_VIEW,
+} from "./views/ChronoteDashboardView.js";
+import { ChronoteSettings, DEFAULT_SETTINGS, ChronoteSettingTab } from "./settings.js";
 import { GoogleCalendarService } from "./services/googleCalendarService.js";
 import { TestService } from "./services/testService.js";
 import {
@@ -17,15 +17,15 @@ import {
   embeddingMissingFields,
 } from "./services/ai/catalog.js";
 import {
-  cortexStudyPostProcessor,
+  chronoteStudyPostProcessor,
   openStudyForFile,
 } from "./services/flashcardStudyPostProcessor.js";
 
-export type { CortexSettings };
+export type { ChronoteSettings };
 export { DEFAULT_SETTINGS };
 
-export default class CortexPlugin extends Plugin {
-  settings: CortexSettings = DEFAULT_SETTINGS;
+export default class ChronotePlugin extends Plugin {
+  settings: ChronoteSettings = DEFAULT_SETTINGS;
   commands!: Commands;
   private oauthState: string | null = null;
 
@@ -54,7 +54,7 @@ export default class CortexPlugin extends Plugin {
     if (!this.knowledgeBase) {
       // `.obsidian/plugins/<id>/` — the standard plugin data dir.
       const pluginDataDir = (this.manifest as { dir?: string } | undefined)?.dir ??
-        `.obsidian/plugins/cortex`;
+        `.obsidian/plugins/chronote`;
       this.knowledgeBase = new KnowledgeBase({
         app: this.app,
         settings: this.settings,
@@ -141,7 +141,7 @@ export default class CortexPlugin extends Plugin {
     // spamming a Notice every time the interval elapses.
     const ai = this.settings.ai;
     const missing = providerMissingFields(ai.provider, {
-      cortexAccountId: ai.cortexAccountId,
+      chronoteAccountId: ai.chronoteAccountId,
       geminiApiKey: ai.geminiApiKey,
       geminiModel: ai.geminiModel,
       apiKey: ai.apiKey,
@@ -165,8 +165,8 @@ export default class CortexPlugin extends Plugin {
     // Build marker — lets us confirm which main.js Obsidian actually
     // loaded. If this line isn't in the console after a reload, the
     // new build didn't take (stale plugin in memory).
-    console.log("[Cortex] build 2026-06-15e — chat markdown rendering, persistence, flashcard/quiz UI, tool-calling hardening");
     const raw = await this.loadData();
+
     this.settings = migrateSettings(raw);
 
     if (!Array.isArray(this.settings.tests)) {
@@ -186,7 +186,7 @@ export default class CortexPlugin extends Plugin {
     // `KnowledgeBase.loadFromDisk`. Idempotent — a subsequent save
     // round-trips the seeded value.
     const pluginDataDir = (this.manifest as { dir?: string } | undefined)?.dir ??
-      `.obsidian/plugins/cortex`;
+      `.obsidian/plugins/chronote`;
     const seeded = await seedEmbeddingDimFromDisk(
       this.settings,
       this.app,
@@ -198,12 +198,12 @@ export default class CortexPlugin extends Plugin {
     }
 
     this.registerView(
-      CORTEX_DASHBOARD_VIEW,
-      (leaf) => new CortexDashboardView(leaf, this),
+      CHRONOTE_DASHBOARD_VIEW,
+      (leaf) => new ChronoteDashboardView(leaf, this),
     );
 
     // Ensure any stale dashboard views from a previous plugin load are closed
-    this.app.workspace.detachLeavesOfType(CORTEX_DASHBOARD_VIEW);
+    this.app.workspace.detachLeavesOfType(CHRONOTE_DASHBOARD_VIEW);
 
     // Register the flashcard-study post-processor and a workspace-level
     // click delegate so clicking the injected "▶ Study flashcards" button
@@ -211,13 +211,13 @@ export default class CortexPlugin extends Plugin {
     // checks the frontmatter (`flashcards: true`) and only adds the
     // button on notes the save service wrote — so other notes that
     // happen to mention flashcards aren't affected.
-    this.registerMarkdownPostProcessor(cortexStudyPostProcessor(this));
+    this.registerMarkdownPostProcessor(chronoteStudyPostProcessor(this));
     const studyClickHandler = (evt: MouseEvent) => {
       const target = evt.target;
       if (!(target instanceof HTMLElement)) return;
-      const btn = target.closest<HTMLElement>("[data-cortex-study]");
+      const btn = target.closest<HTMLElement>("[data-chronote-study]");
       if (!btn) return;
-      const path = btn.getAttribute("data-cortex-study");
+      const path = btn.getAttribute("data-chronote-study");
       if (!path) return;
       const file = this.app.vault.getAbstractFileByPath(path);
       if (!file || !(file instanceof TFile)) return;
@@ -274,17 +274,15 @@ export default class CortexPlugin extends Plugin {
       }),
     );
 
-    this.registerObsidianProtocolHandler("cortex-auth", async (params) => {
-      // Debug: log raw params so misconfigured proxies are easy to diagnose.
-      console.log("[cortex] cortex-auth callback received:", JSON.stringify(params));
-
+    this.registerObsidianProtocolHandler("chronote-auth", async (params) => {
       // CSRF guard: only reject if a state was supplied AND it doesn't match.
+
       // A missing state (proxy didn't echo it back) is treated as a proxy bug,
       // not a security failure — we still accept the tokens. This avoids the
       // situation where a misconfigured proxy strands the user with valid
       // tokens that get thrown away.
       if (params.state && params.state !== this.oauthState) {
-        new Notice("Cortex: OAuth state mismatch. Authentication rejected for security.");
+        new Notice("Chronote: OAuth state mismatch. Authentication rejected for security.");
         this.oauthState = null;
         await this.refreshDashboardCalendarSection();
         return;
@@ -303,26 +301,26 @@ export default class CortexPlugin extends Plugin {
         }
 
         await this.saveData(this.settings);
-        new Notice("Cortex: Google Calendar connected successfully!");
+        new Notice("Chronote: Google Calendar connected successfully!");
         await this.refreshDashboardCalendarSection();
       } else if (params.error) {
-        new Notice(`Cortex: Failed to connect Google Calendar: ${params.error}`);
+        new Notice(`Chronote: Failed to connect Google Calendar: ${params.error}`);
         await this.refreshDashboardCalendarSection();
       } else {
         // Callback fired but carried neither tokens nor an error — the proxy
         // likely misrouted. Re-render so the UI unsticks from "Waiting…".
-        new Notice("Cortex: Google auth callback had no tokens. Try connecting again.");
+        new Notice("Chronote: Google auth callback had no tokens. Try connecting again.");
         await this.refreshDashboardCalendarSection();
       }
     });
 
-    this.addRibbonIcon("brain", "Open Cortex Dashboard", () => {
+    this.addRibbonIcon("brain", "Open Chronote Dashboard", () => {
       this.openDashboard();
     });
 
     this.addCommand({
-      id: "open-cortex-dashboard",
-      name: "Open Cortex Dashboard",
+      id: "open-chronote-dashboard",
+      name: "Open Chronote Dashboard",
       callback: () => this.openDashboard(),
     });
 
@@ -339,7 +337,7 @@ export default class CortexPlugin extends Plugin {
     this.commands = new Commands(this);
     this.commands.addCommands();
 
-    this.addSettingTab(new CortexSettingTab(this.app, this));
+    this.addSettingTab(new ChronoteSettingTab(this.app, this));
 
     // Start the background auto-index scheduler. The first check is
     // delayed by the interval timer, so vault restore isn't delayed.
@@ -347,7 +345,7 @@ export default class CortexPlugin extends Plugin {
   }
 
   async onunload(): Promise<void> {
-    this.app.workspace.detachLeavesOfType(CORTEX_DASHBOARD_VIEW);
+    this.app.workspace.detachLeavesOfType(CHRONOTE_DASHBOARD_VIEW);
     if (this.autoIndexIntervalId !== null) {
       window.clearInterval(this.autoIndexIntervalId);
       this.autoIndexIntervalId = null;
@@ -358,7 +356,7 @@ export default class CortexPlugin extends Plugin {
 
   async openDashboard() {
     const { workspace } = this.app;
-    const existingLeaves = workspace.getLeavesOfType(CORTEX_DASHBOARD_VIEW);
+    const existingLeaves = workspace.getLeavesOfType(CHRONOTE_DASHBOARD_VIEW);
 
     if (existingLeaves.length > 0) {
       workspace.revealLeaf(existingLeaves[0]);
@@ -367,7 +365,7 @@ export default class CortexPlugin extends Plugin {
 
     const leaf = workspace.getLeftLeaf(false);
     if (leaf) {
-      await leaf.setViewState({ type: CORTEX_DASHBOARD_VIEW });
+      await leaf.setViewState({ type: CHRONOTE_DASHBOARD_VIEW });
       workspace.revealLeaf(leaf);
     }
   }
@@ -376,13 +374,13 @@ export default class CortexPlugin extends Plugin {
    * Re-render the dashboard's Google Calendar section so the "Waiting for
    * authorization…" UI is replaced by either the connected schedule view
    * or the connect button (depending on outcome). Called from the
-   * `cortex-auth` protocol handler on every callback path.
+   * `chronote-auth` protocol handler on every callback path.
    */
   private async refreshDashboardCalendarSection(): Promise<void> {
-    const leaves = this.app.workspace.getLeavesOfType(CORTEX_DASHBOARD_VIEW);
+    const leaves = this.app.workspace.getLeavesOfType(CHRONOTE_DASHBOARD_VIEW);
     for (const leaf of leaves) {
       const view = leaf.view;
-      if (view instanceof CortexDashboardView) {
+      if (view instanceof ChronoteDashboardView) {
         view.refreshGoogleCalendarSection();
       }
     }

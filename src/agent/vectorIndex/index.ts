@@ -1,5 +1,5 @@
 /**
- * In-memory vector index for the Cortex AI knowledge index.
+ * In-memory vector index for the Chronote AI knowledge index.
  *
  * Storage: a single Float32Array of size (chunkCount × dim), plus
  * a parallel array of chunk metadata (file, heading, text). The

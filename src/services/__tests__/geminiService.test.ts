@@ -25,7 +25,7 @@ vi.mock("obsidian", () => ({
 }));
 
 import { GeminiService } from "../geminiService.js";
-import { DEFAULT_SETTINGS, CortexSettings } from "../../settingsTypes.js";
+import { DEFAULT_SETTINGS, ChronoteSettings } from "../../settingsTypes.js";
 
 /**
  * Build a settings object with the given Gemini API key, mirroring
@@ -37,12 +37,12 @@ import { DEFAULT_SETTINGS, CortexSettings } from "../../settingsTypes.js";
  *
  * The active provider is pinned to "gemini" — the chat service
  * now dispatches on `settings.ai.provider`, so a default
- * `cortex_cloud` would route to the OpenAI-compat adapter and the
+ * `chronote_cloud` would route to the OpenAI-compat adapter and the
  * Gemini-specific URL/header assertions wouldn't hold. Setting
  * provider explicitly keeps the test focused on the Gemini key
  * transport contract.
  */
-function settingsWithKey(key: string): CortexSettings {
+function settingsWithKey(key: string): ChronoteSettings {
   return {
     ...DEFAULT_SETTINGS,
     geminiApiKey: key,

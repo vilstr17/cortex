@@ -1,12 +1,12 @@
 /**
  * Provider-agnostic types for the multi-provider AI layer.
  *
- * The chat layer (`CortexChatModal`) and the dashboard both speak
+ * The chat layer (`ChronoteChatModal`) and the dashboard both speak
  * these types and never touch a provider's native request shape
  * directly. Adapters in this directory translate between this shape
  * and each provider's wire format.
  */
-import type { CortexSettings } from "../../settingsTypes.js";
+import type { ChronoteSettings } from "../../settingsTypes.js";
 
 export interface ChatMessage {
   role: "user" | "assistant" | "tool";
@@ -141,7 +141,7 @@ export interface AIProviderAdapter {
    * `Float32Array` and the `InMemoryCosineIndex` normalizes on `add()`.
    *
    * Throws on HTTP / auth / network failure with a provider-tagged
-   * error message (e.g. "Cortex: Ollama returned HTTP 404. …").
+   * error message (e.g. "Chronote: Ollama returned HTTP 404. …").
    */
   embed?(texts: string[]): Promise<number[][]>;
 }
@@ -152,7 +152,7 @@ export interface AIProviderAdapter {
  * can reuse the same wording as Gemini (it was lifted out of the
  * original `GeminiService.getTimeContext()`).
  */
-export function buildTimeContext(settings: CortexSettings): string {
+export function buildTimeContext(settings: ChronoteSettings): string {
   const now = new Date();
   const locale = undefined;
   const dateStr = now.toLocaleDateString(locale, {

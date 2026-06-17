@@ -1,5 +1,5 @@
 /**
- * Interactive flashcard deck renderer for the Cortex chat UI.
+ * Interactive flashcard deck renderer for the Chronote chat UI.
  *
  * Replaces the old static reveal-list with a card component that supports
  * front/back flipping, previous/next navigation, progress indication,
@@ -30,38 +30,38 @@ export function renderFlashcardDeck(
 ): void {
   if (proposals.length === 0) return;
 
-  const deck = parent.createDiv({ cls: "cortex-flashcard-deck" });
+  const deck = parent.createDiv({ cls: "chronote-flashcard-deck" });
 
-  const header = deck.createDiv({ cls: "cortex-flashcard-deck-header" });
-  const title = header.createDiv({ cls: "cortex-flashcard-deck-title" });
-  const progress = header.createDiv({ cls: "cortex-flashcard-deck-progress" });
+  const header = deck.createDiv({ cls: "chronote-flashcard-deck-header" });
+  const title = header.createDiv({ cls: "chronote-flashcard-deck-title" });
+  const progress = header.createDiv({ cls: "chronote-flashcard-deck-progress" });
 
-  const stage = deck.createDiv({ cls: "cortex-flashcard-stage" });
-  const cardInner = stage.createDiv({ cls: "cortex-flashcard-inner" });
-  const front = cardInner.createDiv({ cls: "cortex-flashcard-face cortex-flashcard-front" });
-  const back = cardInner.createDiv({ cls: "cortex-flashcard-face cortex-flashcard-back" });
+  const stage = deck.createDiv({ cls: "chronote-flashcard-stage" });
+  const cardInner = stage.createDiv({ cls: "chronote-flashcard-inner" });
+  const front = cardInner.createDiv({ cls: "chronote-flashcard-face chronote-flashcard-front" });
+  const back = cardInner.createDiv({ cls: "chronote-flashcard-face chronote-flashcard-back" });
 
-  const questionEl = front.createDiv({ cls: "cortex-flashcard-question" });
-  const answerEl = back.createDiv({ cls: "cortex-flashcard-answer" });
-  const sourceEl = back.createDiv({ cls: "cortex-flashcard-source" });
+  const questionEl = front.createDiv({ cls: "chronote-flashcard-question" });
+  const answerEl = back.createDiv({ cls: "chronote-flashcard-answer" });
+  const sourceEl = back.createDiv({ cls: "chronote-flashcard-source" });
 
-  const controls = deck.createDiv({ cls: "cortex-flashcard-controls" });
+  const controls = deck.createDiv({ cls: "chronote-flashcard-controls" });
   const prevBtn = controls.createEl("button", {
-    cls: "cortex-flashcard-control-btn",
+    cls: "chronote-flashcard-control-btn",
     text: "← Prev",
   });
   const flipBtn = controls.createEl("button", {
-    cls: "cortex-flashcard-control-btn cortex-flashcard-flip-btn",
+    cls: "chronote-flashcard-control-btn chronote-flashcard-flip-btn",
     text: "Flip",
   });
   const nextBtn = controls.createEl("button", {
-    cls: "cortex-flashcard-control-btn",
+    cls: "chronote-flashcard-control-btn",
     text: "Next →",
   });
 
-  const footer = deck.createDiv({ cls: "cortex-flashcard-footer" });
+  const footer = deck.createDiv({ cls: "chronote-flashcard-footer" });
   const saveBtn = footer.createEl("button", {
-    cls: "mod-cta cortex-flashcard-save-btn",
+    cls: "mod-cta chronote-flashcard-save-btn",
     text: `💾 Save ${proposals.length} to “${options.testName}”`,
   });
 
@@ -125,10 +125,10 @@ export function renderFlashcardDeck(
       // Visually mark the deck as saved.
       deck.addClass("is-saved");
     } catch (err) {
-      console.error("Cortex: failed to save flashcards:", err);
       saveBtn.disabled = false;
       saveBtn.setText(`💾 Save ${proposals.length} to “${options.testName}”`);
     }
+
   });
 
   updateCard();

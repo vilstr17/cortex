@@ -8,23 +8,23 @@
  *
  * This modal is opened by the workspace click delegate registered
  * in `main.ts` when the user clicks the "▶ Study flashcards"
- * button that the Cortex markdown post-processor injects into
+ * button that the Chronote markdown post-processor injects into
  * notes whose frontmatter has `flashcards: true`.
  */
 
 import { App, Modal } from "obsidian";
 import { FlashcardProposal } from "../agent/tools/flashcards.js";
 import { renderFlashcardDeck } from "../ui/FlashcardDeck.js";
-import type CortexPlugin from "../main.js";
+import type ChronotePlugin from "../main.js";
 
 export class StudyFlashcardsModal extends Modal {
-  private plugin: CortexPlugin;
+  private plugin: ChronotePlugin;
   private cards: FlashcardProposal[];
   private testName: string;
 
   constructor(
     app: App,
-    plugin: CortexPlugin,
+    plugin: ChronotePlugin,
     cards: FlashcardProposal[],
     testName: string,
   ) {
@@ -37,7 +37,7 @@ export class StudyFlashcardsModal extends Modal {
   onOpen(): void {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass("cortex-study-flashcards-modal");
+    contentEl.addClass("chronote-study-flashcards-modal");
 
     contentEl.createEl("h2", {
       text: `Study — ${this.testName}`,
@@ -47,7 +47,7 @@ export class StudyFlashcardsModal extends Modal {
       contentEl.createEl("p", {
         text: "This note has no Q/A cards. Add some via the chat, or open the raw markdown to check the format.",
       });
-      const footer = contentEl.createDiv({ cls: "cortex-save-fc-footer" });
+      const footer = contentEl.createDiv({ cls: "chronote-save-fc-footer" });
       const closeBtn = footer.createEl("button", { text: "Close" });
       closeBtn.addEventListener("click", () => this.close());
       return;
@@ -61,7 +61,7 @@ export class StudyFlashcardsModal extends Modal {
       onSave: async () => null,
     });
 
-    const footer = contentEl.createDiv({ cls: "cortex-save-fc-footer" });
+    const footer = contentEl.createDiv({ cls: "chronote-save-fc-footer" });
     const closeBtn = footer.createEl("button", { text: "Close" });
     closeBtn.addEventListener("click", () => this.close());
   }

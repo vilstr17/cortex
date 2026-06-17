@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  * Tests for the OpenAI-compatible adapter — covers URL construction,
  * Authorization header, JSON-decoded `arguments` field, and the
  * Ollama-specific quirks (placeholder API key, no `tool_choice`).
- * Cortex Cloud is implemented as another OpenAI-compat case with a
+ * Chronote Cloud is implemented as another OpenAI-compat case with a
  * fixed base URL and the account id as the bearer token.
  */
 
@@ -16,13 +16,13 @@ vi.mock("obsidian", () => ({
 
 import { OpenAICompatAdapter, normalizeBaseUrl } from "../OpenAICompatAdapter.js";
 import { createAdapter } from "../index.js";
-import { DEFAULT_SETTINGS, CortexSettings } from "../../../settingsTypes.js";
-import { CORTEX_CLOUD_BASE_URL } from "../catalog.js";
+import { DEFAULT_SETTINGS, ChronoteSettings } from "../../../settingsTypes.js";
+import { CHRONOTE_CLOUD_BASE_URL } from "../catalog.js";
 
 function settingsFor(
   provider: "openai" | "ollama" | "lmstudio" | "custom",
   opts: { apiKey?: string; baseUrl?: string; model?: string } = {},
-): CortexSettings {
+): ChronoteSettings {
   return {
     ...DEFAULT_SETTINGS,
     ai: {
@@ -172,7 +172,7 @@ describe("OpenAICompatAdapter — request shape", () => {
   it("normalizes Gemini-style UPPERCASE schema types to standard JSON Schema", async () => {
     // The agent ToolRegistry declares parameters with Gemini-native
     // UPPERCASE types. OpenAI-compatible providers (OpenAI, Ollama, LM
-    // Studio, custom, Cortex Cloud) reject those with an HTTP 400, so
+    // Studio, custom, Chronote Cloud) reject those with an HTTP 400, so
     // the adapter must lowercase them — recursively — on the wire.
     const adapter = new OpenAICompatAdapter(
       settingsFor("openai", { apiKey: "sk-test", model: "gpt-4o-mini" }),
@@ -380,7 +380,7 @@ describe("normalizeBaseUrl", () => {
   });
 });
 
-describe("Cortex Cloud (via createAdapter)", () => {
+describe("Chronote Cloud (via createAdapter)", () => {
   beforeEach(() => {
     requestUrlMock.mockReset();
     requestUrlMock.mockResolvedValue({
@@ -393,13 +393,13 @@ describe("Cortex Cloud (via createAdapter)", () => {
     });
   });
 
-  function settingsForCloud(accountId: string): CortexSettings {
+  function settingsForCloud(accountId: string): ChronoteSettings {
     return {
       ...DEFAULT_SETTINGS,
       ai: {
         ...DEFAULT_SETTINGS.ai,
-        provider: "cortex_cloud",
-        cortexAccountId: accountId,
+        provider: "chronote_cloud",
+        chronoteAccountId: accountId,
         // baseUrl / model are intentionally junk — the factory
         // should override them.
         baseUrl: "https://should-be-ignored.example/v1",
@@ -412,7 +412,7 @@ describe("Cortex Cloud (via createAdapter)", () => {
     const adapter = createAdapter(settingsForCloud("acct_test_42"));
     await adapter.chat({ system: "x", messages: [{ role: "user", text: "hi" }] });
     const call = requestUrlMock.mock.calls[0][0] as { url: string };
-    expect(call.url).toBe(`${CORTEX_CLOUD_BASE_URL}/chat/completions`);
+    expect(call.url).toBe(`${CHRONOTE_CLOUD_BASE_URL}/chat/completions`);
   });
 
   it("sends the account id in the Authorization header", async () => {
@@ -430,7 +430,7 @@ describe("Cortex Cloud (via createAdapter)", () => {
     await adapter.chat({ system: "x", messages: [{ role: "user", text: "hi" }] });
     const call = requestUrlMock.mock.calls[0][0] as { body: string };
     const body = JSON.parse(call.body);
-    expect(body.model).toBe("cortex-cloud-managed");
+    expect(body.model).toBe("chronote-cloud-managed");
     expect(call.body).not.toContain("should-be-ignored");
   });
 });
@@ -446,7 +446,7 @@ describe("OpenAICompatAdapter — embed", () => {
     });
   });
 
-  function settingsWithEmbed(provider: "openai" | "ollama" | "lmstudio" | "custom", extras: Partial<CortexSettings> = {}): CortexSettings {
+  function settingsWithEmbed(provider: "openai" | "ollama" | "lmstudio" | "custom", extras: Partial<ChronoteSettings> = {}): ChronoteSettings {
     return {
       ...DEFAULT_SETTINGS,
       ai: {
