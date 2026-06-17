@@ -1,10 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   migrateSettings,
   detectObsoleteKeys,
   correctEmbeddingBaseUrl,
+  readChronoteIndexDim,
+  seedEmbeddingDimFromDisk,
 } from "../settingsMigration.js";
 import { DEFAULT_SETTINGS } from "../../settingsTypes.js";
+import type { App } from "obsidian";
 
 /**
  * Settings migration regression tests.
@@ -438,4 +441,91 @@ describe("correctEmbeddingBaseUrl", () => {
 // Migration no longer calls correctEmbeddingBaseUrl — the top-level
 // `embeddingBaseUrl` field was deleted in the simplification, and the
 // typo fix is now served by the active chat provider's URL field.
+
+/**
+ * `readChronoteIndexDim` / `seedEmbeddingDimFromDisk` read the binary
+ * `knowledge-index.bin` header (CTX1 magic + version + uint32 LE dim)
+ * so a pre-simplification index with a non-384 dim survives the
+ * dim-mismatch check in `KnowledgeBase.loadFromDisk`. Every null path
+ * and the happy path are driven with a fake vault adapter — no real
+ * filesystem, no Obsidian mocks.
+ */
+function fakeApp(readBinary: (path: string) => Promise<ArrayBuffer>): App {
+  return { vault: { adapter: { readBinary } } } as unknown as App;
+}
+
+/** Build a 9-byte CTX1 header carrying the given dim at offset 5 (LE). */
+function indexHeader(dim: number): ArrayBuffer {
+  const buf = new ArrayBuffer(9);
+  const view = new DataView(buf);
+  view.setUint8(0, 0x43); // 'C'
+  view.setUint8(1, 0x54); // 'T'
+  view.setUint8(2, 0x58); // 'X'
+  view.setUint8(3, 0x31); // '1'
+  view.setUint8(4, 0x01); // version
+  view.setUint32(5, dim, true); // dim, little-endian
+  return buf;
+}
+
+describe("readChronoteIndexDim", () => {
+  it("reads the dim from a valid CTX1 header", async () => {
+    const app = fakeApp(async () => indexHeader(768));
+    expect(await readChronoteIndexDim(app, ".chronote")).toBe(768);
+  });
+
+  it("returns null when the file is too short for the header", async () => {
+    const app = fakeApp(async () => new ArrayBuffer(8));
+    expect(await readChronoteIndexDim(app, ".chronote")).toBeNull();
+  });
+
+  it("returns null when the magic bytes do not match CTX1", async () => {
+    const buf = indexHeader(768);
+    new DataView(buf).setUint8(0, 0x00); // corrupt the magic
+    const app = fakeApp(async () => buf);
+    expect(await readChronoteIndexDim(app, ".chronote")).toBeNull();
+  });
+
+  it("returns null when the file cannot be read", async () => {
+    const app = fakeApp(async () => {
+      throw new Error("ENOENT");
+    });
+    expect(await readChronoteIndexDim(app, ".chronote")).toBeNull();
+  });
+});
+
+describe("seedEmbeddingDimFromDisk", () => {
+  it("seeds ai.embeddingDim from the on-disk header when it is unset", async () => {
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      ai: { ...DEFAULT_SETTINGS.ai, embeddingDim: null },
+    };
+    const app = fakeApp(async () => indexHeader(512));
+    const out = await seedEmbeddingDimFromDisk(settings, app, ".chronote");
+    expect(out.ai.embeddingDim).toBe(512);
+  });
+
+  it("leaves an already-set embeddingDim untouched (idempotent)", async () => {
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      ai: { ...DEFAULT_SETTINGS.ai, embeddingDim: 384 },
+    };
+    const readBinary = vi.fn(async () => indexHeader(999)); // must NOT be called
+    const app = fakeApp(readBinary);
+    const out = await seedEmbeddingDimFromDisk(settings, app, ".chronote");
+    expect(out.ai.embeddingDim).toBe(384);
+    expect(readBinary).not.toHaveBeenCalled();
+  });
+
+  it("leaves embeddingDim unset when no readable index exists", async () => {
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      ai: { ...DEFAULT_SETTINGS.ai, embeddingDim: null },
+    };
+    const app = fakeApp(async () => {
+      throw new Error("ENOENT");
+    });
+    const out = await seedEmbeddingDimFromDisk(settings, app, ".chronote");
+    expect(out.ai.embeddingDim).toBeNull();
+  });
+});
 
