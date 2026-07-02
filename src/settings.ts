@@ -27,6 +27,7 @@ import {
   RESPONSE_STYLES,
 } from "./services/ai/catalog.js";
 import { listLocalModels } from "./services/ai/listLocalModels.js";
+import { GOOGLE_CALENDAR_ENABLED } from "./featureFlags.js";
 
 export class ChronoteSettingTab extends PluginSettingTab {
   plugin: ChronotePlugin;
@@ -144,21 +145,24 @@ export class ChronoteSettingTab extends PluginSettingTab {
         break;
     }
 
-    // Calendar-tools toggle (shared across all providers)
-    new Setting(containerEl)
-      .setName("Enable calendar tools")
-      .setDesc(
-        "When on, the model can list / create / move / delete Google Calendar events on your behalf. " +
-        "Disable for small local models that don't support tool calling.",
-      )
-      .addToggle((toggle) =>
-        toggle
-          .setValue(ai.enableCalendarTools)
-          .onChange(async (value) => {
-            this.plugin.settings.ai.enableCalendarTools = value;
-            await this.plugin.saveData(this.plugin.settings);
-          })
-      );
+    // Calendar-tools toggle (shared across all providers). Hidden while the
+    // Google Calendar feature is disabled — see `featureFlags.ts`.
+    if (GOOGLE_CALENDAR_ENABLED) {
+      new Setting(containerEl)
+        .setName("Enable calendar tools")
+        .setDesc(
+          "When on, the model can list / create / move / delete Google Calendar events on your behalf. " +
+          "Disable for small local models that don't support tool calling.",
+        )
+        .addToggle((toggle) =>
+          toggle
+            .setValue(ai.enableCalendarTools)
+            .onChange(async (value) => {
+              this.plugin.settings.ai.enableCalendarTools = value;
+              await this.plugin.saveData(this.plugin.settings);
+            })
+        );
+    }
 
     // Response style dropdown — a provider-agnostic voice preset.
     // Sits in the shared AI section so it's visible regardless of the
@@ -355,28 +359,32 @@ export class ChronoteSettingTab extends PluginSettingTab {
           })
       );
 
-    // Google Calendar section
-    new Setting(containerEl).setName("Google Calendar").setHeading();
-    containerEl.createEl("p", {
-      text: "Google Calendar is connected from the Dashboard. If you encounter permission errors, disconnect and re-authenticate with the correct scopes.",
-    });
+    // Google Calendar section. Hidden while the feature is disabled — see
+    // `featureFlags.ts`. The disconnect button (and the OAuth tokens it
+    // clears) are only meaningful when the connect flow is available.
+    if (GOOGLE_CALENDAR_ENABLED) {
+      new Setting(containerEl).setName("Google Calendar").setHeading();
+      containerEl.createEl("p", {
+        text: "Google Calendar is connected from the Dashboard. If you encounter permission errors, disconnect and re-authenticate with the correct scopes.",
+      });
 
-    new Setting(containerEl)
-      .setName("Disconnect Google Calendar")
-      .setDesc("Remove stored Google OAuth tokens. You will need to re-authenticate on the Dashboard.")
-      .addButton((button) =>
-        button
-          .setButtonText("Disconnect")
-          .setWarning()
-          .onClick(async () => {
-            this.plugin.settings.googleAccessToken = "";
-            this.plugin.settings.googleRefreshToken = "";
-            this.plugin.settings.googleTokenExpiry = 0;
-            await this.plugin.saveData(this.plugin.settings);
-            new Notice("Google Calendar disconnected. Please re-authenticate on the Dashboard.");
-            this.display();
-          })
-      );
+      new Setting(containerEl)
+        .setName("Disconnect Google Calendar")
+        .setDesc("Remove stored Google OAuth tokens. You will need to re-authenticate on the Dashboard.")
+        .addButton((button) =>
+          button
+            .setButtonText("Disconnect")
+            .setWarning()
+            .onClick(async () => {
+              this.plugin.settings.googleAccessToken = "";
+              this.plugin.settings.googleRefreshToken = "";
+              this.plugin.settings.googleTokenExpiry = 0;
+              await this.plugin.saveData(this.plugin.settings);
+              new Notice("Google Calendar disconnected. Please re-authenticate on the Dashboard.");
+              this.display();
+            })
+        );
+    }
 
     // Indexing — vault search + flashcard persistence.
     //

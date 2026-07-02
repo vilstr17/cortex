@@ -145,6 +145,38 @@ The agent layer (`src/agent/toolRegistry.ts`) maps a tool name to a typed implem
 - Every settings change must end with `await this.plugin.saveData(this.plugin.settings)`.
 - The settings tab re-renders itself (`this.display()`) after toggles so the UI reflects the real state if startup failed.
 
+## Feature flags
+
+Optional features are gated by compile-time constants in `src/featureFlags.ts`.
+Each flag is the single switch for its feature: every surface that touches the
+feature (dashboard UI, settings tab, agent tools, background services) reads the
+flag, so toggling one constant enables or disables the whole thing. The code for
+a disabled feature stays in the tree — nothing is deleted — so there is no
+"restore from git history" step.
+
+### `GOOGLE_CALENDAR_ENABLED`
+
+Controls the entire Google Calendar integration. Currently **`false`**.
+
+When `false`:
+- `ChronoteDashboardView.renderGoogleCalendarSection` returns early, so the
+  "Connect Google Calendar" button and today's schedule never render.
+- The settings tab hides the "Google Calendar" section (connect/disconnect) and
+  the "Enable calendar tools" toggle.
+- `ChronoteChatModal` constructs `GeminiService` with no calendar service, so
+  the `list_events` / `create_event` / `update_event` / `delete_event` tools are
+  not registered with the agent.
+- The chat study-plan flow skips fetching calendar events for context and does
+  not render the "Approve Schedule" button (which would push events to Google).
+- `main.ts` does not register the `chronote-auth` / `cortex-auth` OAuth protocol
+  handlers, so no auth callback can complete.
+
+**To re-enable:** set `GOOGLE_CALENDAR_ENABLED = true` in `src/featureFlags.ts`
+and rebuild (`npm run build`). No other changes are required — the service
+(`services/googleCalendarService.ts`), the agent tools
+(`agent/tools/calendar.ts`), and all the gated UI blocks are intact. Users who
+still have OAuth tokens in their vault data will reconnect from the Dashboard.
+
 ## Common Pitfalls
 
 ### UTC vs Local Dates

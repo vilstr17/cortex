@@ -9,6 +9,7 @@ import { TestService } from "../services/testService.js";
 import { ChronoteTest } from "../settings.js";
 import { localISODate, parseLocalDate, startOfLocalDay, isSameLocalDay, addDays, daysUntil } from "../utils/dateUtils.js";
 import { providerMissingFields, PROVIDER_LABELS } from "../services/ai/catalog.js";
+import { GOOGLE_CALENDAR_ENABLED } from "../featureFlags.js";
 
 export const CHRONOTE_DASHBOARD_VIEW = "chronote-dashboard";
 
@@ -141,6 +142,10 @@ export class ChronoteDashboardView extends ItemView {
 	private renderGoogleCalendarSection(): void {
 		this.authContainer.empty();
 		this.scheduleContainer.empty();
+		// Google Calendar is disabled via feature flag — leave both the
+		// connect button and today's schedule off the dashboard entirely.
+		// Flip GOOGLE_CALENDAR_ENABLED in featureFlags.ts to restore.
+		if (!GOOGLE_CALENDAR_ENABLED) return;
 		if (!this.plugin.settings.googleAccessToken) { this.renderConnectButton(); return; }
 		void this.renderTodaysSchedule();
 	}

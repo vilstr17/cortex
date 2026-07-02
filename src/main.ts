@@ -20,6 +20,7 @@ import {
   chronoteStudyPostProcessor,
   openStudyForFile,
 } from "./services/flashcardStudyPostProcessor.js";
+import { GOOGLE_CALENDAR_ENABLED } from "./featureFlags.js";
 
 export type { ChronoteSettings };
 export { DEFAULT_SETTINGS };
@@ -277,12 +278,18 @@ export default class ChronotePlugin extends Plugin {
     // The proxy still redirects to the legacy `cortex-auth` action from before
     // the plugin was renamed to Chronote. Register both names so existing
     // installs and the current proxy callback continue to work.
-    this.registerObsidianProtocolHandler("chronote-auth", (params) =>
-      this.handleGoogleAuthCallback(params),
-    );
-    this.registerObsidianProtocolHandler("cortex-auth", (params) =>
-      this.handleGoogleAuthCallback(params),
-    );
+    //
+    // Gated behind the Google Calendar feature flag — when the feature is
+    // disabled we don't register the OAuth callback handlers at all, so no
+    // auth flow can complete. Flip GOOGLE_CALENDAR_ENABLED to restore.
+    if (GOOGLE_CALENDAR_ENABLED) {
+      this.registerObsidianProtocolHandler("chronote-auth", (params) =>
+        this.handleGoogleAuthCallback(params),
+      );
+      this.registerObsidianProtocolHandler("cortex-auth", (params) =>
+        this.handleGoogleAuthCallback(params),
+      );
+    }
 
     this.addRibbonIcon("brain", "Open Chronote Dashboard", () => {
       void this.openDashboard();

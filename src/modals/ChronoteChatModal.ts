@@ -24,6 +24,7 @@ import type { ToolProgressEvent } from "../services/ai/runWithTools.js";
 import { renderChatMarkdown } from "../ui/chatMarkdown.js";
 import { renderFlashcardDeck } from "../ui/FlashcardDeck.js";
 import { renderQuizComponent } from "../ui/QuizComponent.js";
+import { GOOGLE_CALENDAR_ENABLED } from "../featureFlags.js";
 
 interface AIResponseWithEvents {
   text: string;
@@ -56,7 +57,13 @@ export class ChronoteChatModal extends Modal {
     super(app);
     this.plugin = plugin;
     this.chatHistory = [...(this.plugin.settings.chatHistory ?? [])];
-    this.geminiService = new GeminiService(plugin.settings, this.plugin.getCalendarService());
+    // Only wire the Google Calendar service (and, through it, the calendar
+    // agent tools) when the feature is enabled. When disabled we pass
+    // `undefined`, so GeminiService registers no calendar tools.
+    this.geminiService = new GeminiService(
+      plugin.settings,
+      GOOGLE_CALENDAR_ENABLED ? this.plugin.getCalendarService() : undefined,
+    );
     // Register the note tools (search/read/list) with the registry.
     // We do this here rather than in main.ts so the tools are scoped
     // to a chat session — the modal owns the lifecycle.
@@ -216,14 +223,20 @@ export class ChronoteChatModal extends Modal {
         // both anchor on the local current date, so the calendar context
         // we hand Gemini must match — otherwise we'd tell it to "schedule
         // for today" while feeding it tomorrow's free slots.
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const events = await this.plugin.getCalendarService().getEventsForDay(today);
-        calendarEvents = events.map((e) => ({
-          summary: e.summary,
-          startTime: e.startTime.toISOString(),
-          endTime: e.endTime.toISOString(),
-        }));
+        //
+        // With Google Calendar disabled we simply omit the calendar
+        // context; the planner still builds a plan from due notes and the
+        // user's routine, it just can't account for existing events.
+        if (GOOGLE_CALENDAR_ENABLED) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const events = await this.plugin.getCalendarService().getEventsForDay(today);
+          calendarEvents = events.map((e) => ({
+            summary: e.summary,
+            startTime: e.startTime.toISOString(),
+            endTime: e.endTime.toISOString(),
+          }));
+        }
       }
 
       // Snapshot the knowledge index state so the model can mention
@@ -357,7 +370,10 @@ export class ChronoteChatModal extends Modal {
     }
 
     // Optional: inline study-block events (the "Approve Schedule" flow).
-    if (parsed.events && parsed.events.length > 0) {
+    // The approval button pushes events onto Google Calendar, so it's only
+    // shown when that feature is enabled (see featureFlags.ts). The plan
+    // text itself is still rendered above for the user to follow manually.
+    if (GOOGLE_CALENDAR_ENABLED && parsed.events && parsed.events.length > 0) {
       this.renderEventApproval(msgEl, parsed.events);
     }
 

@@ -1,14 +1,15 @@
 # Chronote
 
-**Study smarter inside Obsidian.** Chronote turns the notes you already have into a spaced-repetition study system, links them to your Google Calendar, and uses AI to plan your day and search your vault — all without leaving your editor.
+**Study smarter inside Obsidian.** Chronote turns the notes you already have into a spaced-repetition study system and uses AI to plan your day and search your vault — all without leaving your editor.
+
+> **Note:** Google Calendar integration is currently disabled. The code remains in place and can be re-enabled with a single flag — see [How to re-enable Google Calendar](#how-to-re-enable-google-calendar) below.
 
 ## What Chronote does for you
 
 - **Spaced repetition on your existing notes** — Every note becomes a flashcard-style review. Score how well you remember it (1–5) and Chronote schedules the next review automatically.
 - **Tests and exams** — Group related notes into a test, see your preparation progress, and let Chronote track each linked note's exam date.
 - **Flashcards and quizzes** — Ask the AI to generate flashcards or a quiz from any note, then study them as a saved deck.
-- **Google Calendar, inside Obsidian** — See today's schedule, and ask the AI to place study sessions directly into your real calendar.
-- **AI study planner** — Chat with the AI about your schedule. It knows what you're due to review, what's on your calendar, and what tests are coming up, and it suggests study blocks you can approve in one click.
+- **AI study planner** — Chat with the AI about your schedule. It knows what you're due to review and what tests are coming up, and it suggests study blocks you can follow.
 - **Vault-wide AI search** — Every note is indexed locally so the AI can find the right information when you ask.
 
 ## Why people use Chronote
@@ -43,10 +44,10 @@
    - Click **Test embedding** to confirm the endpoint is reachable.
    - Click **Reindex vault** to embed your notes. This runs in the background.
 
-5. **Connect Google Calendar (optional).**
-   - From the Dashboard, click **Connect Google Calendar**.
-   - Sign in with the Google account that owns the calendar you want Chronote to read and write to.
-   - You can disconnect at any time from the Dashboard.
+5. **Google Calendar (currently disabled).**
+   - Google Calendar integration is turned off in this build. The connect
+     button and today's schedule won't appear on the Dashboard.
+   - Maintainers can re-enable it — see [How to re-enable Google Calendar](#how-to-re-enable-google-calendar).
 
 6. **Start reviewing.**
    - Open any note and run **Log Chronote Review** from the Command Palette.
@@ -77,7 +78,7 @@ Open the Dashboard. The **Due Reviews** panel shows what's on your plate today. 
 When an exam or deadline is approaching, create a **Test** from the Dashboard. Add the notes you want to study for it. Chronote tracks your overall preparation and syncs the exam date to every linked note.
 
 ### 4. Let the AI help
-- **Ask the planner** — Open the chat from the Dashboard and say something like *"Plan my study day."* The AI looks at what's due, what's already on your calendar, and what tests are coming up, then suggests specific study blocks. Click **Approve** to put them on your real Google Calendar.
+- **Ask the planner** — Open the chat from the Dashboard and say something like *"Plan my study day."* The AI looks at what's due and what tests are coming up, then suggests specific study blocks for you to follow. *(Pushing an approved plan onto Google Calendar is available when the Google Calendar feature is enabled — see below.)*
 - **Generate flashcards** — In the chat, ask *"Make flashcards from the photosynthesis note."* Chronote proposes cards, you flip through them, and you save the ones you like into a deck.
 - **Take a quiz** — Ask for a quiz on a note or topic. The AI writes the questions, you answer them, and you get immediate feedback.
 - **Find things in your vault** — Ask *"What did I write about spaced repetition?"* Chronote searches your indexed notes and shows you the relevant passages.
@@ -106,7 +107,7 @@ When an exam or deadline is approaching, create a **Test** from the Dashboard. A
 - An AI provider:
   - A free local server (Ollama, LM Studio) — recommended if you don't want to send your data anywhere
   - **Or** an API key for Google Gemini, OpenAI, Anthropic, or any OpenAI-compatible service
-- A Google account, *only* if you want Calendar integration
+- A Google account, *only* if Calendar integration is re-enabled (currently disabled)
 
 ## Privacy at a glance
 
@@ -114,7 +115,26 @@ When an exam or deadline is approaching, create a **Test** from the Dashboard. A
 - API keys, OAuth tokens, and review state are stored inside the plugin's `data.json`, in your vault. They are not encrypted; if you sync your vault to a cloud service you trust, this is fine — if you don't, keep that in mind.
 - When you ask the AI a question, the question (and any context Chronote needs to answer it) is sent to the AI provider you've selected. Pick a local one if you'd rather keep that on your machine.
 - No analytics, no telemetry, no background phone-home.
-- **Infrastructure:** Google Calendar integration uses a lightweight proxy (`cortex-proxy.vercel.app`) to handle OAuth authentication and token refreshing. Your data is transmitted securely, and tokens are only stored in your vault.
+- **Infrastructure:** Google Calendar integration (currently disabled) uses a lightweight proxy (`cortex-proxy.vercel.app`) to handle OAuth authentication and token refreshing. Your data is transmitted securely, and tokens are only stored in your vault.
+
+## How to re-enable Google Calendar
+
+Google Calendar support is disabled behind a single feature flag. No code was
+deleted, so restoring the feature does not require pulling anything from git
+history.
+
+1. Open `src/featureFlags.ts` and set:
+   ```ts
+   export const GOOGLE_CALENDAR_ENABLED = true;
+   ```
+2. Rebuild the plugin: `npm run build`.
+3. Reload the plugin in Obsidian.
+
+That's it. Flipping the flag restores every surface at once: the Dashboard
+connect button and schedule, the settings section, the AI calendar tools, and
+the study-plan "Approve" button. See
+[`docs/developer-guide.md`](docs/developer-guide.md) → "Feature flags" for the
+full list of what the flag controls.
 
 
 
