@@ -91,7 +91,7 @@ When an exam or deadline is approaching, create a **Test** from the Dashboard. A
 ## Documentation
 
 - [`docs/architecture.md`](docs/architecture.md) — System design, data flow, and subsystem overview
-- [`docs/security.md`](docs/security.md) — OAuth, token storage, and privacy model
+- [`docs/security.md`](docs/security.md) — API key storage, and privacy model
 - [`docs/developer-guide.md`](docs/developer-guide.md) — Setup, build commands, and conventions for contributors
 
 ## Requirements
@@ -104,7 +104,7 @@ When an exam or deadline is approaching, create a **Test** from the Dashboard. A
 ## Privacy at a glance
 
 - Your notes stay in your vault. Chronote only reads them.
-- API keys, OAuth tokens, and review state are stored inside the plugin's `data.json`, in your vault. They are not encrypted; if you sync your vault to a cloud service you trust, this is fine — if you don't, keep that in mind.
+- API keys and review state are stored inside the plugin's `data.json`, in your vault. They are not encrypted; if you sync your vault to a cloud service you trust, this is fine — if you don't, keep that in mind.
 - When you ask the AI a question, the question (and any context Chronote needs to answer it) is sent to the AI provider you've selected. Pick a local one if you'd rather keep that on your machine.
 - No analytics, no telemetry, no background phone-home.
 
