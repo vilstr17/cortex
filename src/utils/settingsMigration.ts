@@ -211,6 +211,19 @@ export function migrateSettings(raw: unknown): ChronoteSettings {
     migrated.tests = [];
   }
 
+  // Normalize focusStats (face-detection distraction stats). The
+  // recorder only ever writes `days`; anything else in a stale blob is
+  // dropped and a malformed `days` is reset so the dashboard never has
+  // to defend against it.
+  if (isPlainObject(migrated.focusStats)) {
+    const days = (migrated.focusStats as { days?: unknown }).days;
+    if (!isPlainObject(days)) {
+      migrated.focusStats = { days: {} };
+    }
+  } else {
+    migrated.focusStats = { days: {} };
+  }
+
   // Defensively normalize ai.baseUrls (per-provider URL map for the
   // local / custom providers). If the field exists but is malformed
   // (not a plain object, contains non-string entries), strip the bad

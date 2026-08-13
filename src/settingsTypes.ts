@@ -7,6 +7,7 @@
  */
 import type { FlashcardProposal } from "./agent/tools/flashcards.js";
 import type { QuizProposal } from "./agent/tools/quizzes.js";
+import type { FocusStatsData } from "./focus/focusStats.js";
 
 export interface ChronoteTest {
   id: string;
@@ -175,6 +176,23 @@ export interface ChronoteSettings {
   dailyLimitMax: number | null;
   maxReviewIntervalDays: number | null;
 
+  // ── Face focus detection (camera) ────────────────────────────────
+  // On macOS the camera is owned by the Chronote Camera companion app
+  // (Obsidian's binary lacks the camera entitlement); on other platforms
+  // getUserMedia is used directly. See `detection/DetectionManager.ts`.
+  /** Master switch — face detection runs when true. */
+  faceEnabled: boolean;
+  /** Seconds between detection bursts. Each burst aggregates ~15 frames. */
+  faceSampleIntervalSec: number;
+  /** Eye-openness below which eyes count as "closed" (0–1). */
+  faceBlinkThreshold: number;
+  /** Head-pitch (radians) below which the head counts as "looking down". */
+  facePitchThreshold: number;
+  /** Seconds to keep the last known state after the face drops out. */
+  faceGracePeriodSec: number;
+  /** Persisted distraction statistics (see `focus/focusStats.ts`). */
+  focusStats: FocusStatsData;
+
   // ── Legacy / migration-only fields ──────────────────────────────
   // `migrateSettings()` reads these and copies them into `ai` on
   // first load, then strips them on the next save. They are NEVER
@@ -235,6 +253,12 @@ export const DEFAULT_SETTINGS: ChronoteSettings = {
   bedTime: "23:00",
   dailyLimitMax: null,
   maxReviewIntervalDays: null,
+  faceEnabled: false,
+  faceSampleIntervalSec: 10,
+  faceBlinkThreshold: 0.25,
+  facePitchThreshold: -0.08,
+  faceGracePeriodSec: 2,
+  focusStats: { days: {} },
   flashcardFolder: "",
   autoIndexInterval: "manual",
   chatHistory: [],

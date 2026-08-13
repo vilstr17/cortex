@@ -9,6 +9,13 @@ import { TestService } from "../services/testService.js";
 import { ChronoteTest } from "../settings.js";
 import { localISODate, parseLocalDate, startOfLocalDay, isSameLocalDay, addDays, daysUntil } from "../utils/dateUtils.js";
 import { providerMissingFields, PROVIDER_LABELS } from "../services/ai/catalog.js";
+import {
+  dayKey,
+  focusRatio,
+  getDay,
+  hourlyDistracted,
+  lastNDays,
+} from "../focus/focusStats.js";
 
 export const CHRONOTE_DASHBOARD_VIEW = "chronote-dashboard";
 
@@ -29,6 +36,7 @@ export class ChronoteDashboardView extends ItemView {
 	private scheduleContainer!: HTMLElement;
 	private authContainer!: HTMLElement;
 	private testsContainer!: HTMLElement;
+	private focusContainer!: HTMLElement;
 	private testService!: TestService;
 	private lastCalendarFetch = 0;
 	private lastFetchedEvents: DisplayCalendarEvent[] | null = null;
@@ -100,6 +108,7 @@ export class ChronoteDashboardView extends ItemView {
 		this.scheduleContainer = wrapper.createDiv({ cls: "chronote-schedule-section" });
 		this.testsContainer = wrapper.createDiv({ cls: "chronote-tests-section" });
 		this.authContainer = wrapper.createDiv({ cls: "chronote-auth-section" });
+		this.focusContainer = wrapper.createDiv({ cls: "chronote-focus-section" });
 
 		// Debounced: while editing, metadata changes fire on every save —
 		// re-rendering the whole dashboard (incl. a calendar fetch) each
@@ -124,6 +133,86 @@ export class ChronoteDashboardView extends ItemView {
 		this.renderCalendar();
 		this.renderReviews();
 		this.renderTests();
+		this.renderFocusStats();
+	}
+
+	/**
+	 * Focus stats panel (chronote-plus). Reads the recorder's persisted
+	 * data and renders today's numbers, a 7-day distraction bar chart,
+	 * and the hour-of-day breakdown. Hidden entirely when face detection
+	 * has never been used.
+	 */
+	private renderFocusStats(): void {
+		const el = this.focusContainer;
+		el.empty();
+		const recorder = this.plugin.focusStats;
+		if (!recorder) return;
+		const data = recorder.getData();
+		const todayKey = dayKey(Date.now());
+		const today = getDay(data, todayKey);
+		const hasAnyData = Object.keys(data.days).length > 0;
+		if (!hasAnyData && !this.plugin.settings.faceEnabled) return;
+
+		el.createEl("h2", { text: "Focus" });
+
+		const status = this.plugin.detection?.isFaceOn()
+			? "Face detection is on — stats update live."
+			: "Face detection is off. Enable it in Settings → Chronote → Face Focus Detection.";
+		el.createEl("p", { text: status, cls: "chronote-settings-hint" });
+
+		// Today's headline numbers
+		const stats = el.createDiv({ cls: "chronote-focus-stats" });
+		const fmt = (ms: number) => {
+			const m = Math.round(ms / 60000);
+			if (m < 60) return `${m} min`;
+			return `${Math.floor(m / 60)} h ${m % 60} min`;
+		};
+		const stat = (value: string, label: string) => {
+			const box = stats.createDiv({ cls: "chronote-focus-stat" });
+			box.createDiv({ text: value, cls: "chronote-focus-stat-value" });
+			box.createDiv({ text: label, cls: "chronote-focus-stat-label" });
+		};
+		stat(fmt(today.focusMs), "Focused today");
+		stat(fmt(today.distractedMs), "Distracted today");
+		stat(String(today.distractedCount), "Distractions today");
+		stat(`${Math.round(focusRatio(today) * 100)}%`, "Focus ratio");
+
+		// 7-day distraction bar chart
+		const days = lastNDays(data, 7);
+		const maxMs = Math.max(1, ...days.map((d) => d.distractedMs));
+		const bars = el.createDiv({ cls: "chronote-focus-bars" });
+		for (const d of days) {
+			const h = Math.max(2, Math.round((d.distractedMs / maxMs) * 80));
+			const bar = bars.createDiv({
+				cls: d.distractedMs > 0 ? "chronote-focus-bar" : "chronote-focus-bar chronote-focus-bar-empty",
+			});
+			bar.setAttr("style", `height: ${h}px`);
+			bar.setAttr("title", `${d.key}: ${fmt(d.distractedMs)} distracted`);
+		}
+		const labels = el.createDiv({ cls: "chronote-focus-bar-labels" });
+		for (const d of days) {
+			labels.createEl("span", { text: d.key.slice(8) }); // MM-DD
+		}
+
+		// Hour-of-day breakdown (today)
+		const hours = hourlyDistracted(data, todayKey);
+		const totalHourMs = hours.reduce((a, b) => a + b, 0);
+		if (totalHourMs > 0) {
+			el.createEl("p", { text: "Distracted minutes by hour (today)", cls: "chronote-settings-hint" });
+			const hourBars = el.createDiv({ cls: "chronote-focus-bars" });
+			const maxHour = Math.max(1, ...hours);
+			for (let h = 0; h < 24; h++) {
+				const bar = hourBars.createDiv({
+					cls: hours[h] > 0 ? "chronote-focus-bar" : "chronote-focus-bar chronote-focus-bar-empty",
+				});
+				bar.setAttr("style", `height: ${Math.max(2, Math.round((hours[h] / maxHour) * 80))}px`);
+				bar.setAttr("title", `${h}:00 — ${fmt(hours[h])} distracted`);
+			}
+			const hourLabels = el.createDiv({ cls: "chronote-focus-bar-labels" });
+			for (let h = 0; h < 24; h += 4) {
+				hourLabels.createEl("span", { text: `${h}:00` });
+			}
+		}
 	}
 
 	private renderCalendar(): void {

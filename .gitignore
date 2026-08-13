@@ -21,6 +21,9 @@ data.json
 # Downloaded face-detection assets (wasm runtime + model cache)
 .assets/
 
+# Built Chronote Camera companion binary (build with `npm run build:companion`)
+companion/chronote-camera
+
 dist/
 
 # Catalog edition build output (released as zip, not committed)

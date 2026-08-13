@@ -2325,3 +2325,140 @@
 .chronote-dashboard-header-row h2 {
   margin: 0;
 }
+
+/* ── Face focus detection (chronote-plus) ───────────────────────── */
+
+/* Distraction warning overlay — full-workspace, above everything. */
+.chronote-focus-warning-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: chronote-focus-fade-in 0.2s ease-out;
+}
+
+@keyframes chronote-focus-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.chronote-focus-warning-box {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-s);
+  padding: 32px 40px;
+  text-align: center;
+  max-width: 420px;
+}
+
+.chronote-focus-warning-emoji {
+  font-size: 48px;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.chronote-focus-warning-title {
+  font-size: var(--font-ui-large);
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.chronote-focus-warning-sub {
+  color: var(--text-muted);
+  margin: 0 0 20px;
+}
+
+.chronote-focus-warning-dismiss {
+  min-width: 140px;
+}
+
+/* First-time setup consent modal */
+.chronote-setup-dl {
+  margin: 12px 0;
+}
+
+.chronote-setup-dl dt {
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.chronote-setup-dl dd {
+  color: var(--text-muted);
+  margin: 2px 0 0;
+}
+
+.chronote-setup-note {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  margin: 12px 0;
+}
+
+.chronote-setup-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+/* Focus stats panel on the dashboard */
+.chronote-focus-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.chronote-focus-stat {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.chronote-focus-stat-value {
+  font-size: var(--font-ui-large);
+  font-weight: 700;
+}
+
+.chronote-focus-stat-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  margin-top: 2px;
+}
+
+.chronote-focus-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 80px;
+  margin: 12px 0 4px;
+}
+
+.chronote-focus-bar {
+  flex: 1;
+  background: var(--interactive-accent);
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+  opacity: 0.85;
+}
+
+.chronote-focus-bar-empty {
+  background: var(--background-modifier-border);
+  opacity: 0.4;
+}
+
+.chronote-focus-bar-labels {
+  display: flex;
+  gap: 4px;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.chronote-focus-bar-labels span {
+  flex: 1;
+  text-align: center;
+}

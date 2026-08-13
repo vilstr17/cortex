@@ -461,6 +461,89 @@ export class ChronoteSettingTab extends PluginSettingTab {
             });
           })
       );
+
+    // ── Face focus detection (chronote-plus) ────────────────────────
+    new Setting(containerEl).setName("Face Focus Detection").setHeading();
+    containerEl.createEl("p", {
+      text: "Uses your camera to detect when you look away from the screen, shows a distraction warning, and logs focus stats. On macOS the camera is provided by the Chronote Camera companion (iPhone via Continuity Camera works); elsewhere Obsidian uses the webcam directly. All detection runs locally — nothing leaves your device.",
+      cls: "chronote-settings-hint",
+    });
+
+    new Setting(containerEl)
+      .setName("Enable face detection")
+      .setDesc("First enable downloads the detection model (~26 MB, one-time).")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.faceEnabled)
+          .onChange(async () => {
+            await this.plugin.detection?.toggleFace();
+            this.display();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Sample interval (seconds)")
+      .setDesc("How often a detection burst runs. Lower = more responsive, higher = less CPU.")
+      .addText((text) =>
+        text
+          .setPlaceholder("10")
+          .setValue(String(this.plugin.settings.faceSampleIntervalSec))
+          .onChange(async (value) => {
+            const n = parseInt(value, 10);
+            if (Number.isFinite(n) && n >= 2 && n <= 120) {
+              this.plugin.settings.faceSampleIntervalSec = n;
+              await this.plugin.saveData(this.plugin.settings);
+            }
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Blink threshold")
+      .setDesc("Eye-openness below which eyes count as closed (0–1). Lower = only very closed eyes count.")
+      .addText((text) =>
+        text
+          .setPlaceholder("0.25")
+          .setValue(String(this.plugin.settings.faceBlinkThreshold))
+          .onChange(async (value) => {
+            const n = parseFloat(value);
+            if (Number.isFinite(n) && n >= 0.05 && n <= 0.9) {
+              this.plugin.settings.faceBlinkThreshold = n;
+              await this.plugin.saveData(this.plugin.settings);
+            }
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Head-pitch threshold")
+      .setDesc("Head pitch (radians) below which you count as looking down at your desk. Negative = down.")
+      .addText((text) =>
+        text
+          .setPlaceholder("-0.08")
+          .setValue(String(this.plugin.settings.facePitchThreshold))
+          .onChange(async (value) => {
+            const n = parseFloat(value);
+            if (Number.isFinite(n) && n >= -0.5 && n <= 0.5) {
+              this.plugin.settings.facePitchThreshold = n;
+              await this.plugin.saveData(this.plugin.settings);
+            }
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Grace period (seconds)")
+      .setDesc("How long the last known state is kept after the face briefly drops out.")
+      .addText((text) =>
+        text
+          .setPlaceholder("2")
+          .setValue(String(this.plugin.settings.faceGracePeriodSec))
+          .onChange(async (value) => {
+            const n = parseInt(value, 10);
+            if (Number.isFinite(n) && n >= 0 && n <= 30) {
+              this.plugin.settings.faceGracePeriodSec = n;
+              await this.plugin.saveData(this.plugin.settings);
+            }
+          })
+      );
   }
 
   // ── Provider-specific settings renderers ─────────────────────────

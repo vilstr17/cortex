@@ -1,11 +1,35 @@
 import esbuild from "esbuild";
 import process from "process";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { builtinModules } from "node:module";
 
 // Node's built-in modules, with and without the `node:` protocol prefix,
 // so esbuild treats every form as external. Replaces the third-party
 // `builtin-modules` package (flagged by the Obsidian plugin review).
 const builtins = [...builtinModules, ...builtinModules.map((m) => `node:${m}`)];
+
+/**
+ * Bundles node_modules/@mediapipe/tasks-vision/wasm/vision_wasm_internal.js
+ * as a plain string export so FaceDetector never fetches JS from a CDN.
+ * The WASM binary and ML model (large data files) are still downloaded on
+ * first use with explicit user consent.
+ */
+const mediapipeWasmJsBundler = {
+	name: "mediapipe-wasm-js-bundler",
+	setup(build) {
+		const NS = "mediapipe-wasm-text";
+		build.onResolve({ filter: /^mediapipe:wasm-loader$/ }, () => ({
+			path: "mediapipe:wasm-loader",
+			namespace: NS,
+		}));
+		build.onLoad({ filter: /.*/, namespace: NS }, () => {
+			const wasmDir = resolve("node_modules/@mediapipe/tasks-vision/wasm");
+			const js = readFileSync(`${wasmDir}/vision_wasm_internal.js`, "utf8");
+			return { contents: `export default ${JSON.stringify(js)}`, loader: "js" };
+		});
+	},
+};
 
 const banner =
 `/*
@@ -46,6 +70,7 @@ const context = await esbuild.context({
 	treeShaking: true,
 	outfile: "main.js",
 	minify: prod,
+	plugins: [mediapipeWasmJsBundler],
 });
 
 if (prod) {

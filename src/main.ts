@@ -20,6 +20,8 @@ import {
   chronoteStudyPostProcessor,
   openStudyForFile,
 } from "./services/flashcardStudyPostProcessor.js";
+import { DetectionManager } from "./detection/DetectionManager.js";
+import { FocusStatsRecorder } from "./focus/focusStats.js";
 
 export type { ChronoteSettings };
 export { DEFAULT_SETTINGS };
@@ -32,6 +34,15 @@ export default class ChronotePlugin extends Plugin {
   calendarService: GoogleCalendarService | null = null;
   testService!: TestService;
   knowledgeBase: KnowledgeBase | null = null;
+
+  /**
+   * Camera focus detection (chronote-plus feature). Null on mobile.
+   * Owns the face tracker, the distraction-warning overlay, and the
+   * stats recorder.
+   */
+  detection: DetectionManager | null = null;
+  /** Distraction stats recorder fed by DetectionManager. */
+  focusStats: FocusStatsRecorder | null = null;
 
   getCalendarService(): GoogleCalendarService {
     if (!this.calendarService) {
@@ -231,6 +242,14 @@ export default class ChronotePlugin extends Plugin {
 
     this.testService = new TestService(this);
 
+    // Camera focus detection (chronote-plus). The stats recorder is
+    // created once and fed by DetectionManager on every state change;
+    // the dashboard reads the same object. Auto-start respects the
+    // persisted `faceEnabled` toggle.
+    this.focusStats = new FocusStatsRecorder(this.settings.focusStats);
+    this.detection = new DetectionManager(this, this.focusStats);
+    void this.detection.startEnabled();
+
     // Load the persisted knowledge index in the background. We don't
     // await — first-time users have nothing on disk, and a 1k-note
     // vault takes a couple of seconds to load. The chat UI checks
@@ -304,6 +323,12 @@ export default class ChronotePlugin extends Plugin {
       callback: () => import("./services/indexRunner.js").then(({ runIndex }) => runIndex(this)),
     });
 
+    this.addCommand({
+      id: "toggle-face-detection",
+      name: "Toggle face focus detection",
+      callback: () => this.detection?.toggleFace(),
+    });
+
     this.commands = new Commands(this);
     this.commands.addCommands();
 
@@ -319,6 +344,8 @@ export default class ChronotePlugin extends Plugin {
       window.clearInterval(this.autoIndexIntervalId);
       this.autoIndexIntervalId = null;
     }
+    void this.detection?.destroy();
+    this.detection = null;
     this.calendarService?.destroy();
     this.calendarService = null;
   }
