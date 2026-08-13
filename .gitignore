@@ -30,4 +30,4 @@ dist-catalog/
 coverage/
 
 # Exclude macOS Finder (System Explorer) View States
-.DS_Storedata.json
+.DS_Store
