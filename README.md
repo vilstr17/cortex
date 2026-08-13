@@ -1,21 +1,20 @@
 # Chronote
 
-**Study smarter inside Obsidian.** Chronote turns the notes you already have into a spaced-repetition study system, links them to your Google Calendar, and uses AI to plan your day and search your vault — all without leaving your editor.
+**Study smarter inside Obsidian.** Chronote turns the notes you already have into a spaced-repetition study system and uses AI to search your vault, generate flashcards and quizzes, and plan your revision — all without leaving your editor.
 
 ## What Chronote does for you
 
 - **Spaced repetition on your existing notes** — Every note becomes a flashcard-style review. Score how well you remember it (1–5) and Chronote schedules the next review automatically.
 - **Tests and exams** — Group related notes into a test, see your preparation progress, and let Chronote track each linked note's exam date.
 - **Flashcards and quizzes** — Ask the AI to generate flashcards or a quiz from any note, then study them as a saved deck.
-- **Google Calendar, inside Obsidian** — See today's schedule, and ask the AI to place study sessions directly into your real calendar.
-- **AI study planner** — Chat with the AI about your schedule. It knows what you're due to review, what's on your calendar, and what tests are coming up, and it suggests study blocks you can approve in one click.
+- **AI study planner** — Chat with the AI about what's due. It knows what you're due to review and what tests are coming up, and it can tell you what to prioritize.
 - **Vault-wide AI search** — Every note is indexed locally so the AI can find the right information when you ask.
 
 ## Why people use Chronote
 
 - **You don't lose your notes** — Review state lives in each note's own frontmatter. Your data stays in your vault, in plain Markdown.
 - **You pick the AI** — Use a free local model or bring your own API key, whichever you prefer.
-- **It's keyboard-friendly** — Most of what you do is a one-line command: log a review, ask the planner, open the dashboard.
+- **It's keyboard-friendly** — Most of what you do is a one-line command: log a review, ask the AI, open the dashboard.
 
 *(Note: This plugin was originally called **Cortex**, but we renamed it to **Chronote** to avoid confusion with another existing plugin of the same name.)*
 
@@ -28,7 +27,7 @@
 
 2. **Open the Dashboard.**
    - Click the brain icon in the ribbon (left side of Obsidian), or run **Open Chronote Dashboard** from the Command Palette.
-   - This is your home base — you'll see what's due, what's coming up, and your schedule.
+   - This is your home base — you'll see what's due and what's coming up.
 
 3. **Pick an AI provider.**
    - Open **Settings → Chronote** and choose a provider from the dropdown.
@@ -43,12 +42,7 @@
    - Click **Test embedding** to confirm the endpoint is reachable.
    - Click **Reindex vault** to embed your notes. This runs in the background.
 
-5. **Connect Google Calendar (optional).**
-   - From the Dashboard, click **Connect Google Calendar**.
-   - Sign in with the Google account that owns the calendar you want Chronote to read and write to.
-   - You can disconnect at any time from the Dashboard.
-
-6. **Start reviewing.**
+5. **Start reviewing.**
    - Open any note and run **Log Chronote Review** from the Command Palette.
    - Pick a score from 1 (I forgot) to 5 (I could recite it in my sleep).
    - Chronote writes the score and the next review date into the note's frontmatter. Open the Dashboard to see it appear under "Due Reviews."
@@ -77,7 +71,7 @@ Open the Dashboard. The **Due Reviews** panel shows what's on your plate today. 
 When an exam or deadline is approaching, create a **Test** from the Dashboard. Add the notes you want to study for it. Chronote tracks your overall preparation and syncs the exam date to every linked note.
 
 ### 4. Let the AI help
-- **Ask the planner** — Open the chat from the Dashboard and say something like *"Plan my study day."* The AI looks at what's due, what's already on your calendar, and what tests are coming up, then suggests specific study blocks. Click **Approve** to put them on your real Google Calendar.
+- **Plan your revision** — Open the chat from the Dashboard and ask something like *"What should I review today?"* The AI checks what's due and what tests are coming up, then tells you what to prioritize.
 - **Generate flashcards** — In the chat, ask *"Make flashcards from the photosynthesis note."* Chronote proposes cards, you flip through them, and you save the ones you like into a deck.
 - **Take a quiz** — Ask for a quiz on a note or topic. The AI writes the questions, you answer them, and you get immediate feedback.
 - **Find things in your vault** — Ask *"What did I write about spaced repetition?"* Chronote searches your indexed notes and shows you the relevant passages.
@@ -91,7 +85,7 @@ When an exam or deadline is approaching, create a **Test** from the Dashboard. A
 
 - **Start with 5–10 notes.** Don't try to index your entire vault on day one. Add a handful of important notes, log a few reviews, and get a feel for the loop before scaling up.
 - **Reviews are cheap.** A "review" can take 5–10 seconds if you already know the material. The point is the small, frequent touch.
-- **The AI only sees what you ask about.** Chronote sends a prompt to your chosen AI provider when you open the chat or ask for a study plan. It does not silently upload your vault.
+- **The AI only sees what you ask about.** Chronote sends a prompt to your chosen AI provider when you open the chat. It does not silently upload your vault.
 - **Local first.** If you'd rather nothing leave your computer, run Ollama or LM Studio on your laptop and pick them in Settings. Both work for chat and for vault indexing.
 
 ## Documentation
@@ -106,7 +100,6 @@ When an exam or deadline is approaching, create a **Test** from the Dashboard. A
 - An AI provider:
   - A free local server (Ollama, LM Studio) — recommended if you don't want to send your data anywhere
   - **Or** an API key for Google Gemini, OpenAI, Anthropic, or any OpenAI-compatible service
-- A Google account, *only* if you want Calendar integration
 
 ## Privacy at a glance
 
@@ -114,7 +107,6 @@ When an exam or deadline is approaching, create a **Test** from the Dashboard. A
 - API keys, OAuth tokens, and review state are stored inside the plugin's `data.json`, in your vault. They are not encrypted; if you sync your vault to a cloud service you trust, this is fine — if you don't, keep that in mind.
 - When you ask the AI a question, the question (and any context Chronote needs to answer it) is sent to the AI provider you've selected. Pick a local one if you'd rather keep that on your machine.
 - No analytics, no telemetry, no background phone-home.
-- **Infrastructure:** Google Calendar integration uses a lightweight proxy (`cortex-proxy.vercel.app`) to handle OAuth authentication and token refreshing. Your data is transmitted securely, and tokens are only stored in your vault.
 
 
 

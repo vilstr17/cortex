@@ -142,9 +142,6 @@ describe("migrateSettings", () => {
     const out = migrateSettings(raw);
     expect(out.ai.baseUrls.ollama).toBe("http://my-ollama:11434/v1");
     expect(out.ai.baseUrls.lmstudio).toBe("http://127.0.0.1:1234/v1");
-    // chronote_cloud always has a fixed base URL; included for
-    // completeness so the map is fully populated after migration.
-    expect(out.ai.baseUrls.chronote_cloud).toMatch(/^https:\/\/cortex-proxy/);
     // Custom has no documented default — slot stays empty so the
     // settings tab shows an empty field the first time the user
     // visits it.
@@ -187,7 +184,6 @@ describe("migrateSettings", () => {
           ollama: "http://x:11434/v1", // keep
           lmstudio: 1234, // drop → back-filled from DEFAULT_BASE_URL
           custom: null, // drop → no documented default, stays undefined
-          chronote_cloud: "", // drop (empty string) → back-filled
           gemini: "valid-but-not-a-local-provider", // keep — schema doesn't restrict
         },
       },
@@ -200,7 +196,6 @@ describe("migrateSettings", () => {
     // Custom has no documented default; the slot stays unset so the
     // settings tab shows an empty field the first time the user visits.
     expect(out.ai.baseUrls.custom).toBeUndefined();
-    expect(out.ai.baseUrls.chronote_cloud).toMatch(/^https:\/\/cortex-proxy/);
   });
 
   it("resets a non-object ai.baseUrls to a clean seeded map", () => {
@@ -313,7 +308,6 @@ describe("migrateSettings", () => {
         apiKey: "sk-NEW",
         model: "gpt-4o-mini",
         baseUrl: "",
-        enableCalendarTools: true,
       },
     };
     const out = migrateSettings(raw);

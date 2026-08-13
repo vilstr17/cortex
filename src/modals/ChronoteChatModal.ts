@@ -1,7 +1,6 @@
 import { App, Modal, Notice, setIcon } from "obsidian";
 import ChronotePlugin from "../main.js";
 import { GeminiService } from "../services/geminiService.js";
-import type { ScheduledEvent } from "../services/geminiService.js";
 import type { PersistedChatMessage, PersistedChatAttachments } from "../settingsTypes.js";
 import { providerMissingFields } from "../services/ai/catalog.js";
 import { PROVIDER_LABELS } from "../services/ai/catalog.js";
@@ -27,7 +26,6 @@ import { renderQuizComponent } from "../ui/QuizComponent.js";
 
 interface AIResponseWithEvents {
   text: string;
-  events: ScheduledEvent[] | null;
   /** Proposals made during this turn, captured from the chat. */
   flashcards: FlashcardProposal[];
   /** Quizzes proposed during this turn. */
@@ -56,7 +54,7 @@ export class ChronoteChatModal extends Modal {
     super(app);
     this.plugin = plugin;
     this.chatHistory = [...(this.plugin.settings.chatHistory ?? [])];
-    this.geminiService = new GeminiService(plugin.settings, this.plugin.getCalendarService());
+    this.geminiService = new GeminiService(plugin.settings);
     // Register the note tools (search/read/list) with the registry.
     // We do this here rather than in main.ts so the tools are scoped
     // to a chat session — the modal owns the lifecycle.
@@ -129,7 +127,7 @@ export class ChronoteChatModal extends Modal {
     } else {
       // Welcome message for a fresh chat.
       await this.appendAssistantText(
-        "Hi! I'm Chronote. Ask me about your review schedule, or request a study plan for today.",
+        "Hi! I'm Chronote. Ask me about your notes, your review schedule, or what to study for an upcoming test.",
       );
     }
 
@@ -139,7 +137,7 @@ export class ChronoteChatModal extends Modal {
     this.inputEl = inputArea.createEl("textarea", {
       cls: "chat-input",
       attr: {
-        placeholder: "Ask about your schedule, or type 'plan my day'...",
+        placeholder: "Ask about your notes, reviews, or upcoming tests...",
         rows: 1,
       },
     });
@@ -178,7 +176,6 @@ export class ChronoteChatModal extends Modal {
     // rather than a generic "set your API key" error.
     const ai = this.plugin.settings.ai;
     const missing = providerMissingFields(ai.provider, {
-      chronoteAccountId: ai.chronoteAccountId,
       geminiApiKey: ai.geminiApiKey,
       geminiModel: ai.geminiModel,
       apiKey: ai.apiKey,
@@ -205,27 +202,6 @@ export class ChronoteChatModal extends Modal {
     this.setLoading(true);
 
     try {
-      // Gather context for scheduling mode
-      const isSchedulingQuery = this.isSchedulingQuery(text);
-      let dueNotes: unknown[] | undefined;
-      let calendarEvents: unknown[] | undefined;
-
-      if (isSchedulingQuery) {
-        dueNotes = this.getDueNotesData();
-        // Scheduling always plans for TODAY. The AI prompt and dashboard
-        // both anchor on the local current date, so the calendar context
-        // we hand Gemini must match — otherwise we'd tell it to "schedule
-        // for today" while feeding it tomorrow's free slots.
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const events = await this.plugin.getCalendarService().getEventsForDay(today);
-        calendarEvents = events.map((e) => ({
-          summary: e.summary,
-          startTime: e.startTime.toISOString(),
-          endTime: e.endTime.toISOString(),
-        }));
-      }
-
       // Snapshot the knowledge index state so the model can mention
       // "your index is empty" if applicable, rather than pretending
       // to search an unindexed vault. We build a short, copyable
@@ -249,19 +225,15 @@ export class ChronoteChatModal extends Modal {
       // than a static "Thinking…" while the loop runs.
       const responseText = await this.geminiService.chat(
         this.chatHistory,
-        dueNotes,
-        calendarEvents,
         knowledgeState,
         (event) => this.renderProgress(event),
       );
 
       // Extract proposals/quizzes that were added during this turn.
-      const parsed = this.parseResponseForEvents(responseText);
       const newProposals = pendingProposals.slice(proposalsBefore);
       const newQuizzes = pendingQuizzes.slice(quizzesBefore);
       const fullParsed: AIResponseWithEvents = {
-        text: parsed.text,
-        events: parsed.events,
+        text: responseText,
         flashcards: newProposals,
         quizzes: newQuizzes,
       };
@@ -272,7 +244,7 @@ export class ChronoteChatModal extends Modal {
         fullParsed.flashcards.length > 0 || fullParsed.quizzes.length > 0
           ? { flashcards: fullParsed.flashcards, quizzes: fullParsed.quizzes }
           : undefined;
-      this.chatHistory.push({ role: "assistant", text: parsed.text, attachments });
+      this.chatHistory.push({ role: "assistant", text: responseText, attachments });
       await this.persistChatHistory();
     } catch (err) {
       this.setLoading(false);
@@ -356,11 +328,6 @@ export class ChronoteChatModal extends Modal {
       await renderChatMarkdown(this.app, parsed.text, textEl, this.plugin);
     }
 
-    // Optional: inline study-block events (the "Approve Schedule" flow).
-    if (parsed.events && parsed.events.length > 0) {
-      this.renderEventApproval(msgEl, parsed.events);
-    }
-
     // Optional: flashcard proposals with a Save button and interactive
     // quiz proposals. These are also written into the persisted chat
     // history so they survive closing and reopening the chat.
@@ -406,47 +373,6 @@ export class ChronoteChatModal extends Modal {
     this.chatHistory = trimmed;
     this.plugin.settings.chatHistory = trimmed.map((m) => ({ ...m }));
     await this.plugin.saveData(this.plugin.settings);
-  }
-
-  private renderEventApproval(parent: HTMLElement, events: ScheduledEvent[]): void {
-    const actionArea = parent.createDiv({
-      cls: "chat-action-area",
-    });
-
-    const eventPreview = actionArea.createDiv({
-      cls: "chat-event-preview",
-    });
-    eventPreview.createEl("strong", { text: `Suggested ${events.length} study block(s):` });
-
-    const list = eventPreview.createEl("ul", {
-      cls: "chat-event-list",
-    });
-    for (const event of events) {
-      const startStr = new Date(event.startTime).toLocaleTimeString(undefined, {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      const endStr = new Date(event.endTime).toLocaleTimeString(undefined, {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      const li = list.createEl("li", {
-        text: `${startStr} – ${endStr}: ${event.summary}`,
-      });
-      li.title = event.description;
-    }
-
-    const approveBtn = actionArea.createEl("button", {
-      cls: "mod-cta",
-      text: "✓ Approve Schedule",
-    });
-    approveBtn.addEventListener("click", () => {
-      void (async () => {
-        await this.approveSchedule(events);
-        approveBtn.disabled = true;
-        approveBtn.setText("✓ Events created");
-      })();
-    });
   }
 
   /**
@@ -502,35 +428,6 @@ export class ChronoteChatModal extends Modal {
           return result;
         },
       });
-    }
-  }
-
-  private async approveSchedule(events: ScheduledEvent[]): Promise<void> {
-    if (!this.plugin.settings.googleAccessToken) {
-      new Notice("Chronote: Please connect Google Calendar first from the dashboard.");
-      return;
-    }
-
-    let successCount = 0;
-    for (const event of events) {
-      try {
-        const ok = await this.plugin.getCalendarService().createEvent({
-          summary: event.summary,
-          description: event.description,
-          startTime: event.startTime,
-          endTime: event.endTime,
-        });
-        if (ok) successCount++;
-      } catch (err) {
-        // per-event failures are tolerated; partial success is reported below
-      }
-    }
-
-
-    if (successCount === events.length) {
-      new Notice(`Chronote: All ${successCount} event(s) added to your Google Calendar.`);
-    } else {
-      new Notice(`Chronote: ${successCount}/${events.length} event(s) added. Some may have failed.`);
     }
   }
 
@@ -637,14 +534,6 @@ export class ChronoteChatModal extends Modal {
         return "Checking upcoming tests";
       case "list_reviews":
         return "Checking due reviews";
-      case "list_events":
-        return "Checking your calendar";
-      case "create_event":
-        return "Adding a calendar event";
-      case "update_event":
-        return "Updating a calendar event";
-      case "delete_event":
-        return "Removing a calendar event";
       case "propose_flashcard":
         return "Drafting a flashcard";
       case "propose_quiz":
@@ -656,93 +545,5 @@ export class ChronoteChatModal extends Modal {
 
   private scrollToBottom(): void {
     this.historyContainer.scrollTop = this.historyContainer.scrollHeight;
-  }
-
-  // ── Heuristics ───────────────────────────────────────────────────
-
-  /**
-   * Detect whether the user query is about scheduling / planning.
-   * If so, enrich the AI call with due notes + calendar context.
-   *
-   * Includes "exam" / "test" / "revision" / "midterm" / "final" so
-   * exam-flavoured queries still get the due-notes + today's-calendar
-   * context. The actual list of upcoming tests is fetched by the
-   * `list_tests` tool on demand — it is not in this prompt.
-   */
-  private isSchedulingQuery(text: string): boolean {
-    const lower = text.toLowerCase();
-    const keywords = [
-      "plan", "schedule", "study", "calendar", "today", "tomorrow",
-      "when should i", "what should i review", "review plan",
-      "create events", "add to calendar", "organize my day",
-      "exam", "test", "revision", "revise", "midterm", "final",
-    ];
-    return keywords.some((kw) => lower.includes(kw));
-  }
-
-  /**
-   * Collect due notes data to send to Gemini.
-   */
-  private getDueNotesData(): unknown[] {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const dueNotes: unknown[] = [];
-
-    const files = this.app.vault.getMarkdownFiles();
-    for (const file of files) {
-      const cache = this.app.metadataCache.getFileCache(file);
-      const fm: Record<string, unknown> | undefined = cache?.frontmatter;
-      if (!fm) continue;
-
-      const rawDate = fm.next_review;
-      if (!rawDate) continue;
-
-      dueNotes.push({
-        file: file.basename,
-        next_review: rawDate,
-        lastScore: fm.confidence ?? null,
-        confidence: fm.confidence ?? null,
-        interval: fm.interval ?? null,
-        exam_date: fm.exam_date ?? null,
-      });
-    }
-
-    return dueNotes;
-  }
-
-  /**
-   * Try to extract a JSON array of ScheduledEvent objects from the AI response.
-   * Falls back to returning the text with no events. The `flashcards`
-   * field is filled in by the caller from the shared `pendingProposals`
-   * array — this function only deals with the inline-JSON shape.
-   */
-  private parseResponseForEvents(text: string): { text: string; events: ScheduledEvent[] | null } {
-    // Try to find a JSON array in the response
-    const jsonMatch = text.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) return { text, events: null };
-
-    try {
-      const parsed: unknown = JSON.parse(jsonMatch[0]);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const hasEventShape = parsed.every(
-          (item: unknown) =>
-            typeof item === "object" &&
-            item !== null &&
-            "summary" in item &&
-            "startTime" in item &&
-            "endTime" in item,
-        );
-        if (hasEventShape) {
-          const events = parsed as ScheduledEvent[];
-          // Return the text with the JSON stripped out (so the user sees prose only)
-          const cleanText = text.replace(jsonMatch[0], "").trim() || "Here's your suggested schedule:";
-          return { text: cleanText, events };
-        }
-      }
-    } catch {
-      // Not valid JSON — just show the raw text
-    }
-
-    return { text, events: null };
   }
 }

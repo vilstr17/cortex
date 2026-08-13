@@ -41,7 +41,6 @@ export async function runIndex(
 
   // 1. The chat provider must be configured.
   const missing = providerMissingFields(ai.provider, {
-    chronoteAccountId: ai.chronoteAccountId,
     geminiApiKey: ai.geminiApiKey,
     geminiModel: ai.geminiModel,
     apiKey: ai.apiKey,

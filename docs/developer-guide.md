@@ -46,7 +46,6 @@ src/
   settingsTypes.ts              # Plain interfaces for the settings shape
   commands.ts                   # SRS review command + test commands
   services/
-    googleCalendarService.ts    # OAuth token refresh + Calendar CRUD
     geminiService.ts            # Prompt building + function calling + REST client
     testService.ts              # In-memory test registry (backed by settings)
     flashcardSaveService.ts     # Persisting AI-proposed flashcards to a deck
@@ -55,12 +54,12 @@ src/
     ai/                         # Adapters: Gemini, OpenAI-compat, Anthropic, listLocalModels
   agent/
     toolRegistry.ts             # Tool name → implementation registry
-    tools/                      # Notes, tests, flashcards, quizzes, calendar tools
+    tools/                      # Notes, tests, reviews, flashcards, quizzes
     vectorIndex/                # chunker, embeddings, in-memory index, persistence, knowledgeBase
   views/
-    ChronoteDashboardView.ts      # Custom ItemView: calendar, reviews, tests
+    ChronoteDashboardView.ts      # Custom ItemView: reviews, tests
   modals/
-    ChronoteChatModal.ts          # AI chat UI with schedule approval
+    ChronoteChatModal.ts          # AI chat UI with flashcard/quiz attachments
     CreateTestModal.ts          # Test creation form
     AddToTestModal.ts           # Add current note to an existing test
     MarkTestDoneModal.ts        # Mark a test as completed
@@ -132,9 +131,8 @@ The agent layer (`src/agent/toolRegistry.ts`) maps a tool name to a typed implem
 - The chat prompt explicitly anchors the model to local time and forbids UTC/Z-suffix outputs.
 
 ### Service Ownership
-- **Single-owner services**: `TestService` owns the `tests` array in settings. `GoogleCalendarService` owns token refresh timers. The chat adapter owns chat history for its instance.
+- **Single-owner services**: `TestService` owns the `tests` array in settings. The chat adapter owns chat history for its instance.
 - Services that need to write settings receive a `saveSettingsCallback` rather than holding a reference to the plugin.
-- The Dashboard creates short-lived service instances (`new GoogleCalendarService(...)`) but shares the same underlying settings object.
 
 ### Frontmatter Access
 - Use `app.fileManager.processFrontMatter(file, (fm) => { ... })` for writes.
@@ -151,12 +149,9 @@ The agent layer (`src/agent/toolRegistry.ts`) maps a tool name to a typed implem
 - `Date.toISOString()` produces UTC. Use it for API payloads and ISO date extraction (`split("T")[0]`), but never for user-facing display.
 - `new Date(2026, 5, 12)` is local; `new Date("2026-06-12")` is UTC. The codebase prefers the former for internal date math.
 
-### Service Lifecycle
-- `GoogleCalendarService` starts a `setInterval` for preemptive token refresh. Always call `.destroy()` when the consumer (Dashboard, Chat Modal) is torn down.
-
 ### Metadata Cache Events
 - Obsidian fires `metadataCache.on("changed", ...)` on every save while typing.
-- The Dashboard debounces re-renders to 2 seconds so calendar fetches do not lag the editor.
+- The Dashboard debounces re-renders to 2 seconds so the UI does not lag the editor.
 - If you build a new feature that reacts to file changes, apply a similar debounce.
 
 ### Bundle Size

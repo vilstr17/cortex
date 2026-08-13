@@ -10,7 +10,6 @@ import type { ChronoteSettings } from "../../settingsTypes.js";
 import { GeminiAdapter } from "./GeminiAdapter.js";
 import { AnthropicAdapter } from "./AnthropicAdapter.js";
 import { OpenAICompatAdapter } from "./OpenAICompatAdapter.js";
-import { CHRONOTE_CLOUD_BASE_URL } from "./catalog.js";
 import type { AIProviderAdapter } from "./types.js";
 
 export function createAdapter(settings: ChronoteSettings): AIProviderAdapter {
@@ -19,22 +18,6 @@ export function createAdapter(settings: ChronoteSettings): AIProviderAdapter {
       return new GeminiAdapter(settings);
     case "anthropic":
       return new AnthropicAdapter(settings);
-    case "chronote_cloud":
-      // The proxy picks the model — we never let the user configure
-      // one. Override settings with a synthetic `apiKey` (the account
-      // id) and the fixed base URL. We use a non-empty placeholder
-      // when no account id is configured so the Authorization header
-      // is always present — the proxy then returns its own 401 with
-      // a useful error message.
-      return new OpenAICompatAdapter({
-        ...settings,
-        ai: {
-          ...settings.ai,
-          apiKey: settings.ai.chronoteAccountId || "chronote-cloud",
-          model: "chronote-cloud-managed",
-          baseUrl: CHRONOTE_CLOUD_BASE_URL,
-        },
-      });
     case "openai":
     case "ollama":
     case "lmstudio":

@@ -218,7 +218,7 @@ export function migrateSettings(raw: unknown): ChronoteSettings {
   // provider's slot from the legacy ai.baseUrl (so a vault saved
   // before per-provider URLs existed still has the right value when
   // the user switches back) and pre-fill the documented defaults for
-  // ollama / lmstudio / chronote_cloud.
+  // ollama / lmstudio.
   //
   // Build a fresh `ai` object so we don't mutate the caller's
   // `migrated.ai` (which is the same reference as `raw.ai` from the

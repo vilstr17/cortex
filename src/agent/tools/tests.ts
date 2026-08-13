@@ -8,15 +8,15 @@
  *
  * The tool reads from the live `plugin.settings.tests` array via a
  * closure — no plugin reference, no vault access. That mirrors the
- * `createCalendarTools` factory pattern: the agent layer only knows
+ * other tool factories (notes, reviews): the agent layer only knows
  * about the data it needs, and tests can inject a stub `getTests`
  * without standing up an Obsidian runtime.
  *
  * "Revision" itself is not a stored entity — it is what the model
- * plans once it knows the test, the linked notes, and the calendar
- * free slots. So we only expose the test list here; the model chains
- * `list_tests` → `list_events` → `search_notes` / `read_note` →
- * `create_event` to build a revision plan.
+ * plans once it knows the test and the linked notes. So we only
+ * expose the test list here; the model chains `list_tests` →
+ * `list_reviews` → `search_notes` / `read_note` to build a revision
+ * plan.
  */
 
 import { Tool } from "../toolRegistry.js";

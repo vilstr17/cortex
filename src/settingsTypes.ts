@@ -33,18 +33,13 @@ export interface PersistedChatMessage {
 // ── AI provider types ─────────────────────────────────────────────
 
 /**
- * The seven supported AI providers. Adding a new provider means:
+ * The six supported AI providers. Adding a new provider means:
  *   1. extend this union
  *   2. add a case to `createAdapter()` in `src/services/ai/index.ts`
  *   3. add a UI sub-section in `src/settings.ts`
  *   4. add a curated model list in `PROVIDER_CATALOG` (services/ai/catalog.ts)
- *
- * `chronote_cloud` is the managed proxy: users paste an `acct_…` id
- * from the billing flow and the proxy picks the model. There is no
- * model dropdown and no API key — just the account id.
  */
 export type AIProvider =
-  | "chronote_cloud"
   | "gemini"
   | "openai"
   | "anthropic"
@@ -75,10 +70,6 @@ export type ResponseStyle = "concise" | "friendly" | "motivational" | "formal";
 export interface AIProviderConfig {
   /** Active provider. */
   provider: AIProvider;
-
-  // Chronote Cloud — managed proxy. User pastes the account id they
-  // get from the proxy's sign-up flow; no model field is exposed.
-  chronoteAccountId: string;
 
   // Gemini — kept separate so we don't disturb the (already-shipping)
   // settings keys that may live in user vaults.
@@ -122,7 +113,6 @@ export interface AIProviderConfig {
    * - ollama: "nomic-embed-text"
    * - lmstudio / custom: free-text (server picks if empty)
    * - anthropic: unused (the adapter has no embed endpoint)
-   * - chronote_cloud: empty (the proxy picks)
    */
   embeddingModel: string;
 
@@ -138,9 +128,6 @@ export interface AIProviderConfig {
    * pre-simplification index whose dim is not 384.
    */
   embeddingDim: number | null;
-
-  /** Attach the calendar tool declarations to chat requests. */
-  enableCalendarTools: boolean;
 
   /**
    * Active response-style preset. The fragment is spliced into the
@@ -166,9 +153,6 @@ export interface ChronoteSettings {
   ai: AIProviderConfig;
   planningPreferences: string;
   timeZone: string;
-  googleAccessToken: string;
-  googleRefreshToken: string;
-  googleTokenExpiry: number;
   tests: ChronoteTest[];
   wakeUpTime: string;
   bedTime: string;
@@ -211,8 +195,7 @@ export interface ChronoteSettings {
 
 export const DEFAULT_SETTINGS: ChronoteSettings = {
   ai: {
-    provider: "chronote_cloud",
-    chronoteAccountId: "",
+    provider: "gemini",
     geminiApiKey: "",
     geminiModel: "gemini-2.5-flash",
     apiKey: "",
@@ -221,15 +204,11 @@ export const DEFAULT_SETTINGS: ChronoteSettings = {
     baseUrls: {},
     embeddingModel: "",
     embeddingDim: null,
-    enableCalendarTools: true,
     responseStyle: "concise",
     maxToolRounds: 20,
   },
   planningPreferences: "",
   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  googleAccessToken: "",
-  googleRefreshToken: "",
-  googleTokenExpiry: 0,
   tests: [],
   wakeUpTime: "07:00",
   bedTime: "23:00",

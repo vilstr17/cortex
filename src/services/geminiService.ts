@@ -6,7 +6,8 @@
  *   - a `chat(history, dueNotes, calendarEvents)` method that
  *     built the study-planner (or general) system prompt and ran the
  *     multi-round function-calling loop against the configured AI
- *     adapter, and
+ *     adapter (the study-planner path was removed with Google
+ *     Calendar), and
  *   - a public `tools: ToolRegistry` field so the chat modal and
  *     plugin can register extra tools (notes, flashcards, tests, …).
  *
@@ -22,10 +23,7 @@
  */
 import { requestUrl } from "obsidian";
 import { ChronoteSettings } from "../settings.js";
-import { GoogleCalendarService } from "./googleCalendarService.js";
-import { localISODate } from "../utils/dateUtils.js";
 import { ToolRegistry, Tool, ToolContext } from "../agent/toolRegistry.js";
-import { createCalendarTools } from "../agent/tools/calendar.js";
 import { createAdapter } from "./ai/index.js";
 import type { AIProviderAdapter } from "./ai/types.js";
 import { getResponseStyle } from "./ai/index.js";
@@ -38,47 +36,25 @@ export interface ChatMessage {
   text: string;
 }
 
-export interface ScheduledEvent {
-  summary: string;
-  description: string;
-  startTime: string; // ISO 8601 datetime string
-  endTime: string;   // ISO 8601 datetime string
-}
-
 export class GeminiService {
   private settings: ChronoteSettings;
-  private calendarService?: GoogleCalendarService;
   private readonly adapter: AIProviderAdapter;
 
   /**
-   * Tool registry. The 4 calendar tools are auto-registered when a
-   * calendar service is supplied. New tools (notes, flashcards) call
-   * `registerTool()` or pass a registry via `setToolRegistry()`.
+   * Tool registry. New tools (notes, flashcards) call `registerTool()`
+   * or pass a registry via `setToolRegistry()`.
    */
   readonly tools: ToolRegistry = new ToolRegistry();
 
-  constructor(settings: ChronoteSettings, calendarService?: GoogleCalendarService) {
+  constructor(settings: ChronoteSettings) {
     this.settings = settings;
-    this.calendarService = calendarService;
     // Pick the adapter that matches the active provider. The chat
     // path must reach the same transport as the "Test connection"
     // button in settings — that button goes through `createAdapter`
     // directly, but chat was previously hardcoded to GeminiAdapter,
     // which sent every provider's traffic to Google and produced
-    // HTTP 403s for LM Studio / Ollama / Anthropic / OpenAI / Chronote
-    // Cloud users.
+    // HTTP 403s for LM Studio / Ollama / Anthropic / OpenAI users.
     this.adapter = createAdapter(settings);
-
-    if (calendarService) {
-      for (const t of createCalendarTools({
-        calendarService,
-        timeZone: () =>
-          this.settings.timeZone ||
-          Intl.DateTimeFormat().resolvedOptions().timeZone,
-      })) {
-        this.tools.register(t);
-      }
-    }
   }
 
   /**
@@ -110,108 +86,7 @@ export class GeminiService {
   }
 
   /**
-   * Build the system prompt for scheduling mode.
-   *
-   * This path is taken when the user asks for a study plan
-   * (detected by `isSchedulingQuery` in the chat modal). The model
-   * gets due notes + today's calendar as context, and is expected to
-   * produce a JSON array of study events that the chat modal renders
-   * as an "Approve Schedule" button.
-   *
-   * Upcoming tests are NOT injected here — the model calls the
-   * `list_tests` tool to discover them. That keeps the system prompt
-   * stable (the test list changes whenever the user adds a test) and
-   * keeps per-prompt token cost predictable.
-   *
-   * Voice is set by the active `responseStyle` (same fragment as the
-   * general prompt). The hard rules are tighter here because the output
-   * is parsed by code, not read by a human — wrong date format =
-   * silent corruption. The date rules stay; the box-drawing and
-   * the "STRICT RULES — you MUST follow" posturing go.
-   */
-  private buildSystemPrompt(
-    dueNotesJson: string,
-    calendarEventsJson: string,
-  ): string {
-    const timeContext = this.getTimeContext();
-    const now = new Date();
-    const isoDate = localISODate(now);
-
-    const parts = [
-      timeContext,
-      "",
-      "You are Chronote. " +
-        "Right now the user asked for a study plan, so we're in planning mode. " +
-        "Build the most useful schedule you can for today, given their notes, their calendar, and the time they actually have. " +
-        "Be opinionated. If a note is overdue and the test is tomorrow, it goes first. " +
-        "Don't pad the day. Don't put things in sleep hours. Don't overlap with what's already on the calendar." +
-        "",
-
-      this.getStyleFragment(),
-
-      "Today's date: " + isoDate + ". " +
-        "Schedule every event on this exact date. " +
-        "If you use a different date, the calendar will silently book it on the wrong day and the user will be furious." +
-        "",
-
-      "INPUT CONTEXT",
-      "─────────────",
-      "Due notes (pending review):",
-      dueNotesJson || "(none — nothing is due today)",
-      "",
-      "Calendar events today:",
-      calendarEventsJson || "(the day is wide open)",
-    ];
-
-    const wakeUp = this.settings.wakeUpTime || "07:00";
-    const bedTime = this.settings.bedTime || "23:00";
-
-    parts.push(
-      "",
-      "Daily routine:",
-      "Wake: " + wakeUp + " · Bed: " + bedTime + ". " +
-        "Never schedule study in the sleep window. " +
-        "Never run a study block longer than 2 hours without inserting a 15-minute break. " +
-        "Lowest-scoring notes go in the morning (peak attention). " +
-        "Place new study blocks only in genuine free gaps — never on top of an existing event.",
-    );
-
-    parts.push(
-      "",
-      "How to build the plan:",
-      "1. Look at what's due, prioritize by (a) test proximity and (b) low confidence.",
-      "2. Find the real free slots in the calendar.",
-      "3. Fill them with 25–60 minute blocks. Title each one like 'Review: Calculus limits'.",
-      "4. Use the description field for context (the source note path, the topic, why this one).",
-      "5. If a test is approaching, call list_tests for the target date to see which notes are in scope — don't guess from frontmatter.",
-      "6. If you need a fresh view of the review queue (the context above may be stale), call list_reviews(target date) to re-pull it before prioritizing.",
-    );
-
-    const prefs = this.settings.planningPreferences?.trim();
-    if (prefs) {
-      parts.push(
-        "",
-        "The user's planning preferences (treat as hard rules — these reflect their actual life):",
-        prefs,
-      );
-    }
-
-    parts.push(
-      "",
-      "OUTPUT FORMAT — code reads this, so be exact:",
-      "Return a single JSON array, nothing else. " +
-        "No prose, no markdown fence, no explanation around it. " +
-        "Each element: { summary, description, startTime, endTime }. " +
-        "All times are full ISO 8601 datetimes for " + isoDate + ", " +
-        "formatted as '" + isoDate + "THH:MM:SS+TZ' (e.g. '" + isoDate + "T10:00:00+02:00'). " +
-        "If nothing is actually worth scheduling, return [].",
-    );
-
-    return parts.join("\n");
-  }
-
-  /**
-   * Build the general (non-scheduling) system prompt for chat mode.
+   * Build the general system prompt for chat mode.
    *
    * `knowledgeState` is a short status string describing the
    * vault's knowledge index (e.g. "ready (1247 chunks indexed)"
@@ -233,7 +108,7 @@ export class GeminiService {
     return (
       this.getTimeContext() +
       "\n\nYou are Chronote. You live inside the user's Obsidian vault. " +
-      "Your job is to help them study, revise, and remember things — and to keep their calendar honest when they ask. " +
+      "Your job is to help them study, revise, and remember things. " +
       this.getStyleFragment() +
 
       "\n\nHard rules (these are non-negotiable):" +
@@ -250,7 +125,6 @@ export class GeminiService {
       "\n- list_notes(folder?, tag?) — browse what's in the vault when search returns nothing and you need to discover." +
       "\n- propose_flashcard(question, answer, source_note, test_name) — draft a flashcard. The user reviews and saves from the chat." +
       "\n- propose_quiz(test_name, questions) — draft an interactive multiple-choice quiz. The user answers inside the chat." +
-      "\n- list_events / create_event / update_event / delete_event — Google Calendar. Only touch the calendar when the user asks." +
       "\n- list_tests(date?, include_done?) — find upcoming tests (exams) and the notes linked to each, for a given date. Use this whenever the user asks about an exam, revision, or what to study for a deadline. The test list is the only way to discover upcoming exams — they are not in this prompt." +
       "\n- list_reviews(date?) — find notes due for spaced-repetition review on a given date (defaults to today), with how overdue each one is and its confidence. Use this whenever the user asks what to review, what's due for revision, or wants to plan a revision session. Notes linked to a finished exam are auto-retired. The review queue is not in this prompt — call the tool." +
 
@@ -264,20 +138,16 @@ export class GeminiService {
       "\n- 'What do my notes say about X?' → search_notes('X') → (if relevant) read_note(path) → answer with [[NoteName]] citations." +
       "\n- 'Make flashcards for X' → search_notes('X') → read_note(path) → propose_flashcard(...) for each card." +
       "\n- 'Quiz me on X' → search_notes('X') → read_note(path) → propose_quiz(test_name='General', questions=[...])." +
-      "\n- 'Plan my day' → list_tests() (for exam context) → list_events() → create_event(...) for each study block." +
-      "\n- 'What should I review today?' → list_reviews() → (for each) search_notes or read_note → schedule via create_event if asked." +
-      "\n- For calendar work, don't ask for an event ID — find it via list_events and act on it the same turn." +
+      "\n- 'What should I review today?' → list_reviews() → (for each) search_notes or read_note." +
       "\n- If something is ambiguous in a way that matters (e.g. two events with the same name, or a card topic the notes don't actually cover), ask one short clarifying question. Otherwise, just do it." +
       ""
     );
   }
 
   /**
-   * General-purpose chat with the active AI adapter, with optional
-   * study-planner context. Pass dueNotes and calendarEvents to enable
-   * scheduling mode. Upcoming tests are NOT passed here — the model
-   * calls the `list_tests` tool to discover them on demand.
-   * Returns the assistant's text response.
+   * General-purpose chat with the active AI adapter. Upcoming tests
+   * are NOT passed here — the model calls the `list_tests` tool to
+   * discover them on demand. Returns the assistant's text response.
    *
    * Internally this delegates to the shared `runWithTools` loop with
    * the configured `adapter`. The function-call semantics, model URL,
@@ -286,8 +156,6 @@ export class GeminiService {
    */
   async chat(
     history: ChatMessage[],
-    dueNotes?: unknown[],
-    calendarEvents?: unknown[],
     /**
      * Short status of the vault's knowledge index, surfaced in the
      * system prompt so the model can mention "your index is empty,
@@ -304,16 +172,7 @@ export class GeminiService {
      */
     onProgress?: (event: ToolProgressEvent) => void,
   ): Promise<string> {
-    let systemPrompt: string;
-
-    if (dueNotes && calendarEvents) {
-      systemPrompt = this.buildSystemPrompt(
-        JSON.stringify(dueNotes, null, 2),
-        JSON.stringify(calendarEvents, null, 2),
-      );
-    } else {
-      systemPrompt = this.buildGeneralSystemPrompt(knowledgeState);
-    }
+    const systemPrompt = this.buildGeneralSystemPrompt(knowledgeState);
 
     const messages = history.map((m) => ({
       role: m.role,
@@ -362,8 +221,7 @@ export class GeminiService {
    * returns a string result (or an error string) and we just hand it
    * back to the model. The `ctx.plugin` is null here because the
    * function-call loop doesn't have a plugin instance in scope; tools
-   * that need vault access get it via a closure (see
-   * `createCalendarTools`).
+   * that need vault access get it via a closure.
    */
   private async dispatchTool(
     name: string,

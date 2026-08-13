@@ -23,12 +23,6 @@ export interface ModelOption {
 }
 
 export const PROVIDER_CATALOG: Record<AIProvider, ModelOption[]> = {
-  chronote_cloud: [
-    // The user does NOT pick a model for Chronote Cloud — the proxy
-    // chooses the best price/perf model on Ollama Cloud and routes
-    // accordingly. The empty list is intentional; the settings UI
-    // shows no model dropdown for this provider.
-  ],
   gemini: [
     { id: "gemini-3.5-flash", label: "Gemini 3.5 Flash" },
     { id: "gemini-3.1-pro", label: "Gemini 3.1 Pro" },
@@ -75,7 +69,6 @@ export const PROVIDER_CATALOG: Record<AIProvider, ModelOption[]> = {
 
 /** Human-readable provider names used in the settings UI. */
 export const PROVIDER_LABELS: Record<AIProvider, string> = {
-  chronote_cloud: "Chronote Cloud",
   gemini: "Google Gemini",
   openai: "OpenAI",
   anthropic: "Anthropic Claude",
@@ -84,21 +77,16 @@ export const PROVIDER_LABELS: Record<AIProvider, string> = {
   custom: "Custom (OpenAI-compatible)",
 };
 
-/** Fixed base URL for the managed Chronote Cloud proxy. */
-export const CHRONOTE_CLOUD_BASE_URL = "https://cortex-proxy.vercel.app/v1";
-
 /** Sensible default base URL for OpenAI-compat local providers. */
 export const DEFAULT_BASE_URL: Partial<Record<AIProvider, string>> = {
   ollama: "http://localhost:11434/v1",
   // LM Studio's own docs point at 127.0.0.1 (localhost doesn't resolve on
   // some hosts). The fetcher normalizes missing /v1 suffixes.
   lmstudio: "http://127.0.0.1:1234/v1",
-  chronote_cloud: CHRONOTE_CLOUD_BASE_URL,
 };
 
 /** Per-provider placeholder for the model field when nothing is configured. */
 export const MODEL_PLACEHOLDER: Record<AIProvider, string> = {
-  chronote_cloud: "(model picked by Chronote Cloud)",
   gemini: "e.g., gemini-3.5-flash",
   openai: "e.g., gpt-5.4-mini",
   anthropic: "e.g., claude-sonnet-4-6",
@@ -134,7 +122,6 @@ export const DEFAULT_EMBEDDING_MODEL: Partial<Record<AIProvider, string>> = {
   openai: "text-embedding-3-small",
   ollama: "nomic-embed-text",
   lmstudio: "nomic-embed-text",
-  chronote_cloud: "nomic-embed-text",
 };
 
 /**
@@ -182,7 +169,6 @@ export function resolveEmbeddingModel(
 export function providerMissingFields(
   provider: AIProvider,
   config: {
-    chronoteAccountId: string;
     geminiApiKey: string;
     geminiModel: string;
     apiKey: string;
@@ -191,8 +177,6 @@ export function providerMissingFields(
   },
 ): string[] {
   switch (provider) {
-    case "chronote_cloud":
-      return config.chronoteAccountId ? [] : ["Chronote account id"];
     case "gemini":
       return [
         ...(config.geminiApiKey ? [] : ["Gemini API key"]),

@@ -1,11 +1,10 @@
-import { Plugin, Notice, TFile } from "obsidian";
+import { Plugin, TFile } from "obsidian";
 import Commands from "./commands.js";
 import {
   ChronoteDashboardView,
   CHRONOTE_DASHBOARD_VIEW,
 } from "./views/ChronoteDashboardView.js";
 import { ChronoteSettings, DEFAULT_SETTINGS, ChronoteSettingTab } from "./settings.js";
-import { GoogleCalendarService } from "./services/googleCalendarService.js";
 import { TestService } from "./services/testService.js";
 import {
   migrateSettings,
@@ -27,21 +26,8 @@ export { DEFAULT_SETTINGS };
 export default class ChronotePlugin extends Plugin {
   settings: ChronoteSettings = DEFAULT_SETTINGS;
   commands!: Commands;
-  private oauthState: string | null = null;
-
-  calendarService: GoogleCalendarService | null = null;
   testService!: TestService;
   knowledgeBase: KnowledgeBase | null = null;
-
-  getCalendarService(): GoogleCalendarService {
-    if (!this.calendarService) {
-      this.calendarService = new GoogleCalendarService(
-        this.settings,
-        () => this.saveData(this.settings),
-      );
-    }
-    return this.calendarService;
-  }
 
   /**
    * Lazily construct the knowledge base. We hold a single instance
@@ -141,7 +127,6 @@ export default class ChronotePlugin extends Plugin {
     // spamming a Notice every time the interval elapses.
     const ai = this.settings.ai;
     const missing = providerMissingFields(ai.provider, {
-      chronoteAccountId: ai.chronoteAccountId,
       geminiApiKey: ai.geminiApiKey,
       geminiModel: ai.geminiModel,
       apiKey: ai.apiKey,
@@ -153,12 +138,6 @@ export default class ChronotePlugin extends Plugin {
 
     const { runIndex } = await import("./services/indexRunner.js");
     await runIndex(this);
-  }
-
-  generateOAuthState(): string {
-    const state = crypto.randomUUID();
-    this.oauthState = state;
-    return state;
   }
 
   async onload() {
@@ -274,16 +253,6 @@ export default class ChronotePlugin extends Plugin {
       }),
     );
 
-    // The proxy still redirects to the legacy `cortex-auth` action from before
-    // the plugin was renamed to Chronote. Register both names so existing
-    // installs and the current proxy callback continue to work.
-    this.registerObsidianProtocolHandler("chronote-auth", (params) =>
-      this.handleGoogleAuthCallback(params),
-    );
-    this.registerObsidianProtocolHandler("cortex-auth", (params) =>
-      this.handleGoogleAuthCallback(params),
-    );
-
     this.addRibbonIcon("brain", "Open Chronote Dashboard", () => {
       void this.openDashboard();
     });
@@ -319,8 +288,6 @@ export default class ChronotePlugin extends Plugin {
       window.clearInterval(this.autoIndexIntervalId);
       this.autoIndexIntervalId = null;
     }
-    this.calendarService?.destroy();
-    this.calendarService = null;
   }
 
   async openDashboard() {
@@ -336,68 +303,6 @@ export default class ChronotePlugin extends Plugin {
     if (leaf) {
       await leaf.setViewState({ type: CHRONOTE_DASHBOARD_VIEW });
       await workspace.revealLeaf(leaf);
-    }
-  }
-
-  /**
-   * Re-render the dashboard's Google Calendar section so the "Waiting for
-   * authorization…" UI is replaced by either the connected schedule view
-   * or the connect button (depending on outcome). Called from both the
-   * `chronote-auth` and legacy `cortex-auth` protocol handlers on every
-   * callback path.
-   */
-  private async refreshDashboardCalendarSection(): Promise<void> {
-    const leaves = this.app.workspace.getLeavesOfType(CHRONOTE_DASHBOARD_VIEW);
-    for (const leaf of leaves) {
-      const view = leaf.view;
-      if (view instanceof ChronoteDashboardView) {
-        view.refreshGoogleCalendarSection();
-      }
-    }
-  }
-
-  /**
-   * Handle the Google OAuth token callback from the proxy. Shared by the
-   * `chronote-auth` and legacy `cortex-auth` protocol handlers so the rename
-   * does not break users whose proxy session still redirects to the old action.
-   */
-  private async handleGoogleAuthCallback(params: Record<string, string>): Promise<void> {
-    // CSRF guard: only reject if a state was supplied AND it doesn't match.
-
-    // A missing state (proxy didn't echo it back) is treated as a proxy bug,
-    // not a security failure — we still accept the tokens. This avoids the
-    // situation where a misconfigured proxy strands the user with valid
-    // tokens that get thrown away.
-    if (params.state && params.state !== this.oauthState) {
-      new Notice("Chronote: OAuth state mismatch. Authentication rejected for security.");
-      this.oauthState = null;
-      await this.refreshDashboardCalendarSection();
-      return;
-    }
-    this.oauthState = null;
-
-    if (params.access_token) {
-      this.settings.googleAccessToken = params.access_token;
-      if (params.refresh_token) {
-        this.settings.googleRefreshToken = params.refresh_token;
-      }
-      if (params.expires_in) {
-        this.settings.googleTokenExpiry = Date.now() + parseInt(params.expires_in, 10) * 1000;
-      } else {
-        this.settings.googleTokenExpiry = Date.now() + 3600 * 1000;
-      }
-
-      await this.saveData(this.settings);
-      new Notice("Chronote: Google Calendar connected successfully!");
-      await this.refreshDashboardCalendarSection();
-    } else if (params.error) {
-      new Notice(`Chronote: Failed to connect Google Calendar: ${params.error}`);
-      await this.refreshDashboardCalendarSection();
-    } else {
-      // Callback fired but carried neither tokens nor an error — the proxy
-      // likely misrouted. Re-render so the UI unsticks from "Waiting…".
-      new Notice("Chronote: Google auth callback had no tokens. Try connecting again.");
-      await this.refreshDashboardCalendarSection();
     }
   }
 }

@@ -47,10 +47,6 @@ function fakePlugin(): ChronotePlugin {
       },
     } as ChronoteSettings,
     saveData: vi.fn(),
-    getCalendarService: () => ({
-      getEventsForDay: vi.fn().mockResolvedValue([]),
-      createEvent: vi.fn().mockResolvedValue(true),
-    }),
     getKnowledgeBase: () => ({
       isReady: () => true,
       chunkCount: 5,

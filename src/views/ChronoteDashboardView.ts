@@ -1,13 +1,12 @@
 import { ItemView, Notice, TFile, WorkspaceLeaf, setIcon, moment } from "obsidian";
 import ChronotePlugin from "../main.js";
-import { DisplayCalendarEvent } from "../services/googleCalendarService.js";
 import { ChronoteChatModal } from "../modals/ChronoteChatModal.js";
 import { CreateTestModal } from "../modals/CreateTestModal.js";
 import { ConfirmModal } from "../modals/ConfirmModal.js";
-import { ReviewFilterModal, ReviewFilters } from "../modals/ReviewFilterModal.js";
+import { ReviewFilterModal } from "../modals/ReviewFilterModal.js";
 import { TestService } from "../services/testService.js";
 import { ChronoteTest } from "../settings.js";
-import { localISODate, parseLocalDate, startOfLocalDay, isSameLocalDay, addDays, daysUntil } from "../utils/dateUtils.js";
+import { parseLocalDate, startOfLocalDay, isSameLocalDay } from "../utils/dateUtils.js";
 import { providerMissingFields, PROVIDER_LABELS } from "../services/ai/catalog.js";
 
 export const CHRONOTE_DASHBOARD_VIEW = "chronote-dashboard";
@@ -26,15 +25,9 @@ interface ReviewFilterOptions {
 export class ChronoteDashboardView extends ItemView {
 	private plugin: ChronotePlugin;
 	private reviewsContainer!: HTMLElement;
-	private scheduleContainer!: HTMLElement;
-	private authContainer!: HTMLElement;
 	private testsContainer!: HTMLElement;
 	private testService!: TestService;
-	private lastCalendarFetch = 0;
-	private lastFetchedEvents: DisplayCalendarEvent[] | null = null;
-	private lastFetchedCalendarDate: Date | null = null;
 
-	private currentCalendarDate: Date = new Date();
 	private currentReviewsDate: Date = new Date();
 	private reviewFilters: ReviewFilterOptions = {
 		sortOrder: "low-to-high",
@@ -70,7 +63,6 @@ export class ChronoteDashboardView extends ItemView {
 			// user knows exactly what to set.
 			const ai = this.plugin.settings.ai;
 			const missing = providerMissingFields(ai.provider, {
-				chronoteAccountId: ai.chronoteAccountId,
 				geminiApiKey: ai.geminiApiKey,
 				geminiModel: ai.geminiModel,
 				apiKey: ai.apiKey,
@@ -90,16 +82,11 @@ export class ChronoteDashboardView extends ItemView {
 		refreshBtn.setAttr("title", "Refresh");
 		setIcon(refreshBtn, "refresh-cw");
 		refreshBtn.addEventListener("click", () => {
-			this.lastCalendarFetch = 0;
-			this.lastFetchedEvents = null;
-			this.lastFetchedCalendarDate = null;
 			void this.render();
 		});
 
 		this.reviewsContainer = wrapper.createDiv({ cls: "chronote-reviews-section" });
-		this.scheduleContainer = wrapper.createDiv({ cls: "chronote-schedule-section" });
 		this.testsContainer = wrapper.createDiv({ cls: "chronote-tests-section" });
-		this.authContainer = wrapper.createDiv({ cls: "chronote-auth-section" });
 
 		// Debounced: while editing, metadata changes fire on every save —
 		// re-rendering the whole dashboard (incl. a calendar fetch) each
@@ -121,13 +108,8 @@ export class ChronoteDashboardView extends ItemView {
 	}
 
 	private async render(): Promise<void> {
-		this.renderCalendar();
 		this.renderReviews();
 		this.renderTests();
-	}
-
-	private renderCalendar(): void {
-		this.renderGoogleCalendarSection();
 	}
 
 	private renderReviews(): void {
@@ -136,79 +118,6 @@ export class ChronoteDashboardView extends ItemView {
 
 	private renderTests(): void {
 		this.renderUpcomingTests();
-	}
-
-	private renderGoogleCalendarSection(): void {
-		this.authContainer.empty();
-		this.scheduleContainer.empty();
-		if (!this.plugin.settings.googleAccessToken) { this.renderConnectButton(); return; }
-		void this.renderTodaysSchedule();
-	}
-
-	/**
-	 * Public re-render hook called by the plugin after a `chronote-auth`
-	 * callback resolves. Clears any cached events so the freshly-saved
-	 * tokens are honored on the next render, then re-renders the section.
-	 */
-	refreshGoogleCalendarSection(): void {
-		this.lastFetchedEvents = null;
-		this.lastFetchedCalendarDate = null;
-		this.renderGoogleCalendarSection();
-	}
-
-	private renderConnectButton(): void {
-		this.authContainer.createEl("p", {
-			text: "Connect your Google Calendar to see today's schedule alongside your reviews.",
-			cls: "chronote-calendar-connect-desc",
-		});
-		const btn = this.authContainer.createEl("button", { cls: "chronote-connect-google-btn", text: "Connect Google Calendar" });
-		btn.addEventListener("click", () => { void this.handleConnectGoogleCalendar(); });
-	}
-
-	private async handleConnectGoogleCalendar(): Promise<void> {
-		const state = this.plugin.generateOAuthState();
-		window.open(`https://cortex-proxy.vercel.app/api/auth?state=${encodeURIComponent(state)}`);
-		this.authContainer.empty();
-		const el = this.authContainer.createDiv({ cls: "chronote-auth-status" });
-		el.createEl("h4", { text: "Waiting for authorization\u2026" });
-		el.createEl("p", { text: "Please complete the login in your web browser.", cls: "chronote-auth-hint" });
-	}
-
-	private async renderTodaysSchedule(): Promise<void> {
-		const srv = this.plugin.getCalendarService();
-		const now = Date.now();
-		const dateChanged = !this.lastFetchedCalendarDate || this.lastFetchedCalendarDate.getTime() !== this.currentCalendarDate.getTime();
-		const stale = now - this.lastCalendarFetch > 30000;
-		let events: DisplayCalendarEvent[];
-		if (!this.lastFetchedEvents || dateChanged || stale) {
-			events = await srv.getEventsForDay(this.currentCalendarDate);
-			this.lastCalendarFetch = now;
-			this.lastFetchedCalendarDate = new Date(this.currentCalendarDate);
-			this.lastFetchedEvents = events;
-		} else {
-			events = this.lastFetchedEvents;
-		}
-		this.scheduleContainer.empty();
-
-		const hr = this.scheduleContainer.createDiv({ cls: "chronote-dashboard-header-row" });
-		const titleStr = isSameLocalDay(this.currentCalendarDate, new Date()) ? `Today's Schedule (${events.length})` : `${this.currentCalendarDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })} Schedule (${events.length})`;
-		hr.createEl("h2", { text: titleStr });
-
-		this.createDateNav(hr,
-			() => { const d = new Date(this.currentCalendarDate); d.setDate(d.getDate() - 1); this.currentCalendarDate = d; void this.renderTodaysSchedule(); },
-			() => { this.currentCalendarDate = startOfLocalDay(new Date()); void this.renderTodaysSchedule(); },
-			() => { const d = new Date(this.currentCalendarDate); d.setDate(d.getDate() + 1); this.currentCalendarDate = d; void this.renderTodaysSchedule(); },
-		);
-
-		if (events.length === 0) { this.scheduleContainer.createDiv({ cls: "chronote-schedule-placeholder", text: "No events scheduled for this day." }); return; }
-
-		const list = this.scheduleContainer.createEl("div", { cls: "chronote-event-list" });
-		for (const ev of events) {
-			const item = list.createDiv({ cls: "chronote-event-item" });
-			item.createEl("span", { cls: "chronote-event-time", text: `${this.formatTime(ev.startTime)} \u2013 ${this.formatTime(ev.endTime)}` });
-			item.createEl("span", { cls: "chronote-event-summary", text: ev.summary });
-			if (ev.htmlLink) { const a = item.createEl("a", { cls: "chronote-event-link", text: "\u2197", href: ev.htmlLink }); a.setAttr("target", "_blank"); a.setAttr("title", "Open in Google Calendar"); }
-		}
 	}
 
 	private renderDueReviews(): void {
@@ -396,8 +305,6 @@ export class ChronoteDashboardView extends ItemView {
 		nb.addEventListener("click", onNext);
 		return nav;
 	}
-
-	private formatTime(d: Date): string { return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }); }
 
 	private getDueNotes(target: Date): DueNote[] {
 		const ts = startOfLocalDay(target);

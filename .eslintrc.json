@@ -26,8 +26,7 @@
         "src/utils/**/*.ts",
         "src/utils/__tests__/**/*.ts",
         "src/services/__tests__/**/*.ts",
-        "src/services/geminiService.ts",
-        "src/services/googleCalendarService.ts"
+        "src/services/geminiService.ts"
       ],
       "rules": {
         "@typescript-eslint/no-explicit-any": "error",

@@ -36,11 +36,10 @@ import { DEFAULT_SETTINGS, ChronoteSettings } from "../../settingsTypes.js";
  * deprecation transition.
  *
  * The active provider is pinned to "gemini" — the chat service
- * now dispatches on `settings.ai.provider`, so a default
- * `chronote_cloud` would route to the OpenAI-compat adapter and the
- * Gemini-specific URL/header assertions wouldn't hold. Setting
- * provider explicitly keeps the test focused on the Gemini key
- * transport contract.
+ * now dispatches on `settings.ai.provider`, so a default provider
+ * would route to a different adapter and the Gemini-specific
+ * URL/header assertions wouldn't hold. Setting provider explicitly
+ * keeps the test focused on the Gemini key transport contract.
  */
 function settingsWithKey(key: string): ChronoteSettings {
   return {

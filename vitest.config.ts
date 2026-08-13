@@ -41,7 +41,6 @@ export default defineConfig({
       include: [
         "src/utils/**/*.ts",
         "src/services/geminiService.ts",
-        "src/services/googleCalendarService.ts",
       ],
       exclude: [
         "src/utils/notice.ts",

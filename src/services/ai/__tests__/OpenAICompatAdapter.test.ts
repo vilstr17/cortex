@@ -17,7 +17,6 @@ vi.mock("obsidian", () => ({
 import { OpenAICompatAdapter, normalizeBaseUrl } from "../OpenAICompatAdapter.js";
 import { createAdapter } from "../index.js";
 import { DEFAULT_SETTINGS, ChronoteSettings } from "../../../settingsTypes.js";
-import { CHRONOTE_CLOUD_BASE_URL } from "../catalog.js";
 
 function settingsFor(
   provider: "openai" | "ollama" | "lmstudio" | "custom",
@@ -377,61 +376,6 @@ describe("normalizeBaseUrl", () => {
   });
   it("returns empty string for empty input", () => {
     expect(normalizeBaseUrl("")).toBe("");
-  });
-});
-
-describe("Chronote Cloud (via createAdapter)", () => {
-  beforeEach(() => {
-    requestUrlMock.mockReset();
-    requestUrlMock.mockResolvedValue({
-      status: 200,
-      json: {
-        choices: [
-          { message: { role: "assistant", content: "ok" }, finish_reason: "stop" },
-        ],
-      },
-    });
-  });
-
-  function settingsForCloud(accountId: string): ChronoteSettings {
-    return {
-      ...DEFAULT_SETTINGS,
-      ai: {
-        ...DEFAULT_SETTINGS.ai,
-        provider: "chronote_cloud",
-        chronoteAccountId: accountId,
-        // baseUrl / model are intentionally junk — the factory
-        // should override them.
-        baseUrl: "https://should-be-ignored.example/v1",
-        model: "should-be-ignored",
-      },
-    };
-  }
-
-  it("targets the fixed cortex-proxy base URL", async () => {
-    const adapter = createAdapter(settingsForCloud("acct_test_42"));
-    await adapter.chat({ system: "x", messages: [{ role: "user", text: "hi" }] });
-    const call = requestUrlMock.mock.calls[0][0] as { url: string };
-    expect(call.url).toBe(`${CHRONOTE_CLOUD_BASE_URL}/chat/completions`);
-  });
-
-  it("sends the account id in the Authorization header", async () => {
-    const adapter = createAdapter(settingsForCloud("acct_test_42"));
-    await adapter.chat({ system: "x", messages: [{ role: "user", text: "hi" }] });
-    const call = requestUrlMock.mock.calls[0][0] as { headers: Record<string, string> };
-    expect(call.headers["Authorization"]).toBe("Bearer acct_test_42");
-  });
-
-  it("overrides the user-configured base URL and model", async () => {
-    // Sanity check: the factory should NOT honor whatever the user
-    // typed into the (hidden) baseUrl / model fields. The proxy
-    // is the source of truth for the model.
-    const adapter = createAdapter(settingsForCloud("acct_test_42"));
-    await adapter.chat({ system: "x", messages: [{ role: "user", text: "hi" }] });
-    const call = requestUrlMock.mock.calls[0][0] as { body: string };
-    const body = JSON.parse(call.body);
-    expect(body.model).toBe("chronote-cloud-managed");
-    expect(call.body).not.toContain("should-be-ignored");
   });
 });
 

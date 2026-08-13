@@ -72,9 +72,6 @@ export class ChronoteSettingTab extends PluginSettingTab {
       .setDesc("Switching providers does not clear the others' credentials — you can flip back without re-entering anything.")
       .addDropdown((dropdown) => {
         for (const p of Object.keys(PROVIDER_LABELS) as AIProvider[]) {
-          // Chronote Cloud is not yet available — keep it out of the
-          // picker so users can't select a provider that doesn't work.
-          if (p === "chronote_cloud") continue;
           dropdown.addOption(p, PROVIDER_LABELS[p]);
         }
         dropdown.setValue(this.plugin.settings.ai.provider);
@@ -123,9 +120,6 @@ export class ChronoteSettingTab extends PluginSettingTab {
     // Provider-specific sub-sections
     const ai = this.plugin.settings.ai;
     switch (ai.provider) {
-      case "chronote_cloud":
-        this.renderChronoteCloudSettings(containerEl, ai);
-        break;
       case "gemini":
         this.renderGeminiSettings(containerEl, ai);
         break;
@@ -143,22 +137,6 @@ export class ChronoteSettingTab extends PluginSettingTab {
         this.renderCustomSettings(containerEl, ai);
         break;
     }
-
-    // Calendar-tools toggle (shared across all providers)
-    new Setting(containerEl)
-      .setName("Enable calendar tools")
-      .setDesc(
-        "When on, the model can list / create / move / delete Google Calendar events on your behalf. " +
-        "Disable for small local models that don't support tool calling.",
-      )
-      .addToggle((toggle) =>
-        toggle
-          .setValue(ai.enableCalendarTools)
-          .onChange(async (value) => {
-            this.plugin.settings.ai.enableCalendarTools = value;
-            await this.plugin.saveData(this.plugin.settings);
-          })
-      );
 
     // Response style dropdown — a provider-agnostic voice preset.
     // Sits in the shared AI section so it's visible regardless of the
@@ -195,7 +173,7 @@ export class ChronoteSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Max tool-call rounds")
       .setDesc(
-        "How many times the AI may call tools (notes search, calendar, " +
+        "How many times the AI may call tools (notes search, " +
         "flashcards…) in a single reply before it must answer. Small local " +
         "models sometimes loop — raise this if replies get cut off, lower " +
         "it to fail faster. When the limit is hit, the AI is asked once " +
@@ -247,7 +225,7 @@ export class ChronoteSettingTab extends PluginSettingTab {
     
     new Setting(containerEl)
       .setName("Timezone")
-      .setDesc("The IANA timezone name (e.g., Europe/Prague) used for calendar events and AI context.")
+      .setDesc("The IANA timezone name (e.g., Europe/Prague) used for AI context.")
       .addText((text) =>
         text
           .setPlaceholder("e.g., Europe/Prague")
@@ -355,29 +333,6 @@ export class ChronoteSettingTab extends PluginSettingTab {
           })
       );
 
-    // Google Calendar section
-    new Setting(containerEl).setName("Google Calendar").setHeading();
-    containerEl.createEl("p", {
-      text: "Google Calendar is connected from the Dashboard. If you encounter permission errors, disconnect and re-authenticate with the correct scopes.",
-    });
-
-    new Setting(containerEl)
-      .setName("Disconnect Google Calendar")
-      .setDesc("Remove stored Google OAuth tokens. You will need to re-authenticate on the Dashboard.")
-      .addButton((button) =>
-        button
-          .setButtonText("Disconnect")
-          .setWarning()
-          .onClick(async () => {
-            this.plugin.settings.googleAccessToken = "";
-            this.plugin.settings.googleRefreshToken = "";
-            this.plugin.settings.googleTokenExpiry = 0;
-            await this.plugin.saveData(this.plugin.settings);
-            new Notice("Google Calendar disconnected. Please re-authenticate on the Dashboard.");
-            this.display();
-          })
-      );
-
     // Indexing — vault search + flashcard persistence.
     //
     // Embeddings use the active AI provider's key / base URL and an
@@ -469,49 +424,6 @@ export class ChronoteSettingTab extends PluginSettingTab {
   // supplied container. The dropdown selection above is in charge of
   // showing only the active provider's fields; these methods don't
   // hide or unhide anything themselves.
-
-  private renderChronoteCloudSettings(
-    containerEl: HTMLElement,
-    ai: AIProviderConfig,
-  ): void {
-    containerEl.createEl("p", {
-      text: "Chronote Cloud routes through cortex-proxy.vercel.app. Billed per token. We pick the best price/perf model for you — no model to choose.",
-      cls: "chronote-settings-hint",
-    });
-
-    new Setting(containerEl)
-      .setName("Chronote account id")
-      .setDesc(
-        "Get one by signing up at the proxy site. The id is sent in the Authorization header on every chat request.",
-      )
-      .addText((text) => {
-        text.inputEl.type = "password";
-        text
-          .setPlaceholder("acct_xxxxx")
-          .setValue(ai.chronoteAccountId)
-          .onChange(async (value) => {
-            this.plugin.settings.ai.chronoteAccountId = value.trim();
-            await this.plugin.saveData(this.plugin.settings);
-          });
-      });
-
-    new Setting(containerEl)
-      .setName("Sign in")
-      .setDesc("Open the proxy in your browser to create an account and grab an id.")
-      .addButton((button) =>
-        button
-          .setButtonText("Open cortex-proxy.vercel.app")
-          .setCta()
-          .onClick(() => {
-            window.open("https://cortex-proxy.vercel.app/", "_blank");
-          })
-      );
-
-    containerEl.createEl("p", {
-      text: "Chronote Cloud picks the embedding model for you — no configuration needed.",
-      cls: "chronote-settings-hint",
-    });
-  }
 
   private renderGeminiSettings(
     containerEl: HTMLElement,
@@ -865,7 +777,6 @@ export class ChronoteSettingTab extends PluginSettingTab {
   private async testAiConnection(): Promise<void> {
     const ai = this.plugin.settings.ai;
     const missing = providerMissingFields(ai.provider, {
-      chronoteAccountId: ai.chronoteAccountId,
       geminiApiKey: ai.geminiApiKey,
       geminiModel: ai.geminiModel,
       apiKey: ai.apiKey,

@@ -3,7 +3,7 @@
   "name": "Chronote",
   "version": "1.1.1",
   "minAppVersion": "1.7.2",
-  "description": "Spaced-repetition study tool with Google Calendar scheduling and a multi-provider AI agent.",
+  "description": "Spaced-repetition study tool with a multi-provider AI agent for search, flashcards, and quizzes.",
   "author": "Vilém Štrait",
   "authorUrl": "https://github.com/vilstr17",
   "isDesktopOnly": true
