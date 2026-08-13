@@ -2,6 +2,14 @@
 
 > **Status:** This file originated as the sample-plugin template guide. It has been kept as a general reference for Obsidian plugin conventions. For Chronote-specific documentation, see [`docs/`](docs/) and [`PERFORMANCE.md`](PERFORMANCE.md).
 
+## Chronote-Specific Rules
+
+These rules override the generic template guidance below.
+
+- **No legacy code.** When a feature is removed or refactored, delete the dead code completely — files, imports, settings fields, tests, and doc references. Do not leave commented-out code, unused exports, or "kept for later" stubs behind. The only exception is when the user explicitly says to keep something (e.g. the BLE detector in the camera work).
+- **Docs must always be up to date.** Any change that affects behavior, settings, commands, or architecture must update the relevant docs in the same change: `README.md`, `docs/`, `manifest.json` (description), and `PERFORMANCE.md` if applicable. A commit that changes code without touching docs is incomplete.
+- **Two branches, two versions.** `main` is the official Marketplace release (no Google Calendar, no Chronote Cloud, no camera). `chronote-plus` is the personal version (Google Calendar + camera attention tracking). Never remove Google Calendar or camera features from `chronote-plus`, and never add them to `main`. Chronote Cloud (`chronote_cloud` provider) is removed from **both** — the user only uses their own API keys.
+
 ## Project Overview
 
 - Target: Obsidian Community Plugin (TypeScript → bundled JavaScript).
