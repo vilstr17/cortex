@@ -55,7 +55,44 @@ export class ChronoteSettingTab extends PluginSettingTab {
       text: "All review data is stored locally in each note's YAML frontmatter (confidence, interval, next_review).",
     });
 
-    new Setting(containerEl).setName("AI Provider").setHeading();
+    new Setting(containerEl).setName("AI features").setHeading();
+
+    // ── AI master switch ─────────────────────────────────────────
+    // One toggle for the whole AI surface: chat, embeddings/vault
+    // index, flashcard & quiz proposals, and all provider credential
+    // fields below. Everything under this switch runs without a
+    // single network call when it's off.
+    new Setting(containerEl)
+      .setName("Enable AI features")
+      .setDesc(
+        "Master switch for all AI functionality — chat, vault search, " +
+          "embeddings, flashcard and quiz proposals, and provider " +
+          "credentials. When off, Chronote works fully offline: reviews, " +
+          "tests, and studying keep working, and nothing ever calls an API.",
+      )
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.aiEnabled)
+          .onChange(async (value) => {
+            this.plugin.settings.aiEnabled = value;
+            await this.plugin.saveData(this.plugin.settings);
+            // Re-render so the provider sections / indexing UI appear
+            // or disappear with the switch, and so the auto-index
+            // scheduler is started / torn down immediately.
+            this.plugin.updateAutoIndexSchedule();
+            this.display();
+          }),
+      );
+
+    // Everything below this point in the AI section is meaningless
+    // without the model — hide it wholesale when AI is off.
+    if (!this.plugin.settings.aiEnabled) {
+      containerEl.createEl("p", {
+        text: "AI features are off. Chronote stores all review data locally in your notes — no AI provider, no network calls.",
+      });
+      return;
+    }
+
     containerEl.createEl("p", {
       text: "Pick a provider and supply credentials. Local providers (Ollama, LM Studio) run on your machine; the others call out to a hosted API. Only the fields for the active provider are used.",
     });
@@ -333,13 +370,12 @@ export class ChronoteSettingTab extends PluginSettingTab {
           })
       );
 
-    // Indexing — vault search + flashcard persistence.
-    //
-    // Embeddings use the active AI provider's key / base URL and an
-    // embedding model derived from the provider (see
-    // `DEFAULT_EMBEDDING_MODEL`) — there's no separate field to keep
-    // in sync. The status line is a small `setDesc` we refresh on
-    // every `display()` call so it reflects the live index state.
+    // Indexing — vault search + flashcard persistence. Gated by the
+    // AI master switch: with AI off there is nothing to index (no
+    // embeddings), so the whole section is skipped. The status line
+    // is a small `setDesc` we refresh on every `display()` call so it
+    // reflects the live index state.
+    if (this.plugin.settings.aiEnabled) {
     new Setting(containerEl).setName("Indexing").setHeading();
     containerEl.createEl("p", {
       text:
@@ -416,6 +452,7 @@ export class ChronoteSettingTab extends PluginSettingTab {
             });
           })
       );
+    } // end aiEnabled gate for the Indexing section
   }
 
   // ── Provider-specific settings renderers ─────────────────────────

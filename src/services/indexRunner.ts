@@ -39,6 +39,19 @@ export async function runIndex(
 ): Promise<void> {
   const ai = plugin.settings.ai;
 
+  // 0. The AI master switch gates everything here — indexing IS an
+  //    AI feature (embeddings). When disabled, every call site
+  //    (dashboard button, command palette, settings tab) lands here
+  //    and the user gets one clear explanation instead of a cryptic
+  //    provider error.
+  if (!plugin.settings.aiEnabled) {
+    new Notice(
+      "Chronote: AI features are turned off in Settings → Chronote, so vault indexing is disabled.",
+    );
+    opts.onStateChange?.("error", "AI features disabled");
+    return;
+  }
+
   // 1. The chat provider must be configured.
   const missing = providerMissingFields(ai.provider, {
     geminiApiKey: ai.geminiApiKey,

@@ -211,6 +211,14 @@ export function migrateSettings(raw: unknown): ChronoteSettings {
     migrated.tests = [];
   }
 
+  // Defensive boolean normalization for the AI master switch. A
+  // hand-edited data.json (or a sync conflict) could persist a
+  // non-boolean; anything truthy-but-not-true is treated as enabled
+  // so a corrupt value can never silently disable AI.
+  if (migrated.aiEnabled !== false) {
+    migrated.aiEnabled = true;
+  }
+
   // Defensively normalize ai.baseUrls (per-provider URL map for the
   // local / custom providers). If the field exists but is malformed
   // (not a plain object, contains non-string entries), strip the bad
