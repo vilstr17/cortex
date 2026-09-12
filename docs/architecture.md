@@ -77,10 +77,11 @@ Tests are stored in plugin settings (`ChronoteSettings.tests`) as an array of:
 { id: string; name: string; date: string; filePaths: string[]; done?: boolean }
 ```
 
-- `TestService` provides CRUD + `toggleDone`.
+- `TestService` provides CRUD, note linking/removal, and `toggleDone`.
 - When a file is added to a test, its `exam_date` frontmatter is synced to the test date.
-- When a test date is updated, all linked notes receive the new `exam_date`.
-- Dashboard calculates per-test progress from the `confidence` scores of linked notes (excluding notes with `exclude_from_exam: true`).
+- Removing a linked file deletes its entry from that test. Its `exam_date` is cleared only when no other test still links to the file.
+- Removing a test applies the same cleanup to every linked file.
+- Dashboard calculates per-test progress from the `confidence` scores of its linked notes.
 
 ## AI Integration
 
@@ -89,6 +90,13 @@ Tests are stored in plugin settings (`ChronoteSettings.tests`) as an array of:
 - Builds a system prompt anchored to the real current date/time and user planning preferences.
 - All adapters expose a normalized tool-calling interface; the agent layer registers tools (`notes`, `tests`, `reviews`, `flashcards`, `quizzes`) on top.
 - `ChronoteChatModal` (`src/modals/ChronoteChatModal.ts`) provides an interactive chat UI; the model discovers due reviews and upcoming tests via the `list_reviews` / `list_tests` tools rather than prompt injection.
+- **AI master switch:** `ChronoteSettings.aiEnabled` (default `true`) gates the entire AI surface. When off:
+  - the dashboard chat button is not rendered,
+  - the `Reindex vault` command is hidden from the palette,
+  - `runIndex()` (the single indexing entry point) refuses with a Notice,
+  - `updateAutoIndexSchedule()` never arms the background timer,
+  - the settings tab hides all provider credentials and the Indexing section.
+  Reviews, tests, and flashcard studying remain fully functional — none of them require a model call. The migration normalizes any non-`false` value back to `true`, so a corrupt blob can never silently disable AI.
 
 ## Vault Search (RAG)
 
@@ -107,7 +115,7 @@ Tests are stored in plugin settings (`ChronoteSettings.tests`) as an array of:
 The dashboard is a single custom `ItemView` rendered into the workspace. It has two main panels:
 
 1. **Due Reviews** — date-navigable; filterable by test and sortable by confidence score; overdue items are highlighted.
-2. **Upcoming Tests** — expandable test cards with progress bars, linked notes, exclude toggles, and done/delete actions.
+2. **Upcoming Tests** — expandable test cards with progress bars, linked notes, remove actions, and done/delete actions.
 
 Re-rendering is debounced: metadata changes from typing trigger a 2-second delay so the dashboard does not re-render on every keystroke.
 

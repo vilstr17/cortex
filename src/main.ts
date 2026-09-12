@@ -19,6 +19,7 @@ import {
   chronoteStudyPostProcessor,
   openStudyForFile,
 } from "./services/flashcardStudyPostProcessor.js";
+import { WelcomeModal } from "./modals/WelcomeModal.js";
 
 export type { ChronoteSettings };
 export { DEFAULT_SETTINGS };
@@ -100,6 +101,11 @@ export default class ChronotePlugin extends Plugin {
       this.autoIndexIntervalId = null;
     }
 
+    // The AI master switch wins over the dropdown: with AI disabled
+    // no background embedding run is ever scheduled (and any existing
+    // timer is cleared above), regardless of `autoIndexInterval`.
+    if (!this.settings.aiEnabled) return;
+
     const interval = this.settings.autoIndexInterval;
     if (interval === "manual") return;
 
@@ -115,6 +121,10 @@ export default class ChronotePlugin extends Plugin {
   ): Promise<void> {
     const kb = this.knowledgeBase;
     if (!kb || !kb.isReady() || kb.isReindexInFlight()) return;
+    // Belt-and-braces: the scheduler should never even be active with
+    // AI disabled (see `updateAutoIndexSchedule`), but a settings
+    // change could race the timer — check again here.
+    if (!this.settings.aiEnabled) return;
 
     const thresholdMs =
       interval === "daily"
@@ -260,6 +270,9 @@ export default class ChronotePlugin extends Plugin {
     this.addCommand({
       id: "open-dashboard",
       name: "Open dashboard",
+      // Default shortcut — Cmd+M on macOS, Ctrl+M on Windows/Linux.
+      // Users can rebind or remove it in Settings → Hotkeys.
+      hotkeys: [{ modifiers: ["Mod"], key: "M" }],
       callback: () => this.openDashboard(),
     });
 
@@ -270,7 +283,15 @@ export default class ChronotePlugin extends Plugin {
       // settings-tab button all funnel through `runIndex()` so
       // validation, the in-flight guard, the progress Notice, and
       // the success / failure Notice are identical across surfaces.
-      callback: () => import("./services/indexRunner.js").then(({ runIndex }) => runIndex(this)),
+      // The AI master switch is checked inside `runIndex()` itself.
+      checkCallback: (checking: boolean) => {
+        // Hide the command entirely when AI features are off — the
+        // palette is discovery-driven, so offering an entry that can
+        // only ever show "disabled" would just confuse.
+        if (checking) return this.settings.aiEnabled;
+        import("./services/indexRunner.js").then(({ runIndex }) => runIndex(this));
+        return true;
+      },
     });
 
     this.commands = new Commands(this);
@@ -281,6 +302,30 @@ export default class ChronotePlugin extends Plugin {
     // Start the background auto-index scheduler. The first check is
     // delayed by the interval timer, so vault restore isn't delayed.
     this.updateAutoIndexSchedule();
+
+    // First-run welcome. Deferred until the layout is ready so the
+    // modal doesn't fight Obsidian's own startup UI. Gated by
+    // `welcomeSeen` — the dashboard open path is the fallback trigger
+    // in case the user misses this one.
+    if (!this.settings.welcomeSeen) {
+      this.app.workspace.onLayoutReady(() => {
+        this.showWelcomeIfNeeded();
+      });
+    }
+  }
+
+  /**
+   * Show the first-run welcome modal unless it has already been seen.
+   * Called from plugin activation and from `openDashboard()`, so the
+   * welcome appears at whichever of the two happens first — and never
+   * again after the user dismisses it.
+   */
+  private showWelcomeIfNeeded(): void {
+    if (this.settings.welcomeSeen) return;
+    new WelcomeModal(this.app, () => {
+      this.settings.welcomeSeen = true;
+      void this.saveData(this.settings);
+    }).open();
   }
 
   onunload(): void {
@@ -291,6 +336,10 @@ export default class ChronotePlugin extends Plugin {
   }
 
   async openDashboard() {
+    // Fallback trigger for the first-run welcome — if the user never
+    // saw it at activation, the first dashboard open shows it.
+    this.showWelcomeIfNeeded();
+
     const { workspace } = this.app;
     const existingLeaves = workspace.getLeavesOfType(CHRONOTE_DASHBOARD_VIEW);
 

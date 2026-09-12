@@ -20,6 +20,9 @@ export default class Commands {
     plugin.addCommand({
       id: "log-review",
       name: "Log review",
+      // Default shortcut — Cmd+R on macOS, Ctrl+R on Windows/Linux.
+      // Users can rebind or remove it in Settings → Hotkeys.
+      hotkeys: [{ modifiers: ["Mod"], key: "R" }],
       checkCallback: (checking: boolean) => {
         const activeFile = plugin.app.workspace.getActiveFile();
         if (checking) {
@@ -47,6 +50,9 @@ export default class Commands {
     plugin.addCommand({
       id: "add-file-to-test",
       name: "Add current file to Test",
+      // Default shortcut — Option+T on macOS, Alt+T on Windows/Linux.
+      // Users can rebind or remove it in Settings → Hotkeys.
+      hotkeys: [{ modifiers: ["Alt"], key: "T" }],
       checkCallback: (checking: boolean) => {
         const activeFile = plugin.app.workspace.getActiveFile();
         if (checking) {

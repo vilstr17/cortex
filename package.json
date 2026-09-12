@@ -14,7 +14,7 @@
     "version": "node version-bump.mjs && git add manifest.json versions.json"
   },
   "keywords": [],
-  "author": "Vilém Štrait",
+  "author": "VilStr",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^16.11.6",

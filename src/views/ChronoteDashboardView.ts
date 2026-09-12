@@ -54,29 +54,34 @@ export class ChronoteDashboardView extends ItemView {
 		const headerRow = wrapper.createDiv({ cls: "chronote-header-row" });
 		headerRow.createEl("h1", { text: "Chronote Command Center" });
 
-		const chatBtn = headerRow.createEl("button", { cls: "chronote-chat-icon-btn" });
-		chatBtn.setAttr("title", "Open Chronote AI Chat");
-		setIcon(chatBtn, "message-square");
-		chatBtn.addEventListener("click", () => {
-			// Provider-aware credentials check — same logic as the chat
-			// modal's sendMessage. Surface the missing field name so the
-			// user knows exactly what to set.
-			const ai = this.plugin.settings.ai;
-			const missing = providerMissingFields(ai.provider, {
-				geminiApiKey: ai.geminiApiKey,
-				geminiModel: ai.geminiModel,
-				apiKey: ai.apiKey,
-				model: ai.model,
-				baseUrl: ai.baseUrl,
+		// AI chat entry point. Only rendered when the AI master switch
+		// is on — with AI disabled the dashboard is purely the offline
+		// review surface, so the button would be dead weight.
+		if (this.plugin.settings.aiEnabled) {
+			const chatBtn = headerRow.createEl("button", { cls: "chronote-chat-icon-btn" });
+			chatBtn.setAttr("title", "Open Chronote AI Chat");
+			setIcon(chatBtn, "message-square");
+			chatBtn.addEventListener("click", () => {
+				// Provider-aware credentials check — same logic as the chat
+				// modal's sendMessage. Surface the missing field name so the
+				// user knows exactly what to set.
+				const ai = this.plugin.settings.ai;
+				const missing = providerMissingFields(ai.provider, {
+					geminiApiKey: ai.geminiApiKey,
+					geminiModel: ai.geminiModel,
+					apiKey: ai.apiKey,
+					model: ai.model,
+					baseUrl: ai.baseUrl,
+				});
+				if (missing.length > 0) {
+					new Notice(
+						`Chronote: ${PROVIDER_LABELS[ai.provider]} is not configured. Missing: ${missing.join(", ")}. Set them in Settings → Chronote.`,
+					);
+					return;
+				}
+				new ChronoteChatModal(this.app, this.plugin).open();
 			});
-			if (missing.length > 0) {
-				new Notice(
-					`Chronote: ${PROVIDER_LABELS[ai.provider]} is not configured. Missing: ${missing.join(", ")}. Set them in Settings → Chronote.`,
-				);
-				return;
-			}
-			new ChronoteChatModal(this.app, this.plugin).open();
-		});
+		}
 
 		const refreshBtn = headerRow.createEl("button", { cls: "chronote-refresh-btn clickable-icon" });
 		refreshBtn.setAttr("title", "Refresh");
@@ -231,10 +236,8 @@ export class ChronoteDashboardView extends ItemView {
 			const file = this.app.vault.getFileByPath(fp); if (!file) continue;
 			const cache = this.app.metadataCache.getFileCache(file);
 			const fm = cache?.frontmatter;
-			const excl = fm?.exclude_from_exam === true;
 
 			const li = nl.createEl("li", { cls: "chronote-test-note-item" });
-			if (excl) li.addClass("excluded");
 
 			const link = li.createEl("a", { cls: "chronote-test-note-link", text: file.basename });
 			link.addEventListener("click", (e) => { e.preventDefault(); void this.app.workspace.getLeaf("tab").openFile(file); });
@@ -243,9 +246,9 @@ export class ChronoteDashboardView extends ItemView {
 			if (fm?.confidence !== undefined && fm?.confidence !== null) { ss.addClass("has-score"); ss.setText(`Score: ${fm.confidence}/5`); }
 			else { ss.addClass("no-score"); ss.setText("No score"); }
 
-			const exb = li.createEl("button", { cls: "chronote-exclude-btn" + (excl ? " excluded" : ""), text: excl ? "Excluded" : "Exclude" });
-			exb.addEventListener("click", (e) => { e.stopPropagation(); void (async () => { await this.toggleExcl(file, excl); this.renderTests(); })(); });
-			li.appendChild(link); li.appendChild(ss); li.appendChild(exb);
+			const removeBtn = li.createEl("button", { cls: "chronote-remove-from-test-btn", text: "Remove", attr: { title: "Remove note from test" } });
+			removeBtn.addEventListener("click", (e) => { e.stopPropagation(); void (async () => { await this.testService.removeFileFromTest(test.id, fp); this.renderTests(); this.renderReviews(); })(); });
+			li.appendChild(link); li.appendChild(ss); li.appendChild(removeBtn);
 		}
 
 		const dbtn = item.createEl("button", { cls: "chronote-test-delete-btn" });
@@ -263,15 +266,11 @@ export class ChronoteDashboardView extends ItemView {
 
 		item.addEventListener("click", (e) => {
 			const el = e.target as HTMLElement;
-			if (el.closest(".chronote-test-delete-btn") || el.closest(".chronote-exclude-btn") || el.closest(".chronote-done-btn")) return;
+			if (el.closest(".chronote-test-delete-btn") || el.closest(".chronote-remove-from-test-btn") || el.closest(".chronote-done-btn")) return;
 			item.classList.toggle("expanded");
 		});
 
 		return item;
-	}
-
-	private async toggleExcl(file: TFile, excl: boolean): Promise<void> {
-		await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => { if (excl) delete fm["exclude_from_exam"]; else fm["exclude_from_exam"] = true; });
 	}
 
 	private calculateTestProgress(test: ChronoteTest): number {
@@ -280,7 +279,6 @@ export class ChronoteDashboardView extends ItemView {
 			const f = this.app.vault.getFileByPath(fp); if (!f) continue;
 			const fm = this.app.metadataCache.getFileCache(f)?.frontmatter;
 			if (!fm) { count++; continue; }
-			if (fm.exclude_from_exam === true || fm.exclude_from_exam === "true") continue;
 			count++;
 			if (fm.confidence !== undefined && fm.confidence !== null) sum += Math.max(0, Math.min(MAX, Number(fm.confidence) || 0));
 		}

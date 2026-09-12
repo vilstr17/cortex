@@ -191,6 +191,27 @@ export interface ChronoteSettings {
    * last index exceeds the interval.
    */
   autoIndexInterval: "manual" | "daily" | "weekly";
+
+  /**
+   * Whether the first-run welcome modal has been shown. Set to `true`
+   * the first time the user dismisses it (from plugin activation or
+   * the first dashboard open, whichever comes first) so it never
+   * reappears.
+   */
+  welcomeSeen: boolean;
+
+  /**
+   * Master switch for every AI feature. When `false` the plugin
+   * operates fully offline:
+   *   - the AI chat button and chat modal are disabled
+   *   - "Reindex vault" (command palette, dashboard, settings) is a
+   *     no-op with an explanatory Notice
+   *   - background auto-indexing never starts
+   *   - all provider credential sections are hidden in settings
+   * Review scheduling, tests, and flashcard studying keep working —
+   * none of those require a model call.
+   */
+  aiEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: ChronoteSettings = {
@@ -217,4 +238,6 @@ export const DEFAULT_SETTINGS: ChronoteSettings = {
   flashcardFolder: "",
   autoIndexInterval: "manual",
   chatHistory: [],
+  welcomeSeen: false,
+  aiEnabled: true,
 };

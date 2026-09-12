@@ -99,6 +99,17 @@ plugin.addCommand({
 
 Use `checkCallback` when the command should only appear in the palette under specific conditions (e.g., an active markdown file).
 
+Default hotkeys are set via the `hotkeys` field. Use the `"Mod"` modifier so the shortcut maps to Cmd on macOS and Ctrl on Windows/Linux, and `"Alt"` for Option on macOS / Alt on Windows/Linux. Users can always rebind or remove them in **Settings → Hotkeys**:
+
+```ts
+plugin.addCommand({
+  id: "log-review",
+  name: "Log review",
+  hotkeys: [{ modifiers: ["Mod"], key: "R" }],
+  // ...
+});
+```
+
 ## Adding New Modals
 
 1. Create a new file in `src/modals/` extending `Modal` from `obsidian`.

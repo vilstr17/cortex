@@ -26,7 +26,7 @@
    - Open Obsidian, go to **Settings → Community plugins**, and turn on **Chronote**.
 
 2. **Open the Dashboard.**
-   - Click the brain icon in the ribbon (left side of Obsidian), or run **Open Chronote Dashboard** from the Command Palette.
+   - Click the brain icon in the ribbon (left side of Obsidian), press **Cmd+M** (**Ctrl+M** on Windows/Linux), or run **Open Chronote Dashboard** from the Command Palette.
    - This is your home base — you'll see what's due and what's coming up.
 
 3. **Pick an AI provider.**
@@ -43,9 +43,11 @@
    - Click **Reindex vault** to embed your notes. This runs in the background.
 
 5. **Start reviewing.**
-   - Open any note and run **Log Chronote Review** from the Command Palette.
+   - Open any note and press **Cmd+R** (**Ctrl+R** on Windows/Linux) or run **Log Chronote Review** from the Command Palette.
    - Pick a score from 1 (I forgot) to 5 (I could recite it in my sleep).
    - Chronote writes the score and the next review date into the note's frontmatter. Open the Dashboard to see it appear under "Due Reviews."
+
+> **First run?** The first time you activate Chronote (or open the Dashboard), a short welcome modal walks you through this loop. Both shortcuts are defaults — you can rebind or remove them anytime in **Settings → Hotkeys**.
 
 ## How to use Chronote day to day
 
@@ -68,7 +70,7 @@ If you don't want to write YAML, you don't have to: scoring through the **Log Ch
 Open the Dashboard. The **Due Reviews** panel shows what's on your plate today. Click a note to open it, then run **Log Chronote Review** and pick a score. Chronote pushes the next review out further (or pulls it back in, if you forgot).
 
 ### 3. Group notes into a test
-When an exam or deadline is approaching, create a **Test** from the Dashboard. Add the notes you want to study for it. Chronote tracks your overall preparation and syncs the exam date to every linked note.
+When an exam or deadline is approaching, create a **Test** from the Dashboard (click **+** in the Upcoming Tests panel). Then, on any note you want to study for it, press **Option+T** (**Alt+T** on Windows/Linux) or run **Add Current File to Test** from the Command Palette. Chronote tracks your overall preparation and syncs the exam date to every linked note.
 
 ### 4. Let the AI help
 - **Plan your revision** — Open the chat from the Dashboard and ask something like *"What should I review today?"* The AI checks what's due and what tests are coming up, then tells you what to prioritize.
@@ -78,7 +80,7 @@ When an exam or deadline is approaching, create a **Test** from the Dashboard. A
 
 ### 5. Stay in control
 - **Cap your daily reviews.** In Settings → Chronote → Study, set a daily review limit. If you fall behind, overflow automatically shifts to the next day.
-- **Skip a note for a test.** If a particular note shouldn't be on a test, open the test from the Dashboard and toggle it off — Chronote excludes it from your preparation score.
+- **Remove a note from a test.** Open the test in the Dashboard and click **Remove** next to the note. Chronote deletes that test link and clears its test date unless the note is still linked to another test.
 - **Take a break.** Chronote is just YAML in your notes. If you stop using the plugin, your notes still work, and your data still works.
 
 ## Tips
@@ -97,7 +99,7 @@ When an exam or deadline is approaching, create a **Test** from the Dashboard. A
 ## Requirements
 
 - Obsidian desktop
-- An AI provider:
+- For AI features (optional — turn them off in **Settings → Chronote → AI features** if you don't want them):
   - A free local server (Ollama, LM Studio) — recommended if you don't want to send your data anywhere
   - **Or** an API key for Google Gemini, OpenAI, Anthropic, or any OpenAI-compatible service
 
@@ -106,7 +108,7 @@ When an exam or deadline is approaching, create a **Test** from the Dashboard. A
 - Your notes stay in your vault. Chronote only reads them.
 - API keys and review state are stored inside the plugin's `data.json`, in your vault. They are not encrypted; if you sync your vault to a cloud service you trust, this is fine — if you don't, keep that in mind.
 - When you ask the AI a question, the question (and any context Chronote needs to answer it) is sent to the AI provider you've selected. Pick a local one if you'd rather keep that on your machine.
+- **Want zero AI?** **Settings → Chronote → AI features → Enable AI features** turns everything off with one switch — chat, vault indexing, flashcard and quiz proposals, and provider credentials disappear. Chronote keeps working fully offline: reviews, tests, and studying all run locally and make no network calls.
 - No analytics, no telemetry, no background phone-home.
-
 
 
